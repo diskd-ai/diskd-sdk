@@ -61,10 +61,9 @@ publish:
   script:
     - |
       docker run --rm -v $CI_PROJECT_DIR:/app -w /app node:22-alpine sh -c "
-        npm ci --omit=dev
         echo '@diskd:registry=https://gitlab.iosya.com/api/v4/projects/${CI_PROJECT_ID}/packages/npm/' > .npmrc
         echo '//gitlab.iosya.com/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}' >> .npmrc
-        npm publish
+        npm publish --ignore-scripts
       "
   after_script:
     - docker run --rm -v $CI_PROJECT_DIR:/app -w /app alpine sh -c "rm -rf node_modules"
