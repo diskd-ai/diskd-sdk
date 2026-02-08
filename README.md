@@ -5,6 +5,28 @@ Minimal Google-style SDK for DiskD APIs.
 - Node (non-interactive): `createAuth({ scopes, keyfilePath })`
 - Web (interactive): `createAuth({ issuer, clientId, redirectUri, scopes, audience })` + PKCE redirect flow
 
+Installation
+------------
+
+1. Configure `.npmrc` in your project (or `~/.npmrc`):
+
+   ```ini
+   @diskd:registry=https://gitlab.iosya.com/api/v4/projects/80/packages/npm/
+   //gitlab.iosya.com/api/v4/projects/80/packages/npm/:_authToken=${NPM_TOKEN}
+   ```
+
+2. Set `NPM_TOKEN` to a GitLab personal access token with `read_api` scope:
+
+   ```bash
+   export NPM_TOKEN=glpat-xxxxxxxxxxxx
+   ```
+
+3. Install:
+
+   ```bash
+   npm install @diskd/sdk
+   ```
+
 Install / build (repo)
 ----------------------
 
