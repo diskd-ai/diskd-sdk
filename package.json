@@ -1,0 +1,43 @@
+{
+  "name": "@diskd/sdk",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "browser": "./dist/browser/index.js",
+      "default": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser/index.d.ts",
+      "default": "./dist/browser/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('dist-examples',{recursive:true,force:true});\"",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test dist/__tests__/*.test.js",
+    "test:integration": "npm run build && node --test dist/__integration_tests__/*.test.js",
+    "examples:build": "npm run build && node -e \"require('node:fs').rmSync('dist-examples',{recursive:true,force:true})\" && tsc -p tsconfig.examples.json",
+    "examples:node": "npm run examples:build && node dist-examples/node/quickstart.js",
+    "examples:smoke": "npm run examples:node",
+    "examples:tree": "npm run examples:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-examples/node/drive-tree.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.32",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "undici": "^7.21.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
