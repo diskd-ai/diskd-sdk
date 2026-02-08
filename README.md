@@ -86,6 +86,31 @@ Use `@diskd/sdk/browser` and a standard OAuth2 Authorization Code + PKCE redirec
 
 Runnable example: `examples/web/` (see `examples/README.md`).
 
+Publishing a new version
+------------------------
+
+1. Bump the version in `package.json`:
+
+   ```bash
+   npm version patch   # 0.1.0 -> 0.1.1
+   npm version minor   # 0.1.0 -> 0.2.0
+   npm version major   # 0.1.0 -> 1.0.0
+   ```
+
+2. Push the commit and tag to both remotes:
+
+   ```bash
+   git push github main && git push gitlab main
+   git push github --tags && git push gitlab --tags
+   ```
+
+3. The GitLab CI pipeline triggers on `v*.*.*` tags and automatically:
+   - Builds the project
+   - Runs unit tests and typecheck
+   - Publishes to the GitLab Package Registry
+
+4. Verify at: `https://gitlab.iosya.com/upgraide-v2/platform-api/-/packages`
+
 Docs & examples
 ---------------
 
