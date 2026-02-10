@@ -3,7 +3,7 @@ Platform SDK MVP: Google-style Auth + DriveClient.init (Task #1538) Design Doc
 
 Status: ready for implementation (minimal v1, happy-path)
 Parent: Redmine #1537
-Depends on: Redmine #1540 (Drive Bearer auth + `apis.diskd.local` ingress)
+Depends on: Redmine #1540 (Drive Bearer auth + `apis.upgraide.dev` ingress)
 Related: Redmine #1539 (App UI: download `credentials.json`)
 Last updated: 2026-02-08
 
@@ -35,7 +35,7 @@ const entries = await drive.list({ path: '/' });
 - Support two auth modes behind one `createAuth(...)` function:
   - Browser: Authorization Code + PKCE (redirect-based)
   - Node: Client Credentials (via `credentials.json` keyfile)
-- Use a unified API entrypoint via `DISKD_BASE_URL` (env/global), defaulting to `https://apis.diskd.local:8080`:
+- Use a unified API entrypoint via `DISKD_BASE_URL` (env/global), defaulting to `https://apis.upgraide.dev:8080`:
   - Drive endpoint: `POST ${DISKD_BASE_URL}/drive/api/v1` (JSON-RPC)
 
 Non-goals for first implementation (v1)
@@ -58,9 +58,9 @@ Implementation considerations
 - `DISKD_BASE_URL` resolution (no `baseUrl` param):
   - Node: `process.env.DISKD_BASE_URL`
   - Browser: `globalThis.DISKD_BASE_URL`
-  - Default: `https://apis.diskd.local:8080`
+  - Default: `https://apis.upgraide.dev:8080`
 - Local TLS:
-  - `*.diskd.local` uses a self-signed cert; Node callers may need `NODE_TLS_REJECT_UNAUTHORIZED=0` for local testing, or a trusted CA setup.
+  - `*.upgraide.dev` uses a self-signed cert; Node callers may need `NODE_TLS_REJECT_UNAUTHORIZED=0` for local testing, or a trusted CA setup.
 
 High-level behavior
 -------------------
@@ -169,7 +169,7 @@ Implement `@diskd/sdk` in `mono/platform-api/` (this repo), keeping it self-cont
 - `platform-api/examples/*` (3rd-party runnable quickstarts)
 
 Rationale:
-- Keeps the SDK near the platform routing/auth assumptions it depends on (`apis.diskd.local` + `/drive` path prefix).
+- Keeps the SDK near the platform routing/auth assumptions it depends on (`apis.upgraide.dev` + `/drive` path prefix).
 - Agent-hub can later consume `@diskd/sdk` without duplicating auth/transport logic; `GradientSdk` remains unchanged (deprecated name).
 
 Testing approach
@@ -200,14 +200,14 @@ npm test
 
 ```bash
 cd mono/platform-api
-export DISKD_BASE_URL='https://apis.diskd.local:8080'
+export DISKD_BASE_URL='https://apis.upgraide.dev:8080'
 export DISKD_CREDENTIALS_PATH='/absolute/path/to/credentials.json'
 npm run examples:smoke
 ```
 
 ### Manual happy-path (Tilt / local)
 
-Pre-req: #1540 implemented (Drive accepts Bearer + `apis.diskd.local` routes `/drive`).
+Pre-req: #1540 implemented (Drive accepts Bearer + `apis.upgraide.dev` routes `/drive`).
 
 1. Obtain token (client credentials) and call Drive:
 
@@ -216,10 +216,10 @@ TOKEN=$(
   curl -k -s -u oauth2-client-node:oauth2-client-node-secret \
     -H 'Content-Type: application/x-www-form-urlencoded' \
     -d 'grant_type=client_credentials&scope=openid&audience=diskd-api' \
-    https://oauth2.diskd.local:8080/oauth2/token | jq -r '.access_token'
+    https://oauth2.upgraide.dev:8080/oauth2/token | jq -r '.access_token'
 )
 
-curl -k -s https://apis.diskd.local:8080/drive/api/v1 \
+curl -k -s https://apis.upgraide.dev:8080/drive/api/v1 \
   -H 'Content-Type: application/json' \
   -H "Authorization: Bearer ${TOKEN}" \
   -d '{"jsonrpc":"2.0","method":"drive/init","params":{},"id":1}'
@@ -236,7 +236,7 @@ Acceptance criteria
   - `init()`, `list(...)`.
 - `drive.init()` performs `POST ${DISKD_BASE_URL}/drive/api/v1` with JSON-RPC method `drive/init` and `Authorization: Bearer <token>`.
 - Successful scenario (end-to-end with keyfile):
-  1. Go to `app.diskd.local` and open user profile.
+  1. Go to `app.upgraide.dev` and open user profile.
   2. Open tab: `API Credentials Keys`.
   3. Download `credentials.json`.
   4. Use `credentials.json` in `createAuth({ scopes, keyfilePath })`.

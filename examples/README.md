@@ -23,7 +23,7 @@ Runs the Node quickstart against a real DiskD environment (local Tilt overlay is
 
 ```bash
 cd mono/platform-api
-export DISKD_BASE_URL='https://apis.diskd.local:8080'
+export DISKD_BASE_URL='https://apis.upgraide.dev:8080'
 export DISKD_CREDENTIALS_PATH='/absolute/path/to/credentials.json'
 npm run examples:smoke
 ```
@@ -31,16 +31,16 @@ npm run examples:smoke
 Node quickstart (real DiskD + real `credentials.json`)
 ------------------------------------------------------
 
-1. In `app.diskd.local`, open **Profile** -> **API Credentials Keys** and download `credentials.json`.
+1. In `app.upgraide.dev`, open **Profile** -> **API Credentials Keys** and download `credentials.json`.
 2. Set Drive API base URL via env:
 
 ```bash
-export DISKD_BASE_URL='https://apis.diskd.local:8080'
+export DISKD_BASE_URL='https://apis.upgraide.dev:8080'
 ```
 
 Local TLS note (dev only):
 
-`*.diskd.local` uses a local/self-signed cert in dev. For Node you may need either:
+`*.upgraide.dev` uses a local/self-signed cert in dev. For Node you may need either:
 
 - trust the local CA/cert, or
 - run with `NODE_TLS_REJECT_UNAUTHORIZED=0` (local-only).
@@ -71,9 +71,9 @@ npm run build
 
 ```bash
 VITE_DISKD_CLIENT_ID='<YOUR_CLIENT_ID>'
-VITE_DISKD_OIDC_ISSUER='https://oauth2.diskd.local:8080'
+VITE_DISKD_OIDC_ISSUER='https://oauth2.upgraide.dev:8080'
 VITE_DISKD_AUDIENCE='diskd-api'
-VITE_DISKD_BASE_URL='https://apis.diskd.local:8080'
+VITE_DISKD_BASE_URL='https://apis.upgraide.dev:8080'
 ```
 
 3. Install + run Vite:

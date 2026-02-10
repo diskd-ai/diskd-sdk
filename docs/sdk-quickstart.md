@@ -16,8 +16,8 @@ Node (3rd-party scripts with `credentials.json`)
 Prereqs:
 
 - Node.js 22+
-- `DISKD_BASE_URL` is set (example local overlay: `https://apis.diskd.local:8080`)
-- `credentials.json` downloaded from `app.diskd.local` -> Profile -> `API Credentials Keys`
+- `DISKD_BASE_URL` is set (example local overlay: `https://apis.upgraide.dev:8080`)
+- `credentials.json` downloaded from `app.upgraide.dev` -> Profile -> `API Credentials Keys`
 
 ```ts
 import path from 'node:path';
@@ -44,7 +44,7 @@ Web (PKCE OAuth redirect flow)
 Prereqs:
 
 - An OAuth client configured in DiskD IAM/Hudra
-- `DISKD_BASE_URL` injected into the page (example local overlay: `https://apis.diskd.local:8080`)
+- `DISKD_BASE_URL` injected into the page (example local overlay: `https://apis.upgraide.dev:8080`)
 
 In a bundler (Vite/Webpack/etc):
 
@@ -52,7 +52,7 @@ In a bundler (Vite/Webpack/etc):
 import { createAuth, diskd } from '@diskd/sdk/browser';
 
 const auth = await createAuth({
-  issuer: 'https://oauth2.diskd.local:8080',
+  issuer: 'https://oauth2.upgraide.dev:8080',
   clientId: '<YOUR_CLIENT_ID>',
   redirectUri: window.location.origin + window.location.pathname,
   scopes: ['openid'],

@@ -1,4 +1,4 @@
-Drive: OAuth2 Bearer Auth + `apis.diskd.local` Ingress (Prereq for SDK MVP) Design Doc
+Drive: OAuth2 Bearer Auth + `apis.upgraide.dev` Ingress (Prereq for SDK MVP) Design Doc
 =====================================================================================
 
 Status: ready for implementation (happy-path MVP)
@@ -14,7 +14,7 @@ Redmine #1538 defines a Google-style SDK surface that calls Drive through a unif
 
 Today:
 
-- Drive is not reachable via a unified `apis.diskd.local` entrypoint (Caddy has no such host yet).
+- Drive is not reachable via a unified `apis.upgraide.dev` entrypoint (Caddy has no such host yet).
 - Drive authentication supports legacy headers (`X-Api-Key`, `X-User-Id`, etc.) and (optionally) Kratos cookie → IAM `/internal/authorize`, but **does not** accept OAuth2 Bearer tokens.
 
 This task adds the smallest set of changes to make the SDK happy-path implementable end-to-end.
@@ -23,7 +23,7 @@ Goals
 -----
 
 - Expose Drive JSON-RPC via a stable public URL:
-  - `https://apis.diskd.local:8080/drive/api/v1` → Drive service `/api/v1`
+  - `https://apis.upgraide.dev:8080/drive/api/v1` → Drive service `/api/v1`
 - Allow Drive JSON-RPC calls authenticated by OAuth2 access tokens:
   - Accept `Authorization: Bearer <JWT>`
   - Verify Hydra JWT access tokens via JWKS + `iss` + `aud`
@@ -55,7 +55,7 @@ High-level behavior
 
 1. Client obtains an OAuth2 access token from Hydra (PKCE or client credentials).
 2. Client calls Drive JSON-RPC through ingress:
-   - `POST https://apis.diskd.local:8080/drive/api/v1`
+   - `POST https://apis.upgraide.dev:8080/drive/api/v1`
    - `Authorization: Bearer <access_token>`
 3. Drive verifies JWT:
    - signature (RS256)
@@ -72,12 +72,12 @@ Ingress / public API design
 
 ### Caddy routing
 
-Update the **local overlay** for Caddy (keep `diskd.local` hostnames local-only):
+Update the **local overlay** for Caddy (keep `upgraide.dev` hostnames local-only):
 
 - `platform-infra/.k8s/overlays/local` patch for `common-caddy` ConfigMap (`data.Caddyfile`)
 
 - Add a new hostname:
-  - `https://apis.diskd.local:8080`
+  - `https://apis.upgraide.dev:8080`
 - Add path routing for Drive only (v1):
   - `handle /drive* { uri strip_prefix /drive; reverse_proxy drive-service.drive.svc.cluster.local:8000 }`
 - For any other path:
@@ -85,8 +85,8 @@ Update the **local overlay** for Caddy (keep `diskd.local` hostnames local-only)
 
 Update `platform-infra/README.md` “Local Domains (Caddy)”:
 
-- Add host entry: `127.0.0.1 apis.diskd.local`
-- Add “Open” URL: `https://apis.diskd.local:8080`
+- Add host entry: `127.0.0.1 apis.upgraide.dev`
+- Add “Open” URL: `https://apis.upgraide.dev:8080`
 - Add route description for `/drive` prefix.
 
 Drive auth design
@@ -108,7 +108,7 @@ Update `drive/modules/main/iam_auth.py:get_user_and_org_iam(...)`:
 
 Add non-secret env vars for Bearer verification:
 
-- `HYDRA_ISSUER_URL` (example: `https://oauth2.diskd.local:8080`)
+- `HYDRA_ISSUER_URL` (example: `https://oauth2.upgraide.dev:8080`)
 - `HYDRA_JWKS_URL` (example: `http://iam-hydra.iam-service.svc.cluster.local:4444/.well-known/jwks.json`)
 - `OAUTH2_AUDIENCE` (example: `diskd-api`)
 
@@ -143,7 +143,7 @@ Implementation outline
 ----------------------
 
 1. Ingress
-   - Add `apis.diskd.local` site block and `/drive` reverse proxy.
+   - Add `apis.upgraide.dev` site block and `/drive` reverse proxy.
    - Update `platform-infra/README.md` local domains list.
 2. Drive Bearer auth
    - Implement RS256 JWT verification from JWKS.
@@ -160,7 +160,7 @@ Testing approach
 ### Happy-path manual test (Tilt)
 
 1. Add hosts entry:
-   - `127.0.0.1 apis.diskd.local`
+   - `127.0.0.1 apis.upgraide.dev`
 2. Obtain a client-credentials access token (local dev defaults created by `iam-hydra-client-init`):
 
 ```bash
@@ -168,7 +168,7 @@ TOKEN=$(
   curl -k -s -u oauth2-client-node:oauth2-client-node-secret \\
     -H 'Content-Type: application/x-www-form-urlencoded' \\
     -d 'grant_type=client_credentials&scope=openid&audience=diskd-api' \\
-    https://oauth2.diskd.local:8080/oauth2/token | \\
+    https://oauth2.upgraide.dev:8080/oauth2/token | \\
   jq -r '.access_token'
 )
 ```
@@ -176,7 +176,7 @@ TOKEN=$(
 3. Call Drive init via ingress:
 
 ```bash
-curl -k -s https://apis.diskd.local:8080/drive/api/v1 \\
+curl -k -s https://apis.upgraide.dev:8080/drive/api/v1 \\
   -H 'Content-Type: application/json' \\
   -H \"Authorization: Bearer ${TOKEN}\" \\
   -d '{\"jsonrpc\":\"2.0\",\"method\":\"drive/init\",\"params\":{},\"id\":1}'
@@ -185,7 +185,7 @@ curl -k -s https://apis.diskd.local:8080/drive/api/v1 \\
 4. Call Drive list via ingress:
 
 ```bash
-curl -k -s https://apis.diskd.local:8080/drive/api/v1 \\
+curl -k -s https://apis.upgraide.dev:8080/drive/api/v1 \\
   -H 'Content-Type: application/json' \\
   -H \"Authorization: Bearer ${TOKEN}\" \\
   -d '{\"jsonrpc\":\"2.0\",\"method\":\"drive/paths/list\",\"params\":{\"path\":\"/\"},\"id\":2}'
@@ -194,6 +194,6 @@ curl -k -s https://apis.diskd.local:8080/drive/api/v1 \\
 Acceptance criteria
 -------------------
 
-- `https://apis.diskd.local:8080/drive/api/v1` routes to Drive service and responds to JSON-RPC requests.
+- `https://apis.upgraide.dev:8080/drive/api/v1` routes to Drive service and responds to JSON-RPC requests.
 - With a valid Hydra access token, `drive/init` and `drive/paths/list` succeed using `Authorization: Bearer`.
 - Existing legacy auth modes (API key header mode and cookie mode) continue to work.

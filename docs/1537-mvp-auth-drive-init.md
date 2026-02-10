@@ -8,7 +8,7 @@ Last updated: 2026-02-07
 Context and motivation
 ----------------------
 
-Redmine #1537 defines the target “Platform SDK” shape (auth + service clients behind `apis.diskd.local`).
+Redmine #1537 defines the target “Platform SDK” shape (auth + service clients behind `apis.upgraide.dev`).
 
 This subtask specifies the smallest MVP slice that proves (with a Google-style SDK surface):
 
@@ -42,7 +42,7 @@ Implementation considerations
 - Runtime targets: modern browsers and Node.js 24+ (global `fetch`, `TextEncoder`, `crypto.subtle`).
 - Keep side effects contained to `init` and auth network calls; pure helpers remain pure (PKCE challenge, URL building).
 - Avoid module-level singletons/global variables.
-- Drive API base URL is resolved from `DISKD_BASE_URL` (default `https://apis.diskd.local:8080`):
+- Drive API base URL is resolved from `DISKD_BASE_URL` (default `https://apis.upgraide.dev:8080`):
   - Node: read from `process.env.DISKD_BASE_URL`
   - Browser: read from `globalThis.DISKD_BASE_URL` (injected by app/build)
 - Browser PKCE must survive redirects:
@@ -123,7 +123,7 @@ Keyfile format (Client Credentials)
 
 ```json
 {
-  "issuer": "https://oauth2.diskd.local:8080",
+  "issuer": "https://oauth2.upgraide.dev:8080",
   "clientId": "diskd-agent",
   "clientSecret": "diskd-agent-secret",
   "audience": "diskd-api"
@@ -137,7 +137,7 @@ Source of `credentials.json` (end-user)
 
 For this MVP, the primary way for end users to obtain a valid `credentials.json` is the app UI:
 
-- `app.diskd.local` → user profile → tab `API Credentials Keys` → download `credentials.json`
+- `app.upgraide.dev` → user profile → tab `API Credentials Keys` → download `credentials.json`
 
 Implementation detail (assumption for minimal v1):
 
@@ -164,9 +164,9 @@ export type DrivePathEntry = {
 Notes (MVP):
 
 - `diskd.drive({ version: 'v1', auth })` returns a client that uses `auth.getAccessToken()` for requests.
-- Drive base URL is resolved from `DISKD_BASE_URL` (default `https://apis.diskd.local:8080`).
+- Drive base URL is resolved from `DISKD_BASE_URL` (default `https://apis.upgraide.dev:8080`).
 - `init()` calls `POST {DISKD_BASE_URL}/drive/api/v1` with JSON-RPC method `drive/init` and `Authorization: Bearer <accessToken>`.
-- The response body is ignored in MVP; `init()` only verifies the token can reach Drive through `apis.diskd.local`.
+- The response body is ignored in MVP; `init()` only verifies the token can reach Drive through `apis.upgraide.dev`.
 - `list(...)` calls JSON-RPC `drive/paths/list` and maps the returned `items[]` to `DrivePathEntry[]` (snake_case to camelCase where applicable).
 
 Usage (Node-like)
@@ -175,7 +175,7 @@ Usage (Node-like)
 Target: Node.js 24+ scripts (non-interactive) using Client Credentials (Google-style `keyfilePath`).
 
 ```ts
-// Set DISKD_BASE_URL, e.g.: https://apis.diskd.local:8080
+// Set DISKD_BASE_URL, e.g.: https://apis.upgraide.dev:8080
 const auth = await createAuth({
   scopes: SCOPES,
   keyfilePath: CREDENTIALS_PATH,
@@ -226,7 +226,7 @@ Reference implementations for `drive/init`:
 
 Important routing note:
 
-- Many existing axios-based clients call `POST '/api/v1'` (leading slash), which does not work with an `apis.diskd.local` path prefix like `/drive`. This MVP uses explicit URL construction (`{DISKD_BASE_URL}/drive/api/v1`) so it works behind the unified host.
+- Many existing axios-based clients call `POST '/api/v1'` (leading slash), which does not work with an `apis.upgraide.dev` path prefix like `/drive`. This MVP uses explicit URL construction (`{DISKD_BASE_URL}/drive/api/v1`) so it works behind the unified host.
 
 Example SDK usage in agents (agent-hub)
 ---------------------------------------
@@ -260,7 +260,7 @@ Testing approach
     - Open the quickstart page.
     - Click `Authorize` and complete the OAuth flow.
     - Verify the app obtains an access token and can call `drive.list(...)`.
-  - Go to `app.diskd.local` and open user profile.
+  - Go to `app.upgraide.dev` and open user profile.
   - Open tab on user profile: `API Credentials Keys`.
   - Click download `credentials.json`.
   - Use the downloaded `credentials.json` in `createAuth({ keyfilePath, scopes })`.
@@ -273,7 +273,7 @@ Acceptance criteria
 - `diskd.drive({ version: 'v1', auth })` returns a client with `init()` and `list(...)`.
 - `drive.init()` performs `POST {DISKD_BASE_URL}/drive/api/v1` with method `drive/init` and resolves on success.
 - Successful scenario (end-to-end):
-  1. Go to `app.diskd.local` and open user profile.
+  1. Go to `app.upgraide.dev` and open user profile.
   2. Open tab on user profile: `API Credentials Keys`.
   3. Click download `credentials.json`.
   4. Use `credentials.json` in `createAuth({ keyfilePath, scopes })`.

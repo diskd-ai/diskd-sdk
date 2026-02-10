@@ -18,7 +18,7 @@ We want a single “Google-style” Platform SDK that:
 
 - Exposes a consistent developer experience across services
 - Uses OAuth2/OIDC as the platform auth mechanism for all service APIs
-- Targets a single public API entrypoint `apis.diskd.local` (via Caddy routing)
+- Targets a single public API entrypoint `apis.upgraide.dev` (via Caddy routing)
 - Remains strongly typed and follows functional-architecture constraints (errors as values, no hidden global state)
 
 Goals
@@ -29,7 +29,7 @@ Goals
   - `drive`: Drive API (files, upload/download, indexing, Drive DB, Drive Tools where applicable)
   - `llm`: LLM Router API (completions, streaming, embeddings, models, OCR/images/audio where applicable)
   - `mcpHub`: MCP Hub API (catalog, registry, runtime env, logs, tool toggles)
-- Standardize external access via **one** public API hostname: `https://apis.diskd.local` (local dev uses `:8080` via `common-caddy`).
+- Standardize external access via **one** public API hostname: `https://apis.upgraide.dev` (local dev uses `:8080` via `common-caddy`).
 - Standardize authorization via OAuth2/OIDC (Ory Hydra) access tokens:
   - Authorization Code + PKCE (interactive apps)
   - Client Credentials (service-to-service / CLIs with secrets)
@@ -48,12 +48,12 @@ Non-goals for first implementation (v1)
 Implementation considerations
 -----------------------------
 
-- **Ingress reality today**: local ingress is already Caddy-based with host routing under `*.diskd.local:8080` (see `platform-infra/.k8s/base/common/caddy.yaml`). The new `apis.diskd.local` entrypoint should be implemented as an additional Caddy site block that routes by path prefix.
-- **OAuth2 reality today**: OAuth2/OIDC via Ory Hydra exists (or is planned) with issuer at `https://oauth2.diskd.local:8080` (see `iam-service/docs/oauth2-hydra.md`). That doc explicitly recommends a dedicated hostname for Hydra to avoid sub-path complications.
+- **Ingress reality today**: local ingress is already Caddy-based with host routing under `*.upgraide.dev:8080` (see `platform-infra/.k8s/base/common/caddy.yaml`). The new `apis.upgraide.dev` entrypoint should be implemented as an additional Caddy site block that routes by path prefix.
+- **OAuth2 reality today**: OAuth2/OIDC via Ory Hydra exists (or is planned) with issuer at `https://oauth2.upgraide.dev:8080` (see `iam-service/docs/oauth2-hydra.md`). That doc explicitly recommends a dedicated hostname for Hydra to avoid sub-path complications.
 - **Therefore** (assumption for v1):
-  - Resource APIs are exposed at `apis.diskd.local`.
-  - OAuth2 issuer remains `oauth2.diskd.local` (SDK uses this for discovery/JWKS/token exchange).
-  - If “everything including OAuth2” must be reachable at `apis.diskd.local`, we treat that as a future milestone after validating Hydra sub-path support and discovery URL correctness.
+  - Resource APIs are exposed at `apis.upgraide.dev`.
+  - OAuth2 issuer remains `oauth2.upgraide.dev` (SDK uses this for discovery/JWKS/token exchange).
+  - If “everything including OAuth2” must be reachable at `apis.upgraide.dev`, we treat that as a future milestone after validating Hydra sub-path support and discovery URL correctness.
 - **Functional-architecture constraints** (SDK-side):
   - Do not use `any` as an escape hatch in SDK code.
   - Model errors as ADTs (`Result`), avoid throwing across module boundaries as normal control flow.
@@ -63,7 +63,7 @@ High-level behavior
 -------------------
 
 1. Developer constructs the SDK with:
-   - `apiBaseUrl` (defaults to `https://apis.diskd.local`)
+   - `apiBaseUrl` (defaults to `https://apis.upgraide.dev`)
    - `auth` configuration (issuer, client id, redirect uri, etc.) or a custom token provider.
 2. Developer obtains an access token through `sdk.auth` (interactive PKCE or client credentials).
 3. Service modules (`drive`, `llm`, `mcpHub`) call their endpoints through a shared HTTP transport that automatically attaches:
@@ -135,7 +135,7 @@ OAuth2/OIDC (auth module)
 
 SDK uses OIDC discovery from:
 
-- Issuer: `https://oauth2.diskd.local:8080` (local dev default)
+- Issuer: `https://oauth2.upgraide.dev:8080` (local dev default)
 - Discovery: `/.well-known/openid-configuration`
 - JWKS: from discovery (`jwks_uri`)
 
@@ -166,7 +166,7 @@ API host and routing (Caddy)
 
 All resource APIs are reachable under one hostname:
 
-- `https://apis.diskd.local:8080` (local dev)
+- `https://apis.upgraide.dev:8080` (local dev)
 
 ### Proposed path routing
 
@@ -176,7 +176,7 @@ All resource APIs are reachable under one hostname:
 
 For each route, Caddy strips the prefix and reverse-proxies to the in-cluster service so that internal services keep their existing paths:
 
-- External: `GET https://apis.diskd.local:8080/llm/api/v1/models`
+- External: `GET https://apis.upgraide.dev:8080/llm/api/v1/models`
 - Internal forwarded: `GET http://llm-router.llm-router.svc.cluster.local:3000/api/v1/models`
 
 Notes:
@@ -185,16 +185,16 @@ Notes:
 - LLM Router exposes JSON-RPC at `/api/v1/invoke` and streaming at `/api/v1/stream`.
 - MCP Hub exposes REST under `/api/*`.
 
-### OAuth2 under `apis.diskd.local` (open question)
+### OAuth2 under `apis.upgraide.dev` (open question)
 
-Hydra currently uses `oauth2.diskd.local` as issuer and is recommended to remain on a dedicated hostname for protocol correctness.
+Hydra currently uses `oauth2.upgraide.dev` as issuer and is recommended to remain on a dedicated hostname for protocol correctness.
 
-If strict single-host (`apis.diskd.local`) is required for OAuth2 endpoints too, we must validate:
+If strict single-host (`apis.upgraide.dev`) is required for OAuth2 endpoints too, we must validate:
 
 - Hydra public base URL support for a sub-path issuer (for discovery URL correctness)
 - Redirect URI and issuer consistency for all clients
 
-Until that is validated, v1 SDK uses `oauth2.diskd.local` for auth and `apis.diskd.local` for resource APIs.
+Until that is validated, v1 SDK uses `oauth2.upgraide.dev` for auth and `apis.upgraide.dev` for resource APIs.
 
 Drive module (drive)
 --------------------
@@ -383,7 +383,7 @@ Implementation outline
    - streaming via async generator (JSONL)
 5. Implement `mcp-hub` module:
    - catalog + registry + runtime env
-6. Add Caddy routing for `apis.diskd.local`:
+6. Add Caddy routing for `apis.upgraide.dev`:
    - path-prefix routing to Drive/LLM/MCP Hub services
    - document local hosts entry requirements
 7. Add tests:
@@ -403,7 +403,7 @@ Testing approach
 - End-to-end (environment):
   - run through Tilt with `common-caddy`:
     - obtain token from Hydra issuer
-    - call at least one endpoint from each module via `apis.diskd.local`
+    - call at least one endpoint from each module via `apis.upgraide.dev`
 
 Acceptance criteria
 -------------------
@@ -411,10 +411,10 @@ Acceptance criteria
 - A single SDK entrypoint exposes `auth`, `drive`, `llm`, `mcpHub` modules with stable, typed APIs.
 - All non-happy-path outcomes are surfaced as typed `Result` errors (no uncaught exceptions for expected failures).
 - SDK is configurable for local dev:
-  - `apiBaseUrl=https://apis.diskd.local:8080`
-  - `issuer=https://oauth2.diskd.local:8080`
-- A Caddy route exists (or is specified) so `apis.diskd.local` can reach Drive/LLM/MCP Hub services via path prefixes.
+  - `apiBaseUrl=https://apis.upgraide.dev:8080`
+  - `issuer=https://oauth2.upgraide.dev:8080`
+- A Caddy route exists (or is specified) so `apis.upgraide.dev` can reach Drive/LLM/MCP Hub services via path prefixes.
 - At least one integration test demonstrates:
   - token acquisition (PKCE or client credentials)
-  - a successful call to each module through `apis.diskd.local`
+  - a successful call to each module through `apis.upgraide.dev`
   - a deterministic 401/403 behavior when token is missing or scope is absent

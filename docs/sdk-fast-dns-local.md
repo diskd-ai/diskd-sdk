@@ -7,7 +7,7 @@ Last updated: 2026-02-08
 Context and motivation
 ----------------------
 
-The Node.js SDK examples (notably `examples/node/drive-tree.ts`) are too slow in local overlay because every request to `*.diskd.local` spends ~5 seconds in name resolution. The Drive Tree demo makes many sequential `drive/paths/list` calls, so the overall runtime becomes ~40 seconds for a depth-3 tree.
+The Node.js SDK examples (notably `examples/node/drive-tree.ts`) are too slow in local overlay because every request to `*.upgraide.dev` spends ~5 seconds in name resolution. The Drive Tree demo makes many sequential `drive/paths/list` calls, so the overall runtime becomes ~40 seconds for a depth-3 tree.
 
 Goals:
 - Make local overlay SDK requests fast (sub-second for the Drive Tree demo).
@@ -47,15 +47,15 @@ High-level behavior
 Measurements (domain-specific)
 ------------------------------
 
-Environment: local overlay with `DISKD_BASE_URL=https://apis.diskd.local:8080`.
+Environment: local overlay with `DISKD_BASE_URL=https://apis.upgraide.dev:8080`.
 
 Drive Tree demo runtime:
 - Fast DNS disabled (`DISKD_SDK_FAST_DNS=0`): `real 40.98s`
 - Fast DNS enabled (`DISKD_SDK_FAST_DNS=1`): `real 0.83s`
 
 Single request timing (illustrative):
-- `curl -w '%{time_namelookup} %{time_total}\\n' https://apis.diskd.local:8080/drive/api/v1 ...` reports `time_namelookup ~5.0s`.
-- `curl --resolve apis.diskd.local:8080:127.0.0.1 ...` reduces total time to ~0.06s (lookup ~0).
+- `curl -w '%{time_namelookup} %{time_total}\\n' https://apis.upgraide.dev:8080/drive/api/v1 ...` reports `time_namelookup ~5.0s`.
+- `curl --resolve apis.upgraide.dev:8080:127.0.0.1 ...` reduces total time to ~0.06s (lookup ~0).
 
 Root cause (domain-specific)
 ----------------------------
@@ -65,7 +65,7 @@ Root cause (domain-specific)
 Configuration (domain-specific)
 -------------------------------
 
-- Base URL: `DISKD_BASE_URL` (default: `https://apis.diskd.local:8080`)
+- Base URL: `DISKD_BASE_URL` (default: `https://apis.upgraide.dev:8080`)
 - Fast DNS toggle:
   - Disable: `DISKD_SDK_FAST_DNS=0` or `DISKD_SDK_FAST_DNS=false`
   - Enable: `DISKD_SDK_FAST_DNS=1` or `DISKD_SDK_FAST_DNS=true`

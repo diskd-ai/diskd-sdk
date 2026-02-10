@@ -43,11 +43,11 @@ Drive API base URL is resolved from `DISKD_BASE_URL`:
 
 - Node: `process.env.DISKD_BASE_URL`
 - Browser: `window.DISKD_BASE_URL`
-- Default: `https://apis.diskd.local:8080`
+- Default: `https://apis.upgraide.dev:8080`
 
 Local TLS note (dev only):
 
-`*.diskd.local` uses a local/self-signed cert in dev. For Node examples you may need either:
+`*.upgraide.dev` uses a local/self-signed cert in dev. For Node examples you may need either:
 
 - trust the local CA/cert, or
 - run with `NODE_TLS_REJECT_UNAUTHORIZED=0` (local-only).
@@ -55,12 +55,12 @@ Local TLS note (dev only):
 Node quickstart (credentials.json)
 ----------------------------------
 
-1) Download `credentials.json` from `https://app.diskd.local` → Settings/Profile → `API Credentials Keys`.
+1) Download `credentials.json` from `https://app.upgraide.dev` → Settings/Profile → `API Credentials Keys`.
 
 2) Run:
 
 ```bash
-export DISKD_BASE_URL='https://apis.diskd.local:8080'
+export DISKD_BASE_URL='https://apis.upgraide.dev:8080'
 node -e "console.log(process.env.DISKD_BASE_URL)"
 ```
 

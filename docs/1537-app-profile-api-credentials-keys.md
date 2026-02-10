@@ -15,7 +15,7 @@ End users need a simple, discoverable way to obtain a `credentials.json` file th
 Goals
 -----
 
-- Add a new tab to the user profile page (`app.diskd.local` → Settings/Profile):
+- Add a new tab to the user profile page (`app.upgraide.dev` → Settings/Profile):
   - Tab label: `API Credentials Keys`
   - Primary action: download `credentials.json`
 - Ensure the downloaded file format matches the SDK expectation (#1538 keyfile format).
@@ -42,7 +42,7 @@ Implementation considerations
 High-level behavior
 -------------------
 
-1. User opens `app.diskd.local` and navigates to Settings/Profile.
+1. User opens `app.upgraide.dev` and navigates to Settings/Profile.
 2. User opens the `API Credentials Keys` tab.
 3. User clicks `Download credentials.json`.
 4. Browser downloads a JSON file.
@@ -62,7 +62,7 @@ Return JSON compatible with SDK #1538:
 
 ```json
 {
-  "issuer": "https://oauth2.diskd.local:8080",
+  "issuer": "https://oauth2.upgraide.dev:8080",
   "clientId": "<workspace-or-user-derived-client-id>",
   "clientSecret": "<secret>",
   "audience": "diskd-api"
@@ -101,6 +101,6 @@ Testing approach
 Acceptance criteria
 -------------------
 
-- In `app.diskd.local` user profile, a tab named `API Credentials Keys` exists.
+- In `app.upgraide.dev` user profile, a tab named `API Credentials Keys` exists.
 - Clicking the download action returns `credentials.json` with the required fields (`issuer`, `clientId`, `clientSecret`, `audience`).
 - The downloaded `credentials.json` is compatible with `createAuth({ scopes, keyfilePath })` from #1538.
