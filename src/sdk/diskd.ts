@@ -1,4 +1,6 @@
 import { createAgentHubClient } from '../agentHub/agentHub.js';
+import { createApiKeyAuth } from '../auth/createApiKeyAuth.js';
+import { createAuth } from '../auth/createAuth.js';
 import { createDriveClient } from '../drive/drive.js';
 import { createDriveDatabase } from '../drive/DriveRepository.js';
 import { createDriveDataSource } from '../drive/typeorm/createDriveDataSource.js';
@@ -10,6 +12,11 @@ import type { DriveDataSource } from '../drive/typeorm/datasourceTypes.js';
 import type { DiskD } from './types.js';
 
 export const diskd: DiskD = {
+  auth: {
+    apiKey: (params) => createApiKeyAuth(params),
+    credentials: (params) => createAuth(params),
+  },
+
   drive: ({ version, auth, url }) => {
     if (version !== 'v1') {
       throw new Error('Unsupported Drive API version');

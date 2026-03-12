@@ -26,6 +26,31 @@ examples/
 docs/             -- Design docs and quickstart guides
 ```
 
+## diskd namespace convention
+
+Everything is accessed via the `diskd` namespace. No standalone `createX` imports.
+
+```ts
+import { diskd } from '@diskd/sdk';
+
+// Auth
+const auth = diskd.auth.apiKey({ apiKey, workspaceId });
+const auth = await diskd.auth.credentials({ scopes, keyfilePath });
+
+// Services
+const drive = diskd.drive({ version: 'v1', auth });
+const db    = diskd.database({ auth, dbName, schema });
+const ds    = diskd.datasource({ auth, dbName, entities });  // requires typeorm peer
+const llm   = diskd.llm({ auth });
+```
+
+When adding new functionality to the SDK, always wire it through `diskd.<name>()`
+in `sdk/types.ts` + `sdk/diskd.ts`. Use nested namespaces for related methods
+(e.g., `diskd.auth.apiKey()`, `diskd.auth.credentials()`). Do not expose standalone
+factory functions as the primary API -- `createX` functions may still be exported
+from `src/index.ts` for backward compatibility, but the `diskd.*` namespace is the
+canonical interface.
+
 ## Module conventions
 
 Each service module follows the same pattern:

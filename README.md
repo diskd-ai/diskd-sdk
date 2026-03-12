@@ -6,9 +6,9 @@ All services are accessible via the `diskd` factory, which provides a consistent
 `createApiKeyAuth` / `createAuth` + `diskd.<service>()` pattern:
 
 ```ts
-import { createApiKeyAuth, diskd } from '@diskd/sdk';
+import { diskd } from '@diskd/sdk';
 
-const auth = createApiKeyAuth({ apiKey: '...', workspaceId: '...' });
+const auth = diskd.auth.apiKey({ apiKey: '...', workspaceId: '...' });
 
 const drive      = diskd.drive({ version: 'v1', auth });
 const db         = diskd.database({ auth, dbName: '...', schema: { ... } });
@@ -61,9 +61,9 @@ The SDK supports two authentication modes via the `AuthModule` interface.
 Use `createAuth` for OAuth2 service-account or PKCE browser flows:
 
 ```ts
-import { createAuth, diskd } from '@diskd/sdk';
+import { diskd } from '@diskd/sdk';
 
-const auth = await createAuth({
+const auth = await diskd.auth.credentials({
   scopes: ['openid'],
   keyfilePath: 'credentials.json',
 });
@@ -76,9 +76,9 @@ const drive = diskd.drive({ version: 'v1', auth });
 Use `createApiKeyAuth` for service-to-service communication within the cluster:
 
 ```ts
-import { createApiKeyAuth, diskd } from '@diskd/sdk';
+import { diskd } from '@diskd/sdk';
 
-const auth = createApiKeyAuth({
+const auth = diskd.auth.apiKey({
   apiKey: process.env.DRIVE_API_KEY!,
   workspaceId: process.env.WORKSPACE_ID!,
 });
@@ -283,7 +283,7 @@ npm install @diskd/sdk typeorm
 ### Usage
 
 ```ts
-import { createApiKeyAuth, diskd } from '@diskd/sdk';
+import { diskd } from '@diskd/sdk';
 import { Entity, PrimaryColumn, Column } from 'typeorm';
 
 // Define entities
@@ -300,7 +300,7 @@ class User {
 }
 
 // Create DataSource backed by Drive DB
-const auth = createApiKeyAuth({ apiKey: '...', workspaceId: '...' });
+const auth = diskd.auth.apiKey({ apiKey: '...', workspaceId: '...' });
 
 const ds = diskd.datasource({
   auth,

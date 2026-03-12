@@ -1,5 +1,5 @@
 import type { AgentHubClient } from '../agentHub/agentHubTypes.js';
-import type { AuthModule } from '../auth/types.js';
+import type { ApiKeyAuthParams, AuthModule, SdkCreateParams } from '../auth/types.js';
 import type { DriveDatabaseParams, DriveDatabase } from '../drive/DriveRepository.js';
 import type { DriveClient } from '../drive/types.js';
 import type {
@@ -12,6 +12,14 @@ import type { TgUserbotClient } from '../tgUserbot/tgUserbotTypes.js';
 import type { WebNavigatorClient } from '../webNavigator/webNavigatorTypes.js';
 
 export type DiskD = {
+  /** Auth factory methods. */
+  readonly auth: {
+    /** Create an AuthModule for internal service-to-service communication (API key). */
+    readonly apiKey: (params: ApiKeyAuthParams) => AuthModule;
+    /** Create an AuthModule for external clients (OAuth2 service-account or PKCE). */
+    readonly credentials: (params: SdkCreateParams) => Promise<AuthModule>;
+  };
+
   readonly drive: (params: {
     readonly version: 'v1';
     readonly auth: AuthModule;
