@@ -60,6 +60,8 @@ export type {
   DriveDbResolveByInodeResult,
   DriveDbResolveWithSettingsParams,
   DriveDbResolveWithSettingsResult,
+  DriveDbRollbackParams,
+  DriveDbRollbackResult,
   DriveDbSchema,
   DriveDbSetStatusParams,
   DriveDbSetStatusResult,

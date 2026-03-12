@@ -12,6 +12,7 @@ import type {
   DriveDbQueryResult,
   DriveDbResolveByInodeResult,
   DriveDbResolveWithSettingsResult,
+  DriveDbRollbackResult,
   DriveDbSetStatusResult,
 } from './driveDbTypes.js';
 
@@ -87,6 +88,14 @@ const decodeCommit = (o: unknown): DriveDbCommitResult => {
     commitId: strRequired(r, 'commit_id'),
     enqueuedAt: strRequired(r, 'enqueued_at'),
     completedAt: str(r, 'completed_at'),
+  };
+};
+
+const decodeRollback = (o: unknown): DriveDbRollbackResult => {
+  const r = raw(o);
+  return {
+    name: strRequired(r, 'name'),
+    status: strRequired(r, 'status'),
   };
 };
 
@@ -210,6 +219,14 @@ export const createDriveDbClient = (deps: {
       ...optional('db_type', p.dbType),
     });
     return decodeCommit(result);
+  },
+
+  rollback: async (p) => {
+    const result = await deps.call('drive/db/rollback', {
+      name: p.name,
+      ...optional('db_type', p.dbType),
+    });
+    return decodeRollback(result);
   },
 
   metadata: async (p) => {

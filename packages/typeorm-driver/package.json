@@ -1,0 +1,25 @@
+{
+  "name": "@diskd/typeorm-driver",
+  "version": "0.1.0",
+  "description": "TypeORM driver for Drive DB -- routes SQL through JSON-RPC",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "typeorm": ">=0.3.0"
+  },
+  "dependencies": {
+    "@diskd/sdk": "file:../../"
+  },
+  "devDependencies": {
+    "typeorm": "^0.3.20",
+    "typescript": "^5.7.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "MIT"
+}

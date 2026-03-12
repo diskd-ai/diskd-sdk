@@ -115,6 +115,9 @@ export type DriveDatabase = {
   /** Commit pending changes (flush WAL to S3). */
   readonly commit: () => Promise<{ readonly commitId: string }>;
 
+  /** Rollback uncommitted changes (discard WAL, revert to last commit). */
+  readonly rollback: () => Promise<void>;
+
   /** Get database metadata. */
   readonly metadata: () => Promise<{
     readonly inode: string;
@@ -271,6 +274,10 @@ export const createDriveDatabase = (config: DriveDatabaseConfig): DriveDatabase 
     commit: async () => {
       const result = await db.commit({ name: dbName, dbType });
       return { commitId: result.commitId };
+    },
+
+    rollback: async () => {
+      await db.rollback({ name: dbName, dbType });
     },
 
     metadata: async () => {

@@ -140,6 +140,16 @@ export type DriveDbResolveByInodeResult = {
   readonly dbType: string;
 };
 
+export type DriveDbRollbackParams = {
+  readonly name: string;
+  readonly dbType?: DriveDbType;
+};
+
+export type DriveDbRollbackResult = {
+  readonly name: string;
+  readonly status: string;
+};
+
 export type DriveDbResolveWithSettingsResult = {
   readonly name: string;
   readonly dbInode: string;
@@ -156,6 +166,7 @@ export type DriveDbClient = {
   readonly insert: (params: DriveDbInsertParams) => Promise<DriveDbInsertResult>;
   readonly query: (params: DriveDbQueryParams) => Promise<DriveDbQueryResult>;
   readonly commit: (params: DriveDbCommitParams) => Promise<DriveDbCommitResult>;
+  readonly rollback: (params: DriveDbRollbackParams) => Promise<DriveDbRollbackResult>;
   readonly metadata: (params: DriveDbMetadataParams) => Promise<DriveDbMetadataResult>;
   readonly drop: (params: DriveDbDropParams) => Promise<DriveDbDropResult>;
   readonly setStatus: (params: DriveDbSetStatusParams) => Promise<DriveDbSetStatusResult>;
