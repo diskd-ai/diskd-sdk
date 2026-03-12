@@ -1,15 +1,18 @@
+import { createRequire } from 'node:module';
 import { createAgentHubClient } from '../agentHub/agentHub.js';
 import { createApiKeyAuth } from '../auth/createApiKeyAuth.js';
 import { createAuth } from '../auth/createAuth.js';
 import { createDriveClient } from '../drive/drive.js';
 import { createDriveDatabase } from '../drive/DriveRepository.js';
-import { createDriveDataSource } from '../drive/typeorm/createDriveDataSource.js';
 import { createLlmRouterClient } from '../llmRouter/llmRouter.js';
 import { createMcpHubClient } from '../mcpHub/mcpHub.js';
 import { createTgUserbotClient } from '../tgUserbot/tgUserbot.js';
 import { createWebNavigatorClient } from '../webNavigator/webNavigator.js';
 import type { DriveDataSource } from '../drive/typeorm/datasourceTypes.js';
+import type { DriveDataSourceParams } from '../drive/typeorm/datasourceTypes.js';
 import type { DiskD } from './types.js';
+
+const require = createRequire(import.meta.url);
 
 export const diskd: DiskD = {
   auth: {
@@ -29,7 +32,13 @@ export const diskd: DiskD = {
     return createDriveDatabase({ db: drive.db, dbName, dbType, schema });
   },
 
-  datasource: (params) => createDriveDataSource(params) as DriveDataSource,
+  datasource: (params) => {
+    // Lazy-load typeorm-dependent code so consumers without typeorm are not affected.
+    const { createDriveDataSource } = require('../drive/typeorm/createDriveDataSource.js') as {
+      createDriveDataSource: (p: DriveDataSourceParams) => unknown;
+    };
+    return createDriveDataSource(params) as DriveDataSource;
+  },
 
   llm: ({ auth, url }) => createLlmRouterClient({ auth, url }),
 
