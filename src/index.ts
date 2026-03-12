@@ -66,12 +66,12 @@ export type {
   DriveDbTableSchema,
   DriveDbType,
 } from './drive/driveDbTypes.js';
-export { createDriveRepository } from './drive/DriveRepository.js';
+export { createDriveDatabase } from './drive/DriveRepository.js';
 export type {
-  DeleteOptions,
+  DriveDatabase,
+  DriveDatabaseConfig,
+  DriveDatabaseParams,
   DriveRepository,
-  DriveRepositoryConfig,
-  DriveRepositoryParams,
   FindOptions,
   OrderByClause,
   UpdateOptions,

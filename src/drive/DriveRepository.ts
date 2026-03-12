@@ -1,47 +1,34 @@
 // ---------------------------------------------------------------------------
-// DriveRepository -- base repository pattern for Drive DB-backed storage
+// DriveDatabase + DriveRepository
 // ---------------------------------------------------------------------------
 //
-// Services like app-service can extend this to implement domain-specific
-// repositories using Drive DB (SQLite via JSON-RPC) as their persistence layer.
+// DriveDatabase -- database lifecycle (create, commit, drop, raw SQL, metadata)
+// DriveRepository -- table-scoped CRUD (insert, find, findOne, count, update, delete)
 //
 // Usage:
-//   const repo = diskd.repository({
+//   const db = diskd.database({
 //     auth,
-//     dbName: 'channels.workspace-123.telegram',
-//     dbType: 'telegram',
+//     dbName: 'shop.workspace-123.main',
 //     schema: {
-//       channels: {
-//         id:   { type: 'TEXT', primaryKey: true },
-//         name: { type: 'TEXT', notNull: true },
-//       },
+//       users:  { id: { type: 'TEXT', primaryKey: true }, name: { type: 'TEXT', notNull: true } },
+//       orders: { id: { type: 'TEXT', primaryKey: true }, user_id: { type: 'TEXT' } },
 //     },
 //   });
 //
-//   await repo.ensureCreated();
-//   await repo.insertRows('channels', [{ id: '1', name: 'general' }]);
-//   const rows = await repo.query('SELECT * FROM channels');
-//   await repo.commit();
+//   await db.ensureCreated();
+//
+//   const users = db.repository('users');
+//   await users.insert([{ id: 'u1', name: 'Alice' }]);
+//   const alice = await users.findOne({ id: 'u1' });
+//
+//   await db.commit();
 // ---------------------------------------------------------------------------
 
 import type { DriveDbClient, DriveDbSchema, DriveDbType } from './driveDbTypes.js';
 
 // ---------------------------------------------------------------------------
-// Types
+// Types -- Repository (table-scoped CRUD)
 // ---------------------------------------------------------------------------
-
-export type DriveRepositoryParams = {
-  readonly dbName: string;
-  readonly dbType?: DriveDbType;
-  readonly schema?: DriveDbSchema;
-};
-
-export type DriveRepositoryConfig = {
-  readonly db: DriveDbClient;
-  readonly dbName: string;
-  readonly dbType?: DriveDbType;
-  readonly schema?: DriveDbSchema;
-};
 
 export type WhereClause = {
   readonly [column: string]: unknown;
@@ -64,61 +51,62 @@ export type UpdateOptions = {
   readonly set: Readonly<Record<string, unknown>>;
 };
 
-export type DeleteOptions = {
-  readonly where: WhereClause;
-};
-
 export type DriveRepository = {
-  /** Database name this repository operates on. */
-  readonly dbName: string;
+  /** Table name this repository operates on. */
+  readonly table: string;
 
-  /** Create the database (idempotent -- uses checkExists: true). */
-  readonly ensureCreated: () => Promise<{ readonly dbInode: string; readonly fileId: string }>;
-
-  /** Create the database, dropping it first if it already exists. */
-  readonly recreate: () => Promise<{ readonly dbInode: string; readonly fileId: string }>;
-
-  // -- Generic CRUD operations --
-
-  /** Insert one or more rows into a table. */
+  /** Insert one or more rows. */
   readonly insert: (
-    table: string,
     rows: readonly Readonly<Record<string, unknown>>[],
   ) => Promise<{ readonly inserted: number }>;
 
   /** Find rows matching criteria. */
-  readonly find: (
-    table: string,
-    options?: FindOptions,
-  ) => Promise<readonly Readonly<Record<string, unknown>>[]>;
+  readonly find: (options?: FindOptions) => Promise<readonly Readonly<Record<string, unknown>>[]>;
 
   /** Find a single row matching criteria, or null. */
-  readonly findOne: (
-    table: string,
-    where: WhereClause,
-  ) => Promise<Readonly<Record<string, unknown>> | null>;
+  readonly findOne: (where: WhereClause) => Promise<Readonly<Record<string, unknown>> | null>;
 
   /** Count rows matching criteria. */
-  readonly count: (
-    table: string,
-    where?: WhereClause,
-  ) => Promise<number>;
+  readonly count: (where?: WhereClause) => Promise<number>;
 
-  /** Update rows matching criteria. Returns number of affected rows. */
-  readonly update: (
-    table: string,
-    options: UpdateOptions,
-  ) => Promise<{ readonly changes: number }>;
+  /** Update rows matching criteria. */
+  readonly update: (options: UpdateOptions) => Promise<void>;
 
-  /** Delete rows matching criteria. Returns number of deleted rows. */
-  readonly deleteRows: (
-    table: string,
-    where: WhereClause,
-  ) => Promise<{ readonly changes: number }>;
+  /** Delete rows matching criteria. */
+  readonly deleteRows: (where: WhereClause) => Promise<void>;
+};
 
-  // -- Raw operations --
+// ---------------------------------------------------------------------------
+// Types -- Database (lifecycle + raw operations)
+// ---------------------------------------------------------------------------
 
-  /** Execute a raw SQL query with optional parameters. Returns rows. */
+export type DriveDatabaseParams = {
+  readonly dbName: string;
+  readonly dbType?: DriveDbType;
+  readonly schema?: DriveDbSchema;
+};
+
+export type DriveDatabaseConfig = {
+  readonly db: DriveDbClient;
+  readonly dbName: string;
+  readonly dbType?: DriveDbType;
+  readonly schema?: DriveDbSchema;
+};
+
+export type DriveDatabase = {
+  /** Database name. */
+  readonly dbName: string;
+
+  /** Create the database (idempotent -- checkExists: true). */
+  readonly ensureCreated: () => Promise<{ readonly dbInode: string; readonly fileId: string }>;
+
+  /** Recreate the database (drops if exists). */
+  readonly recreate: () => Promise<{ readonly dbInode: string; readonly fileId: string }>;
+
+  /** Get a table-scoped repository with CRUD operations. */
+  readonly repository: (table: string) => DriveRepository;
+
+  /** Execute a raw SQL query with optional parameters. */
   readonly query: (
     sql: string,
     parameters?: readonly unknown[],
@@ -136,10 +124,7 @@ export type DriveRepository = {
   }>;
 
   /** Set external processing status. */
-  readonly setStatus: (
-    status: string,
-    error?: string,
-  ) => Promise<void>;
+  readonly setStatus: (status: string, error?: string) => Promise<void>;
 
   /** Drop the database entirely. */
   readonly drop: () => Promise<{ readonly deletedFromMetadata: boolean }>;
@@ -191,10 +176,71 @@ const buildLimitOffset = (limit?: number, offset?: number): string => {
 };
 
 // ---------------------------------------------------------------------------
-// Factory
+// Repository factory (table-scoped)
 // ---------------------------------------------------------------------------
 
-export const createDriveRepository = (config: DriveRepositoryConfig): DriveRepository => {
+const createRepository = (deps: {
+  readonly table: string;
+  readonly dbName: string;
+  readonly dbType: DriveDbType | undefined;
+  readonly db: DriveDbClient;
+  readonly execQuery: (sql: string, params?: readonly unknown[]) => Promise<readonly Readonly<Record<string, unknown>>[]>;
+}): DriveRepository => {
+  const { table, db, dbName, dbType, execQuery } = deps;
+
+  return {
+    table,
+
+    insert: async (rows) => {
+      const result = await db.insert({ name: dbName, table, rows, dbType });
+      return { inserted: result.inserted };
+    },
+
+    find: async (options) => {
+      const { where, orderBy, limit, offset } = options ?? {};
+      const w = where ? buildWhereClause(where) : { sql: '', params: [] };
+      const sql = `SELECT * FROM ${table}${w.sql}${orderBy ? buildOrderByClause(orderBy) : ''}${buildLimitOffset(limit, offset)}`;
+      return execQuery(sql, w.params.length > 0 ? w.params : undefined);
+    },
+
+    findOne: async (where) => {
+      const w = buildWhereClause(where);
+      const sql = `SELECT * FROM ${table}${w.sql} LIMIT 1`;
+      const rows = await execQuery(sql, w.params.length > 0 ? w.params : undefined);
+      return rows.length > 0 ? rows[0] : null;
+    },
+
+    count: async (where) => {
+      const w = where ? buildWhereClause(where) : { sql: '', params: [] };
+      const sql = `SELECT COUNT(*) AS cnt FROM ${table}${w.sql}`;
+      const rows = await execQuery(sql, w.params.length > 0 ? w.params : undefined);
+      return Number(rows[0]?.cnt ?? 0);
+    },
+
+    update: async (options) => {
+      const { where, set } = options;
+      const setCols = Object.keys(set);
+      if (setCols.length === 0) return;
+      const setParts = setCols.map((col) => `${col} = ?`);
+      const setParams = setCols.map((col) => set[col]);
+      const w = buildWhereClause(where);
+      const sql = `UPDATE ${table} SET ${setParts.join(', ')}${w.sql}`;
+      await execQuery(sql, [...setParams, ...w.params]);
+    },
+
+    deleteRows: async (where) => {
+      const w = buildWhereClause(where);
+      const sql = `DELETE FROM ${table}${w.sql}`;
+      await execQuery(sql, w.params.length > 0 ? w.params : undefined);
+    },
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Database factory
+// ---------------------------------------------------------------------------
+
+export const createDriveDatabase = (config: DriveDatabaseConfig): DriveDatabase => {
   const { db, dbName, dbType, schema } = config;
 
   const execQuery = async (
@@ -209,84 +255,16 @@ export const createDriveRepository = (config: DriveRepositoryConfig): DriveRepos
     dbName,
 
     ensureCreated: async () => {
-      const result = await db.create({
-        name: dbName,
-        schema,
-        checkExists: true,
-        dbType,
-      });
+      const result = await db.create({ name: dbName, schema, checkExists: true, dbType });
       return { dbInode: result.dbInode, fileId: result.fileId };
     },
 
     recreate: async () => {
-      const result = await db.create({
-        name: dbName,
-        schema,
-        recreate: true,
-        dbType,
-      });
+      const result = await db.create({ name: dbName, schema, recreate: true, dbType });
       return { dbInode: result.dbInode, fileId: result.fileId };
     },
 
-    // -- Generic CRUD --
-
-    insert: async (table, rows) => {
-      const result = await db.insert({ name: dbName, table, rows, dbType });
-      return { inserted: result.inserted };
-    },
-
-    find: async (table, options) => {
-      const { where, orderBy, limit, offset } = options ?? {};
-      const w = where ? buildWhereClause(where) : { sql: '', params: [] };
-      const sql = `SELECT * FROM ${table}${w.sql}${orderBy ? buildOrderByClause(orderBy) : ''}${buildLimitOffset(limit, offset)}`;
-      return execQuery(sql, w.params.length > 0 ? w.params : undefined);
-    },
-
-    findOne: async (table, where) => {
-      const w = buildWhereClause(where);
-      const sql = `SELECT * FROM ${table}${w.sql} LIMIT 1`;
-      const rows = await execQuery(sql, w.params.length > 0 ? w.params : undefined);
-      return rows.length > 0 ? rows[0] : null;
-    },
-
-    count: async (table, where) => {
-      const w = where ? buildWhereClause(where) : { sql: '', params: [] };
-      const sql = `SELECT COUNT(*) AS cnt FROM ${table}${w.sql}`;
-      const rows = await execQuery(sql, w.params.length > 0 ? w.params : undefined);
-      return Number(rows[0]?.cnt ?? 0);
-    },
-
-    update: async (table, options) => {
-      const { where, set } = options;
-      const setCols = Object.keys(set);
-      if (setCols.length === 0) return { changes: 0 };
-
-      const setParts = setCols.map((col) => `${col} = ?`);
-      const setParams = setCols.map((col) => set[col]);
-
-      const w = buildWhereClause(where);
-      const sql = `UPDATE ${table} SET ${setParts.join(', ')}${w.sql}`;
-      const params = [...setParams, ...w.params];
-
-      const rows = await execQuery(sql, params);
-      // SQLite returns changes via rows[0].changes on UPDATE/DELETE via JSON-RPC query
-      const changes = rows.length > 0 && typeof rows[0]?.changes === 'number'
-        ? rows[0].changes as number
-        : 0;
-      return { changes };
-    },
-
-    deleteRows: async (table, where) => {
-      const w = buildWhereClause(where);
-      const sql = `DELETE FROM ${table}${w.sql}`;
-      const rows = await execQuery(sql, w.params.length > 0 ? w.params : undefined);
-      const changes = rows.length > 0 && typeof rows[0]?.changes === 'number'
-        ? rows[0].changes as number
-        : 0;
-      return { changes };
-    },
-
-    // -- Raw operations --
+    repository: (table) => createRepository({ table, dbName, dbType, db, execQuery }),
 
     query: execQuery,
 

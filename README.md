@@ -207,11 +207,12 @@ const resolved = await drive.db.resolveByInode({ dbInode: db.dbInode });
 Drive Repository (CRUD pattern)
 --------------------------------
 
-Higher-level repository with generic CRUD operations -- ideal for services
+Higher-level database + table-scoped repository pattern -- ideal for services
 that use Drive DB as their persistence layer:
 
 ```ts
-const shop = diskd.repository({
+// Create database with schema
+const db = diskd.database({
   auth,
   dbName: 'shop.workspace-123.main',
   dbType: 'database',
@@ -221,47 +222,45 @@ const shop = diskd.repository({
   },
 });
 
-await shop.ensureCreated();
+await db.ensureCreated();
+
+// Get table-scoped repositories
+const users = db.repository('users');
+const orders = db.repository('orders');
 
 // Insert
-await shop.insert('users', [
-  { id: 'u1', name: 'Alice' },
-  { id: 'u2', name: 'Bob' },
-]);
+await users.insert([{ id: 'u1', name: 'Alice' }, { id: 'u2', name: 'Bob' }]);
 
 // Find with where, orderBy, limit, offset
-const users = await shop.find('users', {
+const results = await users.find({
   where: { name: 'Alice' },
   orderBy: { column: 'name', direction: 'ASC' },
   limit: 10,
 });
 
-// Find one
-const alice = await shop.findOne('users', { id: 'u1' });
+// Find one (returns null if not found)
+const alice = await users.findOne({ id: 'u1' });
 
 // Count
-const total = await shop.count('orders');
-const pending = await shop.count('orders', { status: 'pending' });
+const total = await orders.count();
+const pending = await orders.count({ status: 'pending' });
 
 // Update
-await shop.update('orders', {
-  where: { id: 'o1' },
-  set: { status: 'shipped' },
-});
+await orders.update({ where: { id: 'o1' }, set: { status: 'shipped' } });
 
 // Delete
-await shop.deleteRows('orders', { status: 'cancelled' });
+await orders.deleteRows({ status: 'cancelled' });
 
-// Raw SQL for complex queries
-const summary = await shop.query(`
+// Raw SQL at database level for joins and complex queries
+const summary = await db.query(`
   SELECT u.name, SUM(o.total) AS revenue
   FROM users u JOIN orders o ON o.user_id = u.id
   GROUP BY u.id ORDER BY revenue DESC
 `);
 
-// Commit and metadata
-await shop.commit();
-const meta = await shop.metadata();
+// Commit and metadata (database-level operations)
+await db.commit();
+const meta = await db.metadata();
 ```
 
 See `examples/node/drive-db-repository-example.ts`.

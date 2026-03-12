@@ -1,7 +1,7 @@
 /**
  * Drive DB Repository -- shop database example
  *
- * Demonstrates diskd.repository() with generic CRUD operations:
+ * Demonstrates diskd.database() with table-scoped repository CRUD:
  * insert, find, findOne, count, update, deleteRows, plus raw SQL queries.
  *
  * Environment:
@@ -49,47 +49,50 @@ const shopSchema: DriveDbSchema = {
 };
 
 // ---------------------------------------------------------------------------
-// 2. Create repository via diskd.repository()
+// 2. Create database + table-scoped repositories
 // ---------------------------------------------------------------------------
 
-const shop = diskd.repository({
+const db = diskd.database({
   auth,
   dbName: `shop.${WORKSPACE_ID}.main`,
   dbType: 'database',
   schema: shopSchema,
 });
 
-console.log(`Database: ${shop.dbName}\n`);
+const users = db.repository('users');
+const orders = db.repository('orders');
+
+console.log(`Database: ${db.dbName}\n`);
 
 // ---------------------------------------------------------------------------
 // 3. Create database (idempotent)
 // ---------------------------------------------------------------------------
 
 console.log('=== 1. Create shop database ===');
-const { dbInode, fileId } = await shop.ensureCreated();
+const { dbInode, fileId } = await db.ensureCreated();
 console.log(`[ok] Created -- inode: ${dbInode}, fileId: ${fileId}`);
 
 // ---------------------------------------------------------------------------
-// 4. Insert users
+// 4. Insert users via repository
 // ---------------------------------------------------------------------------
 
 console.log('\n=== 2. Insert users ===');
 
-await shop.insert('users', [
+await users.insert([
   { id: 'u1', name: 'Alice', email: 'alice@example.com', created_at: new Date().toISOString() },
   { id: 'u2', name: 'Bob', email: 'bob@example.com', created_at: new Date().toISOString() },
   { id: 'u3', name: 'Charlie', email: 'charlie@example.com', created_at: new Date().toISOString() },
 ]);
 
-console.log(`[ok] Users count: ${await shop.count('users')}`);
+console.log(`[ok] Users count: ${await users.count()}`);
 
 // ---------------------------------------------------------------------------
-// 5. Insert orders
+// 5. Insert orders via repository
 // ---------------------------------------------------------------------------
 
 console.log('\n=== 3. Insert orders ===');
 
-const { inserted } = await shop.insert('orders', [
+const { inserted } = await orders.insert([
   { id: 'o1', user_id: 'u1', product: 'Widget', quantity: 2, price_cents: 1500, status: 'completed', created_at: new Date().toISOString() },
   { id: 'o2', user_id: 'u1', product: 'Gadget', quantity: 1, price_cents: 3200, status: 'pending', created_at: new Date().toISOString() },
   { id: 'o3', user_id: 'u2', product: 'Widget', quantity: 5, price_cents: 1500, status: 'completed', created_at: new Date().toISOString() },
@@ -99,12 +102,12 @@ const { inserted } = await shop.insert('orders', [
 console.log(`[ok] Inserted ${inserted} order(s)`);
 
 // ---------------------------------------------------------------------------
-// 6. find() -- list all users sorted by name
+// 6. find() -- all users sorted by name
 // ---------------------------------------------------------------------------
 
 console.log('\n=== 4. find() -- all users ===');
 
-const allUsers = await shop.find('users', {
+const allUsers = await users.find({
   orderBy: { column: 'name', direction: 'ASC' },
 });
 
@@ -118,7 +121,7 @@ for (const u of allUsers) {
 
 console.log('\n=== 5. find() -- completed orders (limit 2) ===');
 
-const completedOrders = await shop.find('orders', {
+const completedOrders = await orders.find({
   where: { status: 'completed' },
   orderBy: { column: 'created_at', direction: 'DESC' },
   limit: 2,
@@ -134,10 +137,10 @@ for (const o of completedOrders) {
 
 console.log('\n=== 6. findOne() -- user by id ===');
 
-const alice = await shop.findOne('users', { id: 'u1' });
+const alice = await users.findOne({ id: 'u1' });
 console.log(`[ok] Found: ${alice?.name} <${alice?.email}>`);
 
-const missing = await shop.findOne('users', { id: 'u999' });
+const missing = await users.findOne({ id: 'u999' });
 console.log(`[ok] Missing user: ${missing}`);  // null
 
 // ---------------------------------------------------------------------------
@@ -146,8 +149,8 @@ console.log(`[ok] Missing user: ${missing}`);  // null
 
 console.log('\n=== 7. count() ===');
 
-const totalOrders = await shop.count('orders');
-const pendingOrders = await shop.count('orders', { status: 'pending' });
+const totalOrders = await orders.count();
+const pendingOrders = await orders.count({ status: 'pending' });
 console.log(`[ok] Total orders: ${totalOrders}, pending: ${pendingOrders}`);
 
 // ---------------------------------------------------------------------------
@@ -156,15 +159,13 @@ console.log(`[ok] Total orders: ${totalOrders}, pending: ${pendingOrders}`);
 
 console.log('\n=== 8. update() -- ship pending order ===');
 
-const { changes } = await shop.update('orders', {
+await orders.update({
   where: { id: 'o2', status: 'pending' },
   set: { status: 'shipped' },
 });
 
-console.log(`[ok] Updated ${changes} row(s)`);
-
-const updated = await shop.findOne('orders', { id: 'o2' });
-console.log(`     Order o2 status: ${updated?.status}`);
+const updated = await orders.findOne({ id: 'o2' });
+console.log(`[ok] Order o2 status: ${updated?.status}`);
 
 // ---------------------------------------------------------------------------
 // 11. deleteRows()
@@ -172,17 +173,16 @@ console.log(`     Order o2 status: ${updated?.status}`);
 
 console.log('\n=== 9. deleteRows() -- remove shipped orders ===');
 
-const deleted = await shop.deleteRows('orders', { status: 'shipped' });
-console.log(`[ok] Deleted ${deleted.changes} row(s)`);
-console.log(`     Remaining orders: ${await shop.count('orders')}`);
+await orders.deleteRows({ status: 'shipped' });
+console.log(`[ok] Remaining orders: ${await orders.count()}`);
 
 // ---------------------------------------------------------------------------
-// 12. Raw SQL -- join query with parameters
+// 12. Raw SQL on database level -- join query
 // ---------------------------------------------------------------------------
 
 console.log('\n=== 10. Raw SQL -- orders per user ===');
 
-const summary = await shop.query(`
+const summary = await db.query(`
   SELECT u.name, COUNT(o.id) AS order_count, SUM(o.quantity * o.price_cents) AS total_cents
   FROM users u
   LEFT JOIN orders o ON o.user_id = u.id
@@ -196,30 +196,23 @@ for (const row of summary) {
 }
 
 // ---------------------------------------------------------------------------
-// 13. Commit (flush WAL to S3)
+// 13. Commit + metadata
 // ---------------------------------------------------------------------------
 
 console.log('\n=== 11. Commit ===');
+const { commitId } = await db.commit();
+console.log(`[ok] commitId: ${commitId}`);
 
-const { commitId } = await shop.commit();
-console.log(`[ok] Committed -- commitId: ${commitId}`);
-
-// ---------------------------------------------------------------------------
-// 14. Metadata
-// ---------------------------------------------------------------------------
-
-console.log('\n=== 12. Database metadata ===');
-
-const meta = await shop.metadata();
+console.log('\n=== 12. Metadata ===');
+const meta = await db.metadata();
 console.log(`[ok] ${meta.displayName}: ${meta.recordCount} records, ${meta.sizeBytes} bytes`);
 
 // ---------------------------------------------------------------------------
-// 15. Clean up
+// 14. Clean up
 // ---------------------------------------------------------------------------
 
 console.log('\n=== 13. Drop database ===');
-
-const dropResult = await shop.drop();
+const dropResult = await db.drop();
 console.log(`[ok] Dropped: deletedFromMetadata=${dropResult.deletedFromMetadata}`);
 
 console.log('\n[done] Shop database example completed successfully');

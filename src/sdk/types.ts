@@ -1,6 +1,6 @@
 import type { AgentHubClient } from '../agentHub/agentHubTypes.js';
 import type { AuthModule } from '../auth/types.js';
-import type { DriveRepositoryParams, DriveRepository } from '../drive/DriveRepository.js';
+import type { DriveDatabaseParams, DriveDatabase } from '../drive/DriveRepository.js';
 import type { DriveClient } from '../drive/types.js';
 import type { LlmRouterClient } from '../llmRouter/llmRouterTypes.js';
 import type { McpHubClient } from '../mcpHub/mcpHubTypes.js';
@@ -14,10 +14,10 @@ export type DiskD = {
     readonly url?: string;
   }) => DriveClient;
 
-  readonly repository: (params: DriveRepositoryParams & {
+  readonly database: (params: DriveDatabaseParams & {
     readonly auth: AuthModule;
     readonly url?: string;
-  }) => DriveRepository;
+  }) => DriveDatabase;
 
   readonly llm: (params: {
     readonly auth: AuthModule;
