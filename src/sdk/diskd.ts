@@ -1,4 +1,9 @@
+import { createAgentHubClient } from '../agentHub/agentHub.js';
 import { createDriveClient } from '../drive/drive.js';
+import { createLlmRouterClient } from '../llmRouter/llmRouter.js';
+import { createMcpHubClient } from '../mcpHub/mcpHub.js';
+import { createTgUserbotClient } from '../tgUserbot/tgUserbot.js';
+import { createWebNavigatorClient } from '../webNavigator/webNavigator.js';
 import type { DiskD } from './types.js';
 
 export const diskd: DiskD = {
@@ -8,5 +13,15 @@ export const diskd: DiskD = {
     }
     return createDriveClient({ version, auth, url });
   },
+
+  llm: ({ auth, url }) => createLlmRouterClient({ auth, url }),
+
+  mcpHub: ({ auth, workspaceId, url }) => createMcpHubClient({ auth, workspaceId, url }),
+
+  agentHub: ({ auth, workspaceId, url }) => createAgentHubClient({ auth, workspaceId, url }),
+
+  tgUserbot: ({ auth, workspaceId, url }) => createTgUserbotClient({ auth, workspaceId, url }),
+
+  webNavigator: ({ auth, workspaceId, url }) => createWebNavigatorClient({ auth, workspaceId, url }),
 };
 

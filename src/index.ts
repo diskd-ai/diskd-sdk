@@ -76,3 +76,131 @@ export type {
   JsonScalar,
   JsonValue,
 } from './drive/sessionTypes.js';
+
+// -- LLM Router --
+export { createLlmRouterClient } from './llmRouter/llmRouter.js';
+export type {
+  ChatCompletionMessage,
+  CompletionChoice,
+  CompletionParams,
+  CompletionResult,
+  CompletionUsage,
+  EmbeddingObject,
+  EmbeddingParams,
+  EmbeddingResult,
+  EmbeddingUsage,
+  ImageContentPart,
+  ImageUrlContentPart,
+  ListModelsResult,
+  ListProviderModelsParams,
+  ListProviderModelsResult,
+  LlmRouterClient,
+  MessageContent,
+  MessageContentPart,
+  ModelInfo,
+  OcrDocument,
+  OcrPage,
+  OcrParams,
+  OcrResult,
+  ResponseFormat,
+  StreamChunk,
+  TextContentPart,
+  ToolCall,
+  ToolChoice,
+  ToolDefinition,
+  TranscribeParams,
+  TranscribeResult,
+} from './llmRouter/llmRouterTypes.js';
+
+// -- MCP Hub --
+export { createMcpHubClient } from './mcpHub/mcpHub.js';
+export type {
+  CatalogListResult,
+  CatalogQueryParams,
+  McpCatalogCategory,
+  McpCatalogServer,
+  McpHubClient,
+  McpRuntimeSummary,
+  McpServer,
+  McpServerDetails,
+  McpServerLog,
+  McpServerStatus,
+  McpTool,
+} from './mcpHub/mcpHubTypes.js';
+
+// -- Agent Hub --
+export { createAgentHubClient } from './agentHub/agentHub.js';
+export { StreamProtocolHandler } from './agentHub/StreamProtocolHandler.js';
+export { StreamProtocolFetcher, StreamProtocolStream } from './agentHub/StreamProtocolFetcher.js';
+export type {
+  AgentHubClient,
+  AgentHubInvokeParams,
+  AgentHubModelInfo,
+  AgentInfo,
+  AgentInvokeContext,
+  AgentOptions,
+  BillingAliasModel,
+  BillingAliasesResult,
+  SupportedModelsResult,
+} from './agentHub/agentHubTypes.js';
+export type {
+  ContentPartAddedEvent,
+  ContentPartDoneEvent,
+  EventExternalSourceItem,
+  ExternalSourcesAddedEvent,
+  FunctionCallArgumentsDeltaEvent,
+  FunctionCallArgumentsDoneEvent,
+  FunctionCallResultEvent,
+  NotificationEvent,
+  OutputItemAddedEvent,
+  OutputItemDoneEvent,
+  RefusalDeltaEvent,
+  RefusalDoneEvent,
+  ResponseCompletedEvent,
+  ResponseCreatedEvent,
+  ResponseFailedEvent,
+  ResponseIncompleteEvent,
+  ResponseInProgressEvent,
+  SessionUpdateEvent,
+  StreamProtocolErrorEvent,
+  StreamProtocolMap,
+  TextOutputAnnotationAddedEvent,
+  TextOutputDeltaEvent,
+  TextOutputDoneEvent,
+  UpdatePlanEvent,
+} from './agentHub/streamProtocolMap.js';
+
+// -- Telegram Userbot --
+export { createTgUserbotClient } from './tgUserbot/tgUserbot.js';
+export type {
+  TgChannel,
+  TgChannelAddParams,
+  TgChannelAddResult,
+  TgChannelResolveResult,
+  TgChannelStatsResult,
+  TgChannelStatusResult,
+  TgChannelSyncParams,
+  TgMessage,
+  TgMessagesParams,
+  TgMessagesResult,
+  TgTask,
+  TgTaskListResult,
+  TgUserbotClient,
+} from './tgUserbot/tgUserbotTypes.js';
+
+// -- Web Navigator --
+export { createWebNavigatorClient } from './webNavigator/webNavigator.js';
+export type {
+  JobProgress,
+  JobStatus,
+  JobStatusResult,
+  ResolveParams,
+  ResolveResult,
+  ScrapeJob,
+  ScrapeParams,
+  ScrapeResult,
+  ScrapeSubmitResult,
+  ScrapedPage,
+  ScrapeSummary,
+  WebNavigatorClient,
+} from './webNavigator/webNavigatorTypes.js';

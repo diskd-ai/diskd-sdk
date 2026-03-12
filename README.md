@@ -1,10 +1,22 @@
-# @diskd/sdk (MVP)
+# @diskd/sdk
 
-Minimal Google-style SDK for DiskD APIs.
+Unified TypeScript SDK for the Upgraide platform APIs.
 
-- Node (non-interactive): `createAuth({ scopes, keyfilePath })`
-- Web (interactive): `createAuth({ issuer, clientId, redirectUri, scopes, audience })` + PKCE redirect flow
-- Internal services: `createApiKeyAuth({ apiKey, workspaceId })`
+All services are accessible via the `diskd` factory, which provides a consistent
+`createApiKeyAuth` / `createAuth` + `diskd.<service>()` pattern:
+
+```ts
+import { createApiKeyAuth, diskd } from '@diskd/sdk';
+
+const auth = createApiKeyAuth({ apiKey: '...', workspaceId: '...' });
+
+const drive      = diskd.drive({ version: 'v1', auth });
+const llm        = diskd.llm({ auth });
+const agentHub   = diskd.agentHub({ auth, workspaceId: '...' });
+const mcpHub     = diskd.mcpHub({ auth, workspaceId: '...' });
+const tg         = diskd.tgUserbot({ auth, workspaceId: '...' });
+const webNav     = diskd.webNavigator({ auth, workspaceId: '...' });
+```
 
 Installation
 ------------
@@ -37,26 +49,10 @@ npm install
 npm run build
 ```
 
-Configuration
--------------
-
-Drive API base URL is resolved from `DISKD_BASE_URL`:
-
-- Node: `process.env.DISKD_BASE_URL`
-- Browser: `window.DISKD_BASE_URL`
-- Default: `https://apis.upgraide.dev:8080`
-
-Local TLS note (dev only):
-
-`*.upgraide.dev` uses a local/self-signed cert in dev. For Node examples you may need either:
-
-- trust the local CA/cert, or
-- run with `NODE_TLS_REJECT_UNAUTHORIZED=0` (local-only).
-
 Authentication
 --------------
 
-The SDK supports two authentication modes via the `AuthModule` interface:
+The SDK supports two authentication modes via the `AuthModule` interface.
 
 ### External clients (OAuth2)
 
@@ -92,7 +88,24 @@ const drive = diskd.drive({
 });
 ```
 
-Both auth modes produce identical `DriveClient` instances -- the API surface is the same.
+Both auth modes produce identical client instances.
+
+Environment variables
+---------------------
+
+Each service resolves its base URL from an environment variable, falling back
+to an in-cluster K8s service name:
+
+| Service        | Env Variable             | Default                        |
+|----------------|--------------------------|--------------------------------|
+| Drive          | `DISKD_BASE_URL`         | `https://apis.upgraide.dev:8080` |
+| LLM Router     | `LLM_ROUTER_BASE_URL`   | `http://llm-router:3000`      |
+| Agent Hub      | `AGENT_HUB_BASE_URL`    | `http://agent-hub:8081`       |
+| MCP Hub        | `MCP_HUB_BASE_URL`      | `http://mcp-hub:8300`         |
+| TG Userbot     | `TG_USERBOT_BASE_URL`   | `http://tg-userbot:8000`      |
+| Web Navigator  | `WEB_NAVIGATOR_BASE_URL` | `http://web-navigator:8080`  |
+
+All can be overridden per-client via the `url` parameter.
 
 Drive API
 ---------
@@ -110,126 +123,186 @@ await drive.updateMetadata({ inode: 'abc', metadata: { key: 'value' } });
 await drive.updateAttributes({ inode: 'abc', attributes: ['pinned'] });
 ```
 
-### Upload
-
-**Buffer upload** -- single call with progress (handles SHA256, intent, PUT, commit):
+### Upload (buffer + stream)
 
 ```ts
+// Buffer upload
 const result = await drive.upload.file({
   name: 'hello.txt',
   data: new TextEncoder().encode('Hello, world!'),
   mimeType: 'text/plain',
-  onProgress: (uploaded, total) => {
-    console.log(`${uploaded}/${total} bytes`);
-  },
-});
-console.log(`Uploaded: inode=${result.inode}, etag=${result.etag}`);
-```
-
-**Stream upload** -- for large files, pass a `ReadableStream` with pre-computed size and SHA256:
-
-```ts
-import { createReadStream } from 'node:fs';
-import { Readable } from 'node:stream';
-
-const stream = Readable.toWeb(createReadStream('/path/to/large-file.bin')) as ReadableStream<Uint8Array>;
-const result = await drive.upload.file({
-  name: 'large-file.bin',
-  stream,
-  size: 1_000_000_000,
-  sha256Root: 'precomputed-sha256-hex',
   onProgress: (uploaded, total) => console.log(`${uploaded}/${total}`),
 });
-```
 
-**Low-level upload** (start + commit separately):
-
-```ts
-const intent = await drive.upload.start({
-  name: 'file.bin',
-  size: 1024,
-  sha256Root: '...',
-});
-// PUT data to intent.uploadUrl...
-const committed = await drive.upload.commit({
-  intentId: intent.intentId,
-  etag: '...',
+// Stream upload (large files)
+const result = await drive.upload.file({
+  name: 'large.bin',
+  stream: readableStream,
+  size: 1_000_000_000,
+  sha256Root: 'precomputed-hex',
 });
 ```
 
-### Download
-
-Returns a `ReadableStream` -- files are not buffered into memory:
+### Download (streaming)
 
 ```ts
 const file = await drive.download.file({
   inode: 'abc123',
-  onProgress: (downloaded, total) => {
-    console.log(`${downloaded}/${total} bytes`);
-  },
+  onProgress: (downloaded, total) => console.log(`${downloaded}/${total}`),
 });
-console.log(`Size: ${file.size}, type: ${file.mimeType}`);
-
-// Pipe to file (Node.js)
-import { Writable } from 'node:stream';
-import { createWriteStream } from 'node:fs';
-const dest = Writable.toWeb(createWriteStream('/tmp/output.bin')) as WritableStream<Uint8Array>;
-await file.stream.pipeTo(dest);
-
-// Or collect into buffer if needed
-const reader = file.stream.getReader();
-const chunks: Uint8Array[] = [];
-for (;;) {
-  const { done, value } = await reader.read();
-  if (done) break;
-  chunks.push(value);
-}
+await file.stream.pipeTo(writableStream);
 ```
 
-### File metadata
+### File metadata, disk usage, tools, sessions
 
 ```ts
 const meta = await drive.files.metadata({ inode: 'abc' });
-const batch = await drive.files.metadataBatch({ inodes: ['a', 'b'] });
-const url = await drive.files.downloadUrl({ inode: 'abc' });
-```
-
-### Disk usage
-
-```ts
 const usage = await drive.diskUsage();
-console.log(`Used: ${usage.used} bytes`);
-```
-
-### Tools (path-based queries)
-
-```ts
 const ls = await drive.tools.ls({ path: '/', recursive: true });
-const glob = await drive.tools.glob({ pattern: '**/*.md' });
 const grep = await drive.tools.grep({ pattern: 'TODO' });
-const search = await drive.tools.vsearch({ query: 'deployment guide', topK: 5 });
 ```
 
-### Sessions
+See `examples/node/drive-upload-download.ts` and `examples/node/drive-session-external.ts`.
+
+LLM Router API
+--------------
+
+JSON-RPC 2.0 + NDJSON streaming for multi-provider LLM completions:
 
 ```ts
-const session = await drive.session.start({ projectId: 'my-project', title: 'Chat' });
-await session.append([
-  drive.session.message({ role: 'user', content: 'Hello' }),
-  drive.session.message({ role: 'assistant', content: 'Hi there!' }),
-]);
+const llm = diskd.llm({ auth, url: 'http://llm-router:3000' });
 
-const opened = await drive.session.open({
-  projectId: 'my-project',
-  sessionId: session.sessionId,
-  limit: 10,
+// Non-streaming completion
+const result = await llm.completions.create({
+  provider: 'openai', model: 'gpt-4o-mini',
+  messages: [{ role: 'user', content: 'Hello' }],
+  maxTokens: 64,
 });
-console.log(opened.messages);
 
-const list = await drive.session.list({ projectId: 'my-project' });
+// Streaming
+for await (const chunk of llm.completions.stream(params)) {
+  process.stdout.write(chunk.choices[0]?.delta?.content ?? '');
+}
+
+// Models, embeddings, OCR, audio transcription
+const models = await llm.models.listAll();
+const embeddings = await llm.embeddings.create({ provider: 'openai', model: 'text-embedding-3-small', input: ['text'] });
 ```
 
-See `examples/node/drive-session-external.ts` for a complete session workflow example.
+See `examples/node/llm-router-example.ts`.
+
+Agent Hub API
+-------------
+
+SSE streaming with `StreamProtocolHandler` + `StreamProtocolFetcher` for agent invocation:
+
+```ts
+import { diskd, StreamProtocolHandler } from '@diskd/sdk';
+
+const agentHub = diskd.agentHub({ auth, workspaceId: '...' });
+
+// List agents and models
+const agents = await agentHub.agents.list();
+const models = await agentHub.agents.getSupportedModels('assistant');
+const billing = await agentHub.billing.getAliases();
+
+// Invoke with fluent stream handling
+const handler = new StreamProtocolHandler()
+  .on('response.output_text.delta', (e) => process.stdout.write(e.delta))
+  .on('response.completed', (e) => console.log('done', e.response.usage))
+  .on('response.failed', (e) => console.error(e.response.error.message))
+  .on('error', (e) => console.error(e.message));
+
+const stream = await agentHub.invoke({
+  agentName: 'assistant',
+  query: 'Hello',
+  agentOptions: { maxTokens: 256 },
+});
+
+stream.map((event) => handler.handle(event))
+  .stop(() => console.log('stream closed'))
+  .catch((err) => console.error(err));
+```
+
+Stream protocol events include text deltas, function calls/results, content parts
+(images, files, audio), web/file search lifecycle, external sources, plan updates,
+notifications, and error/completion signals.
+
+See `examples/node/agent-hub-example.ts`.
+
+MCP Hub API
+-----------
+
+REST client for MCP server catalog, registry, and integrations:
+
+```ts
+const mcpHub = diskd.mcpHub({ auth, workspaceId: '...' });
+
+// Catalog
+const catalog = await mcpHub.catalog.list({ search: 'github' });
+const details = await mcpHub.catalog.getServerDetails(serverId);
+
+// Registry (installed servers)
+const registry = await mcpHub.registry.list();
+const added = await mcpHub.registry.addServer({ catalogServerId: '...' });
+await mcpHub.registry.toggleTool(serverId, toolId, false);
+const logs = await mcpHub.registry.getServerLogs(serverId, { limit: 10 });
+await mcpHub.registry.deleteServer(serverId);
+
+// Env vars, connection settings, remote servers
+await mcpHub.registry.upsertEnvVar(serverId, { key: 'TOKEN', value: '...' });
+await mcpHub.registry.addRemoteServer({ name: 'My MCP', url: '...', authType: 'pat' });
+```
+
+See `examples/node/mcp-hub-example.ts`.
+
+Telegram Userbot API
+--------------------
+
+REST client for Telegram channel resolution, importing, and message retrieval:
+
+```ts
+const tg = diskd.tgUserbot({ auth, workspaceId: '...' });
+
+// Resolve channel (public, no auth required)
+const resolved = await tg.channels.resolve('durov');
+
+// Channel operations
+const channels = await tg.channels.list();
+await tg.channels.add({ channelIdentifier: '@mychannel', limit: 1000 });
+await tg.channels.sync({ telegramId: -1001234567890 });
+
+// Messages and stats
+const messages = await tg.channels.getMessages(channelId, { limit: 50, searchText: 'keyword' });
+const stats = await tg.channels.getStats(channelId);
+const status = await tg.channels.getStatus(channelId);
+
+// Tasks
+const tasks = await tg.tasks.list();
+await tg.tasks.cancel(taskUuid);
+```
+
+See `examples/node/tg-userbot-example.ts`.
+
+Web Navigator API
+-----------------
+
+REST client for URL resolution and web scraping jobs:
+
+```ts
+const webNav = diskd.webNavigator({ auth, workspaceId: '...' });
+
+// Resolve URL metadata
+const meta = await webNav.resolve({ url: 'https://example.com' });
+
+// Submit scrape job
+const job = await webNav.scrape.submit({ url: 'https://example.com', depth: 1, maxPages: 10 });
+const status = await webNav.scrape.getStatus(job.jobId);
+const result = await webNav.scrape.getResult(job.jobId);
+await webNav.scrape.cancel(job.jobId);
+```
+
+See `examples/node/web-navigator-example.ts`.
 
 Web quickstart (Vite + PKCE)
 ----------------------------
@@ -244,16 +317,15 @@ Publishing a new version
 1. Bump the version in `package.json`:
 
    ```bash
-   npm version patch   # 0.1.0 -> 0.1.1
-   npm version minor   # 0.1.0 -> 0.2.0
-   npm version major   # 0.1.0 -> 1.0.0
+   npm version patch   # 0.3.0 -> 0.3.1
+   npm version minor   # 0.3.0 -> 0.4.0
+   npm version major   # 0.3.0 -> 1.0.0
    ```
 
-2. Push the commit and tag to both remotes:
+2. Push the commit and tag:
 
    ```bash
-   git push github main && git push gitlab main
-   git push github --tags && git push gitlab --tags
+   git push gitlab main --tags
    ```
 
 3. The GitLab CI pipeline triggers on `v*.*.*` tags and automatically:
@@ -263,10 +335,9 @@ Publishing a new version
 
 4. Verify at: `https://gitlab.iosya.com/upgraide-v2/platform-api/-/packages`
 
-Docs & examples
----------------
+Docs and examples
+-----------------
 
 - Quickstart: `docs/sdk-quickstart.md`
 - Examples: `examples/README.md`
 - Design: `docs/drive-session-sdk-design.md`
-- Task docs: `docs/1537-*.md`, `docs/1538-*.md`
