@@ -282,11 +282,11 @@ npm install @diskd/typeorm-driver typeorm
 
 ```ts
 import { createApiKeyAuth } from '@diskd/sdk';
-import { createDriveDataSource } from '@diskd/typeorm-driver';
+import { createDriveDataSource, DriveDriver } from '@diskd/typeorm-driver';
 import { Entity, PrimaryColumn, Column } from 'typeorm';
 
 // Define entities
-@Entity()
+@Entity({ name: 'users' })
 class User {
   @PrimaryColumn({ type: 'varchar', length: 26 })
   id!: string;
@@ -298,18 +298,6 @@ class User {
   email!: string;
 }
 
-@Entity()
-class Order {
-  @PrimaryColumn({ type: 'varchar', length: 26 })
-  id!: string;
-
-  @Column({ type: 'varchar' })
-  userId!: string;
-
-  @Column({ type: 'integer' })
-  total!: number;
-}
-
 // Create DataSource backed by Drive DB
 const auth = createApiKeyAuth({ apiKey: '...', workspaceId: '...' });
 
@@ -317,26 +305,24 @@ const dataSource = createDriveDataSource({
   auth,
   url: 'https://apis.upgraide.me/drive/api/v1',
   dbName: 'shop.workspace-123.main',
-  entities: [User, Order],
-  synchronize: true, // Auto-create tables via DDL
+  entities: [User],
+  synchronize: true,
 });
 
 await dataSource.initialize();
 
-// Use standard TypeORM repositories
+// Standard TypeORM repository operations
 const userRepo = dataSource.getRepository(User);
-
 await userRepo.save({ id: 'u1', name: 'Alice', email: 'alice@example.com' });
-await userRepo.save({ id: 'u2', name: 'Bob', email: 'bob@example.com' });
 
 const alice = await userRepo.findOneBy({ id: 'u1' });
 const users = await userRepo.find({ order: { name: 'ASC' } });
 
 // Persist to S3 (flush WAL)
-const driver = dataSource.driver as import('@diskd/typeorm-driver').DriveDriver;
+const driver = dataSource.driver as DriveDriver;
 await driver.commit();
 
-// Rollback discards uncommitted changes
+// Rollback discards uncommitted changes (revert to last commit)
 await driver.driveRollback();
 ```
 

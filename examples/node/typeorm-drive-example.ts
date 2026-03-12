@@ -1,20 +1,37 @@
+/**
+ * TypeORM + Drive DB -- shop database example
+ *
+ * Demonstrates using TypeORM entities and repositories against Drive DB via
+ * the @diskd/typeorm-driver package. All SQL is routed through Drive DB
+ * JSON-RPC; COMMIT flushes WAL to S3, ROLLBACK discards uncommitted changes.
+ *
+ * Environment:
+ *   DISKD_BASE_URL   - Drive API URL (default: https://apis.upgraide.dev:8080)
+ *   DRIVE_API_KEY    - API key
+ *   WORKSPACE_ID     - Workspace ID
+ *
+ * Run:
+ *   npm run examples:build && node dist-examples/node/typeorm-drive-example.js
+ */
+
+import { createApiKeyAuth } from '../../src/auth/createApiKeyAuth.js';
+import { createDriveDataSource, DriveDriver } from '../../packages/typeorm-driver/src/index.js';
+import { Entity, PrimaryColumn, Column } from 'typeorm';
+
 // ---------------------------------------------------------------------------
-// TypeORM + Drive DB example
-// ---------------------------------------------------------------------------
-//
-// Demonstrates using TypeORM entities and repositories against Drive DB via
-// the @diskd/typeorm-driver package. All SQL is routed through Drive DB
-// JSON-RPC; COMMIT flushes WAL to S3, ROLLBACK discards uncommitted changes.
-//
-// Usage:
-//   DRIVE_API_KEY=... WORKSPACE_ID=... npx ts-node examples/node/typeorm-drive-example.ts
+// Configuration
 // ---------------------------------------------------------------------------
 
-import { createApiKeyAuth } from '../../src/index.js';
-import { Entity, PrimaryColumn, Column, DataSource } from 'typeorm';
+const DRIVE_API_KEY = process.env.DRIVE_API_KEY ?? 'key-dev-1234567890';
+const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
+const DRIVE_URL = process.env.DISKD_BASE_URL
+  ? `${process.env.DISKD_BASE_URL}/drive/api/v1`
+  : 'https://apis.upgraide.dev:8080/drive/api/v1';
+
+const auth = createApiKeyAuth({ apiKey: DRIVE_API_KEY, workspaceId: WORKSPACE_ID });
 
 // ---------------------------------------------------------------------------
-// Entities
+// 1. Define TypeORM entities
 // ---------------------------------------------------------------------------
 
 @Entity({ name: 'users' })
@@ -28,7 +45,7 @@ class User {
   @Column({ type: 'varchar', length: 255 })
   email!: string;
 
-  @Column({ type: 'integer', default: 0 })
+  @Column({ type: 'integer', default: 0, name: 'order_count' })
   orderCount!: number;
 }
 
@@ -48,112 +65,146 @@ class Order {
 }
 
 // ---------------------------------------------------------------------------
-// Main
+// 2. Create DataSource via diskd typeorm driver
 // ---------------------------------------------------------------------------
 
-const main = async () => {
-  const apiKey = process.env.DRIVE_API_KEY;
-  const workspaceId = process.env.WORKSPACE_ID;
-  if (!apiKey || !workspaceId) {
-    console.error('Set DRIVE_API_KEY and WORKSPACE_ID');
-    process.exit(1);
-  }
-
-  const auth = createApiKeyAuth({ apiKey, workspaceId });
-  const driveUrl =
-    process.env.DRIVE_URL ?? 'https://apis.upgraide.me/drive/api/v1';
-  const dbName = `shop.${workspaceId}.typeorm-demo`;
-
-  // -- The createDriveDataSource factory is in @diskd/typeorm-driver.
-  // -- For this example we import it relatively from the packages/ dir.
-  const { createDriveDataSource } = await import(
-    '../../packages/typeorm-driver/src/createDriveDataSource.js'
-  );
-  const { DriveDriver } = await import(
-    '../../packages/typeorm-driver/src/DriveDriver.js'
-  );
-
-  // Create DataSource backed by Drive DB
-  const dataSource: DataSource = createDriveDataSource({
-    auth,
-    url: driveUrl,
-    dbName,
-    entities: [User, Order],
-    synchronize: true,
-    logging: true,
-  });
-
-  console.log('--- Initializing DataSource ---');
-  await dataSource.initialize();
-
-  // -- TypeORM repositories --------------------------------------------- //
-
-  const userRepo = dataSource.getRepository(User);
-  const orderRepo = dataSource.getRepository(Order);
-
-  // Insert users
-  console.log('\n--- Inserting users ---');
-  await userRepo.save({ id: 'u1', name: 'Alice', email: 'alice@shop.io', orderCount: 0 });
-  await userRepo.save({ id: 'u2', name: 'Bob', email: 'bob@shop.io', orderCount: 0 });
-  await userRepo.save({ id: 'u3', name: 'Carol', email: 'carol@shop.io', orderCount: 0 });
-
-  // Insert orders
-  console.log('\n--- Inserting orders ---');
-  await orderRepo.save({ id: 'o1', userId: 'u1', product: 'Widget A', total: 2500 });
-  await orderRepo.save({ id: 'o2', userId: 'u1', product: 'Widget B', total: 1500 });
-  await orderRepo.save({ id: 'o3', userId: 'u2', product: 'Gadget X', total: 7500 });
-
-  // Query
-  console.log('\n--- Querying ---');
-  const alice = await userRepo.findOneBy({ id: 'u1' });
-  console.log('Alice:', alice);
-
-  const allUsers = await userRepo.find({ order: { name: 'ASC' } });
-  console.log('All users:', allUsers);
-
-  const aliceOrders = await orderRepo.findBy({ userId: 'u1' });
-  console.log('Alice orders:', aliceOrders);
-
-  // Raw SQL join
-  console.log('\n--- Raw SQL ---');
-  const summary = await dataSource.query(`
-    SELECT u.name, COUNT(o.id) AS order_count, SUM(o.total) AS revenue
-    FROM users u
-    LEFT JOIN orders o ON o.user_id = u.id
-    GROUP BY u.id
-    ORDER BY revenue DESC
-  `);
-  console.log('Revenue summary:', summary);
-
-  // Commit to S3
-  console.log('\n--- Committing to S3 ---');
-  const driver = dataSource.driver;
-  if (driver instanceof DriveDriver) {
-    const { commitId } = await driver.commit();
-    console.log('Committed:', commitId);
-  }
-
-  // Update
-  console.log('\n--- Updating ---');
-  await userRepo.update({ id: 'u1' }, { orderCount: 2 });
-  const updated = await userRepo.findOneBy({ id: 'u1' });
-  console.log('Alice after update:', updated);
-
-  // Rollback uncommitted changes
-  console.log('\n--- Rolling back ---');
-  if (driver instanceof DriveDriver) {
-    await driver.driveRollback();
-    const afterRollback = await userRepo.findOneBy({ id: 'u1' });
-    console.log('Alice after rollback (orderCount should be 0):', afterRollback);
-  }
-
-  // Cleanup
-  console.log('\n--- Cleanup ---');
-  await dataSource.destroy();
-  console.log('Done.');
-};
-
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
+const dataSource = createDriveDataSource({
+  auth,
+  url: DRIVE_URL,
+  dbName: `shop.${WORKSPACE_ID}.typeorm-demo`,
+  entities: [User, Order],
+  synchronize: true,
 });
+
+console.log(`Database: shop.${WORKSPACE_ID}.typeorm-demo\n`);
+
+// ---------------------------------------------------------------------------
+// 3. Initialize (creates tables via DDL if synchronize: true)
+// ---------------------------------------------------------------------------
+
+console.log('=== 1. Initialize DataSource ===');
+await dataSource.initialize();
+console.log('[ok] DataSource initialized, tables synchronized');
+
+// ---------------------------------------------------------------------------
+// 4. Insert users via TypeORM repository
+// ---------------------------------------------------------------------------
+
+console.log('\n=== 2. Insert users ===');
+
+const userRepo = dataSource.getRepository(User);
+const orderRepo = dataSource.getRepository(Order);
+
+await userRepo.save([
+  { id: 'u1', name: 'Alice', email: 'alice@shop.io', orderCount: 0 },
+  { id: 'u2', name: 'Bob', email: 'bob@shop.io', orderCount: 0 },
+  { id: 'u3', name: 'Carol', email: 'carol@shop.io', orderCount: 0 },
+]);
+
+const userCount = await userRepo.count();
+console.log(`[ok] Users count: ${userCount}`);
+
+// ---------------------------------------------------------------------------
+// 5. Insert orders
+// ---------------------------------------------------------------------------
+
+console.log('\n=== 3. Insert orders ===');
+
+await orderRepo.save([
+  { id: 'o1', userId: 'u1', product: 'Widget A', total: 2500 },
+  { id: 'o2', userId: 'u1', product: 'Widget B', total: 1500 },
+  { id: 'o3', userId: 'u2', product: 'Gadget X', total: 7500 },
+  { id: 'o4', userId: 'u3', product: 'Gizmo Z', total: 4200 },
+]);
+
+const orderCount = await orderRepo.count();
+console.log(`[ok] Orders count: ${orderCount}`);
+
+// ---------------------------------------------------------------------------
+// 6. findOneBy()
+// ---------------------------------------------------------------------------
+
+console.log('\n=== 4. findOneBy() -- user by id ===');
+
+const alice = await userRepo.findOneBy({ id: 'u1' });
+console.log(`[ok] Found: ${alice?.name} <${alice?.email}>`);
+
+const missing = await userRepo.findOneBy({ id: 'u999' });
+console.log(`[ok] Missing user: ${missing}`); // null
+
+// ---------------------------------------------------------------------------
+// 7. find() with order
+// ---------------------------------------------------------------------------
+
+console.log('\n=== 5. find() -- all users sorted ===');
+
+const allUsers = await userRepo.find({ order: { name: 'ASC' } });
+
+for (const u of allUsers) {
+  console.log(`     ${u.id} -- ${u.name} <${u.email}>`);
+}
+
+// ---------------------------------------------------------------------------
+// 8. findBy() -- filtered query
+// ---------------------------------------------------------------------------
+
+console.log('\n=== 6. findBy() -- orders for user u1 ===');
+
+const aliceOrders = await orderRepo.findBy({ userId: 'u1' });
+
+for (const o of aliceOrders) {
+  console.log(`     ${o.id}: ${o.product} -- $${(o.total / 100).toFixed(2)}`);
+}
+
+// ---------------------------------------------------------------------------
+// 9. Raw SQL -- join query
+// ---------------------------------------------------------------------------
+
+console.log('\n=== 7. Raw SQL -- revenue per user ===');
+
+const summary = await dataSource.query(`
+  SELECT u.name, COUNT(o.id) AS order_count, SUM(o.total) AS revenue
+  FROM users u
+  LEFT JOIN orders o ON o.user_id = u.id
+  GROUP BY u.id
+  ORDER BY revenue DESC
+`);
+
+for (const row of summary) {
+  const dollars = (Number(row.revenue ?? 0) / 100).toFixed(2);
+  console.log(`     ${row.name}: ${row.order_count} order(s), $${dollars}`);
+}
+
+// ---------------------------------------------------------------------------
+// 10. Commit -- flush WAL to S3
+// ---------------------------------------------------------------------------
+
+console.log('\n=== 8. Commit to S3 ===');
+
+const driver = dataSource.driver as DriveDriver;
+const { commitId } = await driver.commit();
+console.log(`[ok] commitId: ${commitId}`);
+
+// ---------------------------------------------------------------------------
+// 11. Update -- then rollback
+// ---------------------------------------------------------------------------
+
+console.log('\n=== 9. Update + rollback ===');
+
+await userRepo.update({ id: 'u1' }, { orderCount: 2 });
+const updated = await userRepo.findOneBy({ id: 'u1' });
+console.log(`[ok] Alice orderCount after update: ${updated?.orderCount}`);
+
+await driver.driveRollback();
+const afterRollback = await userRepo.findOneBy({ id: 'u1' });
+console.log(`[ok] Alice orderCount after rollback: ${afterRollback?.orderCount} (should be 0)`);
+
+// ---------------------------------------------------------------------------
+// 12. Cleanup
+// ---------------------------------------------------------------------------
+
+console.log('\n=== 10. Cleanup ===');
+await dataSource.destroy();
+console.log('[ok] DataSource destroyed');
+
+console.log('\n[done] TypeORM + Drive DB example completed successfully');
