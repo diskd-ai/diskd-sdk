@@ -26,13 +26,17 @@ const readJsonResponse = async (response: Response): Promise<unknown> => {
   }
 };
 
-export const jsonRpcCall = async (params: {
+export type JsonRpcCallParams = {
   readonly url: string;
-  readonly bearerToken: string;
   readonly method: string;
   readonly rpcParams: unknown;
   readonly id: number;
-}): Promise<unknown> => {
+} & (
+  | { readonly bearerToken: string; readonly headers?: undefined }
+  | { readonly headers: Readonly<Record<string, string>>; readonly bearerToken?: undefined }
+);
+
+export const jsonRpcCall = async (params: JsonRpcCallParams): Promise<unknown> => {
   const payload: JsonRpcRequest = {
     jsonrpc: '2.0',
     method: params.method,
@@ -40,10 +44,14 @@ export const jsonRpcCall = async (params: {
     id: params.id,
   };
 
+  const authHeaders: Record<string, string> = params.headers
+    ? { ...params.headers }
+    : { Authorization: `Bearer ${params.bearerToken}` };
+
   const response = await fetch(params.url, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${params.bearerToken}`,
+      ...authHeaders,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),

@@ -41,7 +41,9 @@
     "examples:build": "npm run build && node -e \"require('node:fs').rmSync('dist-examples',{recursive:true,force:true})\" && tsc -p tsconfig.examples.json",
     "examples:node": "npm run examples:build && node dist-examples/node/quickstart.js",
     "examples:smoke": "npm run examples:node",
-    "examples:tree": "npm run examples:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-examples/node/drive-tree.js"
+    "examples:tree": "npm run examples:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-examples/node/drive-tree.js",
+    "examples:session-internal": "npm run examples:build && node dist-examples/node/drive-session-internal.js",
+    "examples:session-external": "npm run examples:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-examples/node/drive-session-external.js"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",

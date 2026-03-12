@@ -1,0 +1,5 @@
+# Tilt Configuration - @diskd/sdk (platform-api)
+# SDK test and example runners -- no K8s deployments.
+# Requires the 'drive' service group to be running.
+
+environment: local
