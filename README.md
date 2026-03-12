@@ -11,6 +11,8 @@ import { createApiKeyAuth, diskd } from '@diskd/sdk';
 const auth = createApiKeyAuth({ apiKey: '...', workspaceId: '...' });
 
 const drive      = diskd.drive({ version: 'v1', auth });
+const db         = diskd.database({ auth, dbName: '...', schema: { ... } });
+const ds         = diskd.datasource({ auth, dbName: '...', entities: [...] });
 const llm        = diskd.llm({ auth });
 const agentHub   = diskd.agentHub({ auth, workspaceId: '...' });
 const mcpHub     = diskd.mcpHub({ auth, workspaceId: '...' });
@@ -265,24 +267,23 @@ const meta = await db.metadata();
 
 See `examples/node/drive-db-repository-example.ts`.
 
-TypeORM Driver (`@diskd/typeorm-driver`)
-----------------------------------------
+TypeORM Driver (`diskd.datasource()`)
+-------------------------------------
 
 Use TypeORM entities, relations, and repositories against Drive DB. SQL is routed
 through Drive DB JSON-RPC, and TypeORM's transaction lifecycle maps to Drive DB's
-commit/rollback semantics.
+commit/rollback semantics. Requires `typeorm` as a peer dependency.
 
 ### Installation
 
 ```bash
-npm install @diskd/typeorm-driver typeorm
+npm install @diskd/sdk typeorm
 ```
 
 ### Usage
 
 ```ts
-import { createApiKeyAuth } from '@diskd/sdk';
-import { createDriveDataSource, DriveDriver } from '@diskd/typeorm-driver';
+import { createApiKeyAuth, diskd } from '@diskd/sdk';
 import { Entity, PrimaryColumn, Column } from 'typeorm';
 
 // Define entities
@@ -301,7 +302,7 @@ class User {
 // Create DataSource backed by Drive DB
 const auth = createApiKeyAuth({ apiKey: '...', workspaceId: '...' });
 
-const dataSource = createDriveDataSource({
+const ds = diskd.datasource({
   auth,
   url: 'https://apis.upgraide.me/drive/api/v1',
   dbName: 'shop.workspace-123.main',
@@ -309,21 +310,20 @@ const dataSource = createDriveDataSource({
   synchronize: true,
 });
 
-await dataSource.initialize();
+await ds.initialize();
 
 // Standard TypeORM repository operations
-const userRepo = dataSource.getRepository(User);
+const userRepo = ds.getRepository(User);
 await userRepo.save({ id: 'u1', name: 'Alice', email: 'alice@example.com' });
 
 const alice = await userRepo.findOneBy({ id: 'u1' });
 const users = await userRepo.find({ order: { name: 'ASC' } });
 
 // Persist to S3 (flush WAL)
-const driver = dataSource.driver as DriveDriver;
-await driver.commit();
+await ds.driver.commit();
 
 // Rollback discards uncommitted changes (revert to last commit)
-await driver.driveRollback();
+await ds.driver.driveRollback();
 ```
 
 ### Transaction mapping

@@ -53,10 +53,19 @@
   },
   "devDependencies": {
     "@types/node": "^22.15.32",
+    "typeorm": "^0.3.28",
     "typescript": "^5.8.3"
   },
   "dependencies": {
     "undici": "^7.21.0"
+  },
+  "peerDependencies": {
+    "typeorm": "^0.3.28"
+  },
+  "peerDependenciesMeta": {
+    "typeorm": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=22.0.0"

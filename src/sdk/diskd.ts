@@ -1,10 +1,12 @@
 import { createAgentHubClient } from '../agentHub/agentHub.js';
 import { createDriveClient } from '../drive/drive.js';
 import { createDriveDatabase } from '../drive/DriveRepository.js';
+import { createDriveDataSource } from '../drive/typeorm/createDriveDataSource.js';
 import { createLlmRouterClient } from '../llmRouter/llmRouter.js';
 import { createMcpHubClient } from '../mcpHub/mcpHub.js';
 import { createTgUserbotClient } from '../tgUserbot/tgUserbot.js';
 import { createWebNavigatorClient } from '../webNavigator/webNavigator.js';
+import type { DriveDataSource } from '../drive/typeorm/datasourceTypes.js';
 import type { DiskD } from './types.js';
 
 export const diskd: DiskD = {
@@ -19,6 +21,8 @@ export const diskd: DiskD = {
     const drive = createDriveClient({ version: 'v1', auth, url });
     return createDriveDatabase({ db: drive.db, dbName, dbType, schema });
   },
+
+  datasource: (params) => createDriveDataSource(params) as DriveDataSource,
 
   llm: ({ auth, url }) => createLlmRouterClient({ auth, url }),
 

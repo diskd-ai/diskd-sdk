@@ -79,6 +79,12 @@ export type {
   UpdateOptions,
   WhereClause,
 } from './drive/DriveRepository.js';
+export type {
+  DriveDataSource,
+  DriveDataSourceDriver,
+  DriveDataSourceParams,
+  DriveDataSourceRepository,
+} from './drive/typeorm/datasourceTypes.js';
 export type { DriveSession, DriveSessionManager } from './drive/sessionObject.js';
 export { createDriveSessionManager } from './drive/sessionObject.js';
 export type { MessageParams } from './drive/sessionBuilder.js';

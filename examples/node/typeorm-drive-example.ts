@@ -2,8 +2,8 @@
  * TypeORM + Drive DB -- shop database example
  *
  * Demonstrates using TypeORM entities and repositories against Drive DB via
- * the @diskd/typeorm-driver package. All SQL is routed through Drive DB
- * JSON-RPC; COMMIT flushes WAL to S3, ROLLBACK discards uncommitted changes.
+ * diskd.datasource(). All SQL is routed through Drive DB JSON-RPC; COMMIT
+ * flushes WAL to S3, ROLLBACK discards uncommitted changes.
  *
  * Environment:
  *   DISKD_BASE_URL   - Drive API URL (default: https://apis.upgraide.dev:8080)
@@ -14,8 +14,7 @@
  *   npm run examples:build && node dist-examples/node/typeorm-drive-example.js
  */
 
-import { createApiKeyAuth } from '../../src/auth/createApiKeyAuth.js';
-import { createDriveDataSource, DriveDriver } from '../../packages/typeorm-driver/src/index.js';
+import { createApiKeyAuth, diskd } from '../../src/index.js';
 import { Entity, PrimaryColumn, Column } from 'typeorm';
 
 // ---------------------------------------------------------------------------
@@ -65,10 +64,10 @@ class Order {
 }
 
 // ---------------------------------------------------------------------------
-// 2. Create DataSource via diskd typeorm driver
+// 2. Create DataSource via diskd.datasource()
 // ---------------------------------------------------------------------------
 
-const dataSource = createDriveDataSource({
+const ds = diskd.datasource({
   auth,
   url: DRIVE_URL,
   dbName: `shop.${WORKSPACE_ID}.typeorm-demo`,
@@ -83,7 +82,7 @@ console.log(`Database: shop.${WORKSPACE_ID}.typeorm-demo\n`);
 // ---------------------------------------------------------------------------
 
 console.log('=== 1. Initialize DataSource ===');
-await dataSource.initialize();
+await ds.initialize();
 console.log('[ok] DataSource initialized, tables synchronized');
 
 // ---------------------------------------------------------------------------
@@ -92,8 +91,8 @@ console.log('[ok] DataSource initialized, tables synchronized');
 
 console.log('\n=== 2. Insert users ===');
 
-const userRepo = dataSource.getRepository(User);
-const orderRepo = dataSource.getRepository(Order);
+const userRepo = ds.getRepository(User);
+const orderRepo = ds.getRepository(Order);
 
 await userRepo.save([
   { id: 'u1', name: 'Alice', email: 'alice@shop.io', orderCount: 0 },
@@ -162,13 +161,13 @@ for (const o of aliceOrders) {
 
 console.log('\n=== 7. Raw SQL -- revenue per user ===');
 
-const summary = await dataSource.query(`
+const summary = await ds.query(`
   SELECT u.name, COUNT(o.id) AS order_count, SUM(o.total) AS revenue
   FROM users u
   LEFT JOIN orders o ON o.user_id = u.id
   GROUP BY u.id
   ORDER BY revenue DESC
-`);
+`) as ReadonlyArray<Record<string, unknown>>;
 
 for (const row of summary) {
   const dollars = (Number(row.revenue ?? 0) / 100).toFixed(2);
@@ -181,8 +180,7 @@ for (const row of summary) {
 
 console.log('\n=== 8. Commit to S3 ===');
 
-const driver = dataSource.driver as DriveDriver;
-const { commitId } = await driver.commit();
+const { commitId } = await ds.driver.commit();
 console.log(`[ok] commitId: ${commitId}`);
 
 // ---------------------------------------------------------------------------
@@ -195,7 +193,7 @@ await userRepo.update({ id: 'u1' }, { orderCount: 2 });
 const updated = await userRepo.findOneBy({ id: 'u1' });
 console.log(`[ok] Alice orderCount after update: ${updated?.orderCount}`);
 
-await driver.driveRollback();
+await ds.driver.driveRollback();
 const afterRollback = await userRepo.findOneBy({ id: 'u1' });
 console.log(`[ok] Alice orderCount after rollback: ${afterRollback?.orderCount} (should be 0)`);
 
@@ -204,7 +202,7 @@ console.log(`[ok] Alice orderCount after rollback: ${afterRollback?.orderCount} 
 // ---------------------------------------------------------------------------
 
 console.log('\n=== 10. Cleanup ===');
-await dataSource.destroy();
+await ds.destroy();
 console.log('[ok] DataSource destroyed');
 
 console.log('\n[done] TypeORM + Drive DB example completed successfully');

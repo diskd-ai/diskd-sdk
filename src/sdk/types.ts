@@ -2,6 +2,10 @@ import type { AgentHubClient } from '../agentHub/agentHubTypes.js';
 import type { AuthModule } from '../auth/types.js';
 import type { DriveDatabaseParams, DriveDatabase } from '../drive/DriveRepository.js';
 import type { DriveClient } from '../drive/types.js';
+import type {
+  DriveDataSource,
+  DriveDataSourceParams,
+} from '../drive/typeorm/datasourceTypes.js';
 import type { LlmRouterClient } from '../llmRouter/llmRouterTypes.js';
 import type { McpHubClient } from '../mcpHub/mcpHubTypes.js';
 import type { TgUserbotClient } from '../tgUserbot/tgUserbotTypes.js';
@@ -18,6 +22,9 @@ export type DiskD = {
     readonly auth: AuthModule;
     readonly url?: string;
   }) => DriveDatabase;
+
+  /** Create a TypeORM DataSource backed by Drive DB (requires `typeorm` peer). */
+  readonly datasource: (params: DriveDataSourceParams) => DriveDataSource;
 
   readonly llm: (params: {
     readonly auth: AuthModule;
