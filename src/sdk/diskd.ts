@@ -1,5 +1,6 @@
 import { createAgentHubClient } from '../agentHub/agentHub.js';
 import { createDriveClient } from '../drive/drive.js';
+import { createDriveRepository } from '../drive/DriveRepository.js';
 import { createLlmRouterClient } from '../llmRouter/llmRouter.js';
 import { createMcpHubClient } from '../mcpHub/mcpHub.js';
 import { createTgUserbotClient } from '../tgUserbot/tgUserbot.js';
@@ -12,6 +13,11 @@ export const diskd: DiskD = {
       throw new Error('Unsupported Drive API version');
     }
     return createDriveClient({ version, auth, url });
+  },
+
+  repository: ({ auth, url, dbName, dbType, schema }) => {
+    const drive = createDriveClient({ version: 'v1', auth, url });
+    return createDriveRepository({ db: drive.db, dbName, dbType, schema });
   },
 
   llm: ({ auth, url }) => createLlmRouterClient({ auth, url }),

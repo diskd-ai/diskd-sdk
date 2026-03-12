@@ -164,6 +164,108 @@ const grep = await drive.tools.grep({ pattern: 'TODO' });
 
 See `examples/node/drive-upload-download.ts` and `examples/node/drive-session-external.ts`.
 
+Drive Database API
+------------------
+
+JSON-RPC client for Drive's SQLite-backed database operations:
+
+```ts
+const drive = diskd.drive({ version: 'v1', auth });
+
+// Create a database with schema
+const db = await drive.db.create({
+  name: 'myapp.workspace-123.main',
+  schema: {
+    users: {
+      id:    { type: 'TEXT', primaryKey: true },
+      name:  { type: 'TEXT', notNull: true },
+      email: { type: 'TEXT', notNull: true },
+    },
+  },
+});
+
+// Insert rows
+await drive.db.insert({
+  name: 'myapp.workspace-123.main',
+  table: 'users',
+  rows: [{ id: '1', name: 'Alice', email: 'alice@example.com' }],
+});
+
+// Query with parameters
+const result = await drive.db.query({
+  name: 'myapp.workspace-123.main',
+  sql: 'SELECT * FROM users WHERE id = ?',
+  parameters: ['1'],
+});
+
+// Commit, metadata, drop, resolve
+await drive.db.commit({ name: 'myapp.workspace-123.main' });
+const meta = await drive.db.metadata({ name: 'myapp.workspace-123.main' });
+const resolved = await drive.db.resolveByInode({ dbInode: db.dbInode });
+```
+
+Drive Repository (CRUD pattern)
+--------------------------------
+
+Higher-level repository with generic CRUD operations -- ideal for services
+that use Drive DB as their persistence layer:
+
+```ts
+const shop = diskd.repository({
+  auth,
+  dbName: 'shop.workspace-123.main',
+  dbType: 'database',
+  schema: {
+    users:  { id: { type: 'TEXT', primaryKey: true }, name: { type: 'TEXT', notNull: true } },
+    orders: { id: { type: 'TEXT', primaryKey: true }, user_id: { type: 'TEXT' }, total: { type: 'INTEGER' } },
+  },
+});
+
+await shop.ensureCreated();
+
+// Insert
+await shop.insert('users', [
+  { id: 'u1', name: 'Alice' },
+  { id: 'u2', name: 'Bob' },
+]);
+
+// Find with where, orderBy, limit, offset
+const users = await shop.find('users', {
+  where: { name: 'Alice' },
+  orderBy: { column: 'name', direction: 'ASC' },
+  limit: 10,
+});
+
+// Find one
+const alice = await shop.findOne('users', { id: 'u1' });
+
+// Count
+const total = await shop.count('orders');
+const pending = await shop.count('orders', { status: 'pending' });
+
+// Update
+await shop.update('orders', {
+  where: { id: 'o1' },
+  set: { status: 'shipped' },
+});
+
+// Delete
+await shop.deleteRows('orders', { status: 'cancelled' });
+
+// Raw SQL for complex queries
+const summary = await shop.query(`
+  SELECT u.name, SUM(o.total) AS revenue
+  FROM users u JOIN orders o ON o.user_id = u.id
+  GROUP BY u.id ORDER BY revenue DESC
+`);
+
+// Commit and metadata
+await shop.commit();
+const meta = await shop.metadata();
+```
+
+See `examples/node/drive-db-repository-example.ts`.
+
 LLM Router API
 --------------
 

@@ -40,6 +40,43 @@ export type {
   DriveUploadStartParams,
   DriveUploadStartResult,
 } from './drive/driveTypes.js';
+export { createDriveDbClient } from './drive/driveDb.js';
+export type {
+  DriveDbClient,
+  DriveDbColumnDef,
+  DriveDbCommitParams,
+  DriveDbCommitResult,
+  DriveDbCreateParams,
+  DriveDbCreateResult,
+  DriveDbDropParams,
+  DriveDbDropResult,
+  DriveDbInsertParams,
+  DriveDbInsertResult,
+  DriveDbMetadataParams,
+  DriveDbMetadataResult,
+  DriveDbQueryParams,
+  DriveDbQueryResult,
+  DriveDbResolveByInodeParams,
+  DriveDbResolveByInodeResult,
+  DriveDbResolveWithSettingsParams,
+  DriveDbResolveWithSettingsResult,
+  DriveDbSchema,
+  DriveDbSetStatusParams,
+  DriveDbSetStatusResult,
+  DriveDbTableSchema,
+  DriveDbType,
+} from './drive/driveDbTypes.js';
+export { createDriveRepository } from './drive/DriveRepository.js';
+export type {
+  DeleteOptions,
+  DriveRepository,
+  DriveRepositoryConfig,
+  DriveRepositoryParams,
+  FindOptions,
+  OrderByClause,
+  UpdateOptions,
+  WhereClause,
+} from './drive/DriveRepository.js';
 export type { DriveSession, DriveSessionManager } from './drive/sessionObject.js';
 export { createDriveSessionManager } from './drive/sessionObject.js';
 export type { MessageParams } from './drive/sessionBuilder.js';

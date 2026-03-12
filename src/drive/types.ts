@@ -1,3 +1,4 @@
+import type { DriveDbClient } from './driveDbTypes.js';
 import type { DriveSessionManager } from './sessionObject.js';
 import type {
   DriveCreateParams,
@@ -73,6 +74,9 @@ export type DriveClient = {
     readonly grep: (params: DriveToolsGrepParams) => Promise<DriveToolsResult>;
     readonly vsearch: (params: DriveToolsVsearchParams) => Promise<DriveToolsResult>;
   };
+
+  // Database operations (Drive DB -- SQLite via JSON-RPC)
+  readonly db: DriveDbClient;
 
   // Session management
   readonly session: DriveSessionManager;

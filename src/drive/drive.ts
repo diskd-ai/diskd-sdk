@@ -1,5 +1,6 @@
 import type { AuthModule } from '../auth/types.js';
 import { resolveDiskdBaseUrl } from '../env/baseUrl.js';
+import { createDriveDbClient } from './driveDb.js';
 import { jsonRpcCall } from './rpc.js';
 import { createDriveSessionClient } from './session.js';
 import { createDriveSessionManager } from './sessionObject.js';
@@ -250,6 +251,7 @@ export const createDriveClient = (params: {
     return jsonRpcCall({ url: rpcUrl, bearerToken, method, rpcParams, id });
   };
 
+  const db = createDriveDbClient({ call });
   const rpc = createDriveSessionClient({ call });
   const session = createDriveSessionManager({ rpc });
 
@@ -532,6 +534,9 @@ export const createDriveClient = (params: {
         return decodeToolsResult(result);
       },
     },
+
+    // -- Database --
+    db,
 
     // -- Session --
     session,
