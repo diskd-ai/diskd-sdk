@@ -265,6 +265,99 @@ const meta = await db.metadata();
 
 See `examples/node/drive-db-repository-example.ts`.
 
+TypeORM Driver (`@diskd/typeorm-driver`)
+----------------------------------------
+
+Use TypeORM entities, relations, and repositories against Drive DB. SQL is routed
+through Drive DB JSON-RPC, and TypeORM's transaction lifecycle maps to Drive DB's
+commit/rollback semantics.
+
+### Installation
+
+```bash
+npm install @diskd/typeorm-driver typeorm
+```
+
+### Usage
+
+```ts
+import { createApiKeyAuth } from '@diskd/sdk';
+import { createDriveDataSource } from '@diskd/typeorm-driver';
+import { Entity, PrimaryColumn, Column } from 'typeorm';
+
+// Define entities
+@Entity()
+class User {
+  @PrimaryColumn({ type: 'varchar', length: 26 })
+  id!: string;
+
+  @Column({ type: 'varchar' })
+  name!: string;
+
+  @Column({ type: 'varchar' })
+  email!: string;
+}
+
+@Entity()
+class Order {
+  @PrimaryColumn({ type: 'varchar', length: 26 })
+  id!: string;
+
+  @Column({ type: 'varchar' })
+  userId!: string;
+
+  @Column({ type: 'integer' })
+  total!: number;
+}
+
+// Create DataSource backed by Drive DB
+const auth = createApiKeyAuth({ apiKey: '...', workspaceId: '...' });
+
+const dataSource = createDriveDataSource({
+  auth,
+  url: 'https://apis.upgraide.me/drive/api/v1',
+  dbName: 'shop.workspace-123.main',
+  entities: [User, Order],
+  synchronize: true, // Auto-create tables via DDL
+});
+
+await dataSource.initialize();
+
+// Use standard TypeORM repositories
+const userRepo = dataSource.getRepository(User);
+
+await userRepo.save({ id: 'u1', name: 'Alice', email: 'alice@example.com' });
+await userRepo.save({ id: 'u2', name: 'Bob', email: 'bob@example.com' });
+
+const alice = await userRepo.findOneBy({ id: 'u1' });
+const users = await userRepo.find({ order: { name: 'ASC' } });
+
+// Persist to S3 (flush WAL)
+const driver = dataSource.driver as import('@diskd/typeorm-driver').DriveDriver;
+await driver.commit();
+
+// Rollback discards uncommitted changes
+await driver.driveRollback();
+```
+
+### Transaction mapping
+
+| TypeORM operation       | Drive DB action                        |
+|------------------------|----------------------------------------|
+| `BEGIN TRANSACTION`    | No-op (writes auto-accumulate in WAL)  |
+| `COMMIT`               | `drive.db.commit()` -- flush WAL to S3 |
+| `ROLLBACK`             | `drive.db.rollback()` -- discard WAL   |
+
+### Limitations (v1)
+
+- No nested transactions / savepoints (deferred to v2)
+- Affected row count returns 0 (each JSON-RPC call is a separate SQLite
+  connection; works fine for ULID-based entities)
+- Schema introspection from live database is limited; `synchronize: true`
+  generates DDL directly
+
+See `examples/node/typeorm-drive-example.ts` and `docs/typeorm-driver-design.md`.
+
 LLM Router API
 --------------
 
