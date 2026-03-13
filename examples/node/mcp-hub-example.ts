@@ -2,7 +2,7 @@
  * MCP Hub SDK -- internal service example
  *
  * Demonstrates catalog browsing, registry management, tool toggling, and log
- * retrieval using the diskd.mcpHub() factory with API key auth.
+ * retrieval using the diskd.os.mcp() factory with API key auth.
  *
  * Environment:
  *   MCP_HUB_URL      - MCP Hub service URL (default: http://localhost:8300)
@@ -13,7 +13,6 @@
  *   npm run examples:build && node dist-examples/node/mcp-hub-example.js
  */
 
-import { createApiKeyAuth } from '../../src/auth/createApiKeyAuth.js';
 import { diskd } from '../../src/sdk/diskd.js';
 
 // ---------------------------------------------------------------------------
@@ -28,12 +27,12 @@ const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
 // Create MCP Hub client via diskd factory (internal service pattern)
 // ---------------------------------------------------------------------------
 
-const auth = createApiKeyAuth({
+const auth = diskd.auth.apiKey({
   apiKey: MCP_HUB_API_KEY,
   workspaceId: WORKSPACE_ID,
 });
 
-const mcpHub = diskd.mcpHub({ auth, workspaceId: WORKSPACE_ID, url: MCP_HUB_URL });
+const mcpHub = diskd.os.mcp({ auth, workspaceId: WORKSPACE_ID, url: MCP_HUB_URL });
 
 console.log(`Connecting to MCP Hub at ${MCP_HUB_URL}`);
 console.log(`Workspace: ${WORKSPACE_ID}\n`);

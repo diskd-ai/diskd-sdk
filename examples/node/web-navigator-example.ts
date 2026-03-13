@@ -2,7 +2,7 @@
  * Web Navigator SDK -- internal service example
  *
  * Demonstrates URL resolution and scrape job submission
- * using the diskd.webNavigator() factory with API key auth.
+ * using the diskd.utils.webNavigator() factory with API key auth.
  *
  * Environment:
  *   WEB_NAVIGATOR_URL - Web Navigator service URL (default: http://localhost:8080)
@@ -13,7 +13,6 @@
  *   npm run examples:build && node dist-examples/node/web-navigator-example.js
  */
 
-import { createApiKeyAuth } from '../../src/auth/createApiKeyAuth.js';
 import { diskd } from '../../src/sdk/diskd.js';
 
 // ---------------------------------------------------------------------------
@@ -28,12 +27,12 @@ const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
 // Create Web Navigator client via diskd factory
 // ---------------------------------------------------------------------------
 
-const auth = createApiKeyAuth({
+const auth = diskd.auth.apiKey({
   apiKey: WEB_NAV_API_KEY,
   workspaceId: WORKSPACE_ID,
 });
 
-const webNav = diskd.webNavigator({ auth, workspaceId: WORKSPACE_ID, url: WEB_NAVIGATOR_URL });
+const webNav = diskd.utils.webNavigator({ auth, workspaceId: WORKSPACE_ID, url: WEB_NAVIGATOR_URL });
 
 console.log(`Connecting to Web Navigator at ${WEB_NAVIGATOR_URL}`);
 console.log(`Workspace: ${WORKSPACE_ID}\n`);

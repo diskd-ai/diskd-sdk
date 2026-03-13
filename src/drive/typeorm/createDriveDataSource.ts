@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// createDriveDataSource -- used internally by diskd.datasource()
+// createDriveDataSource -- used internally by diskd.os.datasource()
 // ---------------------------------------------------------------------------
 
 import { createRequire } from 'node:module';

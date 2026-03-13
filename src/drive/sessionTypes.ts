@@ -86,6 +86,13 @@ export type DriveSessionDocument = {
   readonly forkSourceMessageId: string | null;
 };
 
+export type DriveSessionProjectScopeRef = {
+  readonly scopeType: 'project';
+  readonly projectId: string;
+};
+
+export type DriveSessionScopeRef = DriveSessionProjectScopeRef;
+
 export type DriveSessionSaveParams = {
   readonly projectId: string;
   readonly session: DriveSessionDocument;
@@ -192,6 +199,25 @@ export type DriveSessionDeleteResult = {
   readonly status: string;
 };
 
+export type DriveScopedSessionStartParams = {
+  readonly title?: string;
+  readonly workspaceId?: string;
+};
+
+export type DriveScopedSessionOpenParams = {
+  readonly sessionId: string;
+  readonly limit?: number;
+};
+
+export type DriveScopedSessionSaveParams = {
+  readonly session: DriveSessionDocument;
+  readonly attributes?: readonly string[];
+};
+
+export type DriveScopedSessionDeleteParams = {
+  readonly sessionId: string;
+};
+
 export type DriveSessionClient = {
   readonly save: (params: DriveSessionSaveParams) => Promise<DriveSessionSaveResult>;
   readonly get: (params: DriveSessionGetParams) => Promise<DriveSessionGetResult>;
@@ -202,4 +228,3 @@ export type DriveSessionClient = {
   readonly deleteMessages: (params: DriveSessionDeleteMessagesParams) => Promise<DriveSessionDeleteMessagesResult>;
   readonly delete: (params: DriveSessionDeleteParams) => Promise<DriveSessionDeleteResult>;
 };
-

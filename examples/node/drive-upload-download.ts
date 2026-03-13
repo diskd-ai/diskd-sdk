@@ -17,7 +17,6 @@
  *   npm run examples:build && node dist-examples/node/drive-upload-download.js
  */
 
-import { createApiKeyAuth } from '../../src/auth/createApiKeyAuth.js';
 import { diskd } from '../../src/sdk/diskd.js';
 
 // ---------------------------------------------------------------------------
@@ -32,12 +31,12 @@ const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
 // Create Drive client via diskd factory (internal service pattern)
 // ---------------------------------------------------------------------------
 
-const auth = createApiKeyAuth({
+const auth = diskd.auth.apiKey({
   apiKey: DRIVE_API_KEY,
   workspaceId: WORKSPACE_ID,
 });
 
-const drive = diskd.drive({ version: 'v1', auth, url: DRIVE_API_URL });
+const drive = diskd.os.drive({ version: 'v1', auth, url: DRIVE_API_URL });
 
 console.log(`Connecting to Drive at ${DRIVE_API_URL}`);
 console.log(`Workspace: ${WORKSPACE_ID}\n`);

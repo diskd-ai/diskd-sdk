@@ -38,18 +38,29 @@ const auth = diskd.auth.apiKey({ apiKey, workspaceId });
 const auth = await diskd.auth.credentials({ scopes, keyfilePath });
 
 // Services
-const drive = diskd.drive({ version: 'v1', auth });
-const db    = diskd.database({ auth, dbName, schema });
-const ds    = diskd.datasource({ auth, dbName, entities });  // requires typeorm peer
-const llm   = diskd.llm({ auth });
+const drive    = diskd.os.drive({ version: 'v1', auth });
+const db       = diskd.os.database({ auth, dbName, schema });
+const ds       = diskd.os.datasource({ auth, dbName, entities });  // requires typeorm peer
+const llm      = diskd.os.llm({ auth });
+const agents   = diskd.os.agents({ auth, workspaceId });
+const mcp      = diskd.os.mcp({ auth, workspaceId });
+const sessions = diskd.platform.sessions({ auth, scope: { scopeType: 'project', projectId } });
+const crontab  = diskd.platform.crontab({ auth, scope: { scopeType: 'project', projectId } });
+const tg       = diskd.utils.tgUserBot({ auth, workspaceId });
+const webNav   = diskd.utils.webNavigator({ auth, workspaceId });
 ```
 
-When adding new functionality to the SDK, always wire it through `diskd.<name>()`
-in `sdk/types.ts` + `sdk/diskd.ts`. Use nested namespaces for related methods
-(e.g., `diskd.auth.apiKey()`, `diskd.auth.credentials()`). Do not expose standalone
-factory functions as the primary API -- `createX` functions may still be exported
-from `src/index.ts` for backward compatibility, but the `diskd.*` namespace is the
-canonical interface.
+When adding new functionality to the SDK, always wire it through the canonical
+`diskd` namespaces in `sdk/types.ts` + `sdk/diskd.ts`:
+
+- `diskd.os.*` for infrastructure and storage/runtime services
+- `diskd.platform.*` for platform domain entities such as sessions and crontab
+- `diskd.utils.*` for utility clients such as TG Userbot and Web Navigator
+- `diskd.auth.*` for auth creation
+
+Do not expose standalone factory functions as the primary API -- `createX`
+functions may still be exported from `src/index.ts` for backward compatibility,
+but the `diskd.*` namespace is the canonical interface.
 
 ## Module conventions
 

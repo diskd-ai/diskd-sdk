@@ -2,7 +2,7 @@
  * TypeORM + Drive DB -- shop database example
  *
  * Demonstrates using TypeORM entities and repositories against Drive DB via
- * diskd.datasource(). All SQL is routed through Drive DB JSON-RPC; COMMIT
+ * diskd.os.datasource(). All SQL is routed through Drive DB JSON-RPC; COMMIT
  * flushes WAL to S3, ROLLBACK discards uncommitted changes.
  *
  * Environment:
@@ -14,7 +14,7 @@
  *   npm run examples:build && node dist-examples/node/typeorm-drive-example.js
  */
 
-import { createApiKeyAuth, diskd } from '../../src/index.js';
+import { diskd } from '../../src/index.js';
 import { Entity, PrimaryColumn, Column } from 'typeorm';
 
 // ---------------------------------------------------------------------------
@@ -27,7 +27,7 @@ const DRIVE_URL = process.env.DISKD_BASE_URL
   ? `${process.env.DISKD_BASE_URL}/drive/api/v1`
   : 'https://apis.upgraide.dev:8080/drive/api/v1';
 
-const auth = createApiKeyAuth({ apiKey: DRIVE_API_KEY, workspaceId: WORKSPACE_ID });
+const auth = diskd.auth.apiKey({ apiKey: DRIVE_API_KEY, workspaceId: WORKSPACE_ID });
 
 // ---------------------------------------------------------------------------
 // 1. Define TypeORM entities
@@ -64,10 +64,10 @@ class Order {
 }
 
 // ---------------------------------------------------------------------------
-// 2. Create DataSource via diskd.datasource()
+// 2. Create DataSource via diskd.os.datasource()
 // ---------------------------------------------------------------------------
 
-const ds = diskd.datasource({
+const ds = diskd.os.datasource({
   auth,
   url: DRIVE_URL,
   dbName: `shop.${WORKSPACE_ID}.typeorm-demo`,

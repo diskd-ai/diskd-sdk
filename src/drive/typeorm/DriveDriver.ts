@@ -11,7 +11,7 @@ import type { DriveDbClient, DriveDbType, DriveDbSchema } from '../driveDbTypes.
 import { DriveQueryRunner } from './DriveQueryRunner.js';
 
 // ---------------------------------------------------------------------------
-// Internal options stashed on DataSource.options by diskd.datasource()
+// Internal options stashed on DataSource.options by diskd.os.datasource()
 // ---------------------------------------------------------------------------
 
 export type DriveConnectionOptions = {
@@ -60,7 +60,7 @@ export class DriveDriver extends AbstractSqliteDriver {
       ._driveOptions as DriveConnectionOptions | undefined;
     if (!opts) {
       throw new Error(
-        '@diskd/sdk: missing Drive options. Use diskd.datasource() to create the DataSource.',
+        '@diskd/sdk: missing Drive options. Use diskd.os.datasource() to create the DataSource.',
       );
     }
 

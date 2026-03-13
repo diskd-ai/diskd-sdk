@@ -2,7 +2,7 @@
  * Telegram Userbot SDK -- internal service example
  *
  * Demonstrates channel resolution, listing, message fetching, and stats
- * using the diskd.tgUserbot() factory with API key auth.
+ * using the diskd.utils.tgUserBot() factory with API key auth.
  *
  * Environment:
  *   TG_USERBOT_URL   - Telegram Userbot service URL (default: http://localhost:8000)
@@ -13,7 +13,6 @@
  *   npm run examples:build && node dist-examples/node/tg-userbot-example.js
  */
 
-import { createApiKeyAuth } from '../../src/auth/createApiKeyAuth.js';
 import { diskd } from '../../src/sdk/diskd.js';
 
 // ---------------------------------------------------------------------------
@@ -28,12 +27,12 @@ const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
 // Create Telegram Userbot client via diskd factory
 // ---------------------------------------------------------------------------
 
-const auth = createApiKeyAuth({
+const auth = diskd.auth.apiKey({
   apiKey: TG_API_KEY,
   workspaceId: WORKSPACE_ID,
 });
 
-const tg = diskd.tgUserbot({ auth, workspaceId: WORKSPACE_ID, url: TG_USERBOT_URL });
+const tg = diskd.utils.tgUserBot({ auth, workspaceId: WORKSPACE_ID, url: TG_USERBOT_URL });
 
 console.log(`Connecting to Telegram Userbot at ${TG_USERBOT_URL}`);
 console.log(`Workspace: ${WORKSPACE_ID}\n`);

@@ -13,7 +13,6 @@
  *   npm run examples:build && node dist-examples/node/llm-router-example.js
  */
 
-import { createApiKeyAuth } from '../../src/auth/createApiKeyAuth.js';
 import { diskd } from '../../src/sdk/diskd.js';
 
 // ---------------------------------------------------------------------------
@@ -28,12 +27,12 @@ const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
 // Create LLM Router client via diskd factory (internal service pattern)
 // ---------------------------------------------------------------------------
 
-const auth = createApiKeyAuth({
+const auth = diskd.auth.apiKey({
   apiKey: LLM_API_KEY,
   workspaceId: WORKSPACE_ID,
 });
 
-const llm = diskd.llm({ auth, url: LLM_ROUTER_URL });
+const llm = diskd.os.llm({ auth, url: LLM_ROUTER_URL });
 
 console.log(`Connecting to LLM Router at ${LLM_ROUTER_URL}`);
 console.log(`Workspace: ${WORKSPACE_ID}\n`);

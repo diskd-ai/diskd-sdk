@@ -1,5 +1,9 @@
 import type {
   DriveSessionClient,
+  DriveScopedSessionDeleteParams,
+  DriveScopedSessionOpenParams,
+  DriveScopedSessionSaveParams,
+  DriveScopedSessionStartParams,
   DriveSessionDeleteResult,
   DriveSessionDocument,
   DriveSessionGetMessageRangeResult,
@@ -35,6 +39,15 @@ export type DriveSessionManager = {
   readonly save: (params: DriveSessionSaveParams) => Promise<DriveSessionSaveResult>;
   readonly list: (params: { readonly projectId: string }) => Promise<DriveSessionListResult>;
   readonly delete: (params: { readonly projectId: string; readonly sessionId: string }) => Promise<DriveSessionDeleteResult>;
+  readonly message: (params: MessageParams) => DriveSessionMessage;
+};
+
+export type DriveScopedSessionManager = {
+  readonly start: (params: DriveScopedSessionStartParams) => Promise<DriveSession>;
+  readonly open: (params: DriveScopedSessionOpenParams) => Promise<DriveSession>;
+  readonly save: (params: DriveScopedSessionSaveParams) => Promise<DriveSessionSaveResult>;
+  readonly list: () => Promise<DriveSessionListResult>;
+  readonly delete: (params: DriveScopedSessionDeleteParams) => Promise<DriveSessionDeleteResult>;
   readonly message: (params: MessageParams) => DriveSessionMessage;
 };
 
@@ -221,6 +234,39 @@ export const createDriveSessionManager = (params: {
 
     message: (msgParams: MessageParams): DriveSessionMessage => {
       return buildMessage(msgParams);
+    },
+  };
+};
+
+export const createScopedDriveSessionManager = (params: {
+  readonly manager: DriveSessionManager;
+  readonly projectId: string;
+}): DriveScopedSessionManager => {
+  const { manager, projectId } = params;
+
+  return {
+    start: async (startParams): Promise<DriveSession> => {
+      return manager.start({ ...startParams, projectId });
+    },
+
+    open: async (openParams): Promise<DriveSession> => {
+      return manager.open({ ...openParams, projectId });
+    },
+
+    save: async (saveParams): Promise<DriveSessionSaveResult> => {
+      return manager.save({ ...saveParams, projectId });
+    },
+
+    list: async (): Promise<DriveSessionListResult> => {
+      return manager.list({ projectId });
+    },
+
+    delete: async (deleteParams): Promise<DriveSessionDeleteResult> => {
+      return manager.delete({ ...deleteParams, projectId });
+    },
+
+    message: (msgParams: MessageParams): DriveSessionMessage => {
+      return manager.message(msgParams);
     },
   };
 };

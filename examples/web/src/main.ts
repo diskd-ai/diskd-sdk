@@ -1,6 +1,6 @@
 import './style.css';
 
-import { createAuth, diskd } from '@diskd/sdk/browser';
+import { diskd } from '@diskd/sdk/browser';
 
 const env = import.meta.env;
 
@@ -19,7 +19,7 @@ if (!app) {
 
 app.innerHTML = `
   <h1>DiskD Drive API Quickstart</h1>
-  <p>Google-style SDK usage: <code>createAuth</code> + <code>diskd.drive</code>.</p>
+  <p>Google-style SDK usage: <code>diskd.auth.credentials</code> + <code>diskd.os.drive</code>.</p>
   <button id="authorize_button">Authorize</button>
   <button id="signout_button">Sign Out</button>
   <pre id="content"></pre>
@@ -30,7 +30,7 @@ const signoutBtn = document.querySelector<HTMLButtonElement>('#signout_button');
 const contentEl = document.querySelector<HTMLPreElement>('#content');
 
 const main = async (): Promise<void> => {
-  const auth = await createAuth({
+  const auth = await diskd.auth.credentials({
     issuer: ISSUER,
     clientId: CLIENT_ID,
     redirectUri: window.location.origin + window.location.pathname,
@@ -38,7 +38,7 @@ const main = async (): Promise<void> => {
     audience: AUDIENCE,
   });
 
-  const drive = diskd.drive({ version: 'v1', auth });
+  const drive = diskd.os.drive({ version: 'v1', auth });
 
   await auth.handleRedirectCallback();
 

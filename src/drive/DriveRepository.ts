@@ -6,7 +6,7 @@
 // DriveRepository -- table-scoped CRUD (insert, find, findOne, count, update, delete)
 //
 // Usage:
-//   const db = diskd.database({
+//   const db = diskd.os.database({
 //     auth,
 //     dbName: 'shop.workspace-123.main',
 //     schema: {

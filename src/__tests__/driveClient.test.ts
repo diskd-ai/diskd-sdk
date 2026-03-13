@@ -30,7 +30,7 @@ test('drive.init calls JSON-RPC with Bearer token', async () => {
   };
 
   try {
-    const drive = diskd.drive({ version: 'v1', auth });
+    const drive = diskd.os.drive({ version: 'v1', auth });
     await drive.init();
 
     assert.equal(calls[0]?.url, 'https://apis.example/drive/api/v1');
@@ -77,7 +77,7 @@ test('drive.crontab.getStatus uses the drive JSON-RPC endpoint', async () => {
   };
 
   try {
-    const drive = diskd.drive({ version: 'v1', auth });
+    const drive = diskd.os.drive({ version: 'v1', auth });
     const result = await drive.crontab.getStatus({
       scope: {
         scopeType: 'profile',
@@ -98,7 +98,7 @@ test('drive.crontab.getStatus uses the drive JSON-RPC endpoint', async () => {
   }
 });
 
-test('diskd.crontab.getStatus uses the drive JSON-RPC endpoint', async () => {
+test('diskd.platform.crontab binds scope + timezone in the constructor', async () => {
   process.env.DISKD_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
@@ -130,11 +130,16 @@ test('diskd.crontab.getStatus uses the drive JSON-RPC endpoint', async () => {
   };
 
   try {
-    const crontab = diskd.crontab({ auth });
-    const result = await crontab.getStatus({
+    const crontab = diskd.platform.crontab({
+      auth,
       scope: {
-        scopeType: 'profile',
+        scopeType: 'project',
+        projectId: 'proj-1',
       },
+      timezone: 'UTC',
+    });
+    const result = await crontab.save({
+      jobs: [],
     });
 
     assert.deepEqual(result, {
@@ -143,15 +148,72 @@ test('diskd.crontab.getStatus uses the drive JSON-RPC endpoint', async () => {
       updatedAt: '2026-03-13T10:00:00Z',
     });
     assert.equal(calls[0]?.url, 'https://apis.example/drive/api/v1');
-    assert.ok(String(calls[0]?.init?.body).includes('"method":"drive/crontab/get-status"'));
-    assert.ok(String(calls[0]?.init?.body).includes('"scope_type":"profile"'));
+    assert.ok(String(calls[0]?.init?.body).includes('"method":"drive/crontab/save"'));
+    assert.ok(String(calls[0]?.init?.body).includes('"scope_type":"project"'));
+    assert.ok(String(calls[0]?.init?.body).includes('"project_id":"proj-1"'));
+    assert.ok(String(calls[0]?.init?.body).includes('"timezone":"UTC"'));
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
     delete process.env.DISKD_BASE_URL;
   }
 });
 
-test('diskd.session.list uses the drive JSON-RPC endpoint', async () => {
+test('diskd.platform.crontab defaults timezone from the caller runtime', async () => {
+  process.env.DISKD_BASE_URL = 'https://apis.example';
+
+  const calls: FetchCall[] = [];
+  const originalFetch = globalThis.fetch;
+  const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const url = typeof input === 'string' ? input : input.toString();
+    calls.push({ url, init });
+    return new Response(JSON.stringify({
+      jsonrpc: '2.0',
+      result: {
+        job_count: 0,
+        next_run_at: null,
+        updated_at: '2026-03-13T10:00:00Z',
+      },
+      id: 1,
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+  (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
+
+  const auth: AuthModule = {
+    signIn: async () => {},
+    signOut: () => {},
+    handleRedirectCallback: async () => {},
+    getAccessToken: async () => 'token-123',
+    getToken: () => ({ accessToken: 'token-123' }),
+  };
+
+  try {
+    const expectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const expectedTimezoneFragment =
+      typeof expectedTimezone === 'string' && expectedTimezone.length > 0
+        ? `"timezone":"${expectedTimezone}"`
+        : '"timezone":null';
+    const crontab = diskd.platform.crontab({
+      auth,
+      scope: {
+        scopeType: 'project',
+        projectId: 'proj-1',
+      },
+    });
+    await crontab.save({
+      jobs: [],
+    });
+
+    assert.ok(String(calls[0]?.init?.body).includes(expectedTimezoneFragment));
+  } finally {
+    (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
+    delete process.env.DISKD_BASE_URL;
+  }
+});
+
+test('diskd.platform.sessions.list uses the drive JSON-RPC endpoint', async () => {
   process.env.DISKD_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
@@ -188,8 +250,14 @@ test('diskd.session.list uses the drive JSON-RPC endpoint', async () => {
   };
 
   try {
-    const sessions = diskd.session({ auth });
-    const result = await sessions.list({ projectId: 'proj-1' });
+    const sessions = diskd.platform.sessions({
+      auth,
+      scope: {
+        scopeType: 'project',
+        projectId: 'proj-1',
+      },
+    });
+    const result = await sessions.list();
 
     assert.deepEqual(result, {
       items: [{
@@ -208,4 +276,30 @@ test('diskd.session.list uses the drive JSON-RPC endpoint', async () => {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
     delete process.env.DISKD_BASE_URL;
   }
+});
+
+test('diskd exposes namespaced os and utils factories for non-drive services', () => {
+  const auth: AuthModule = {
+    signIn: async () => {},
+    signOut: () => {},
+    handleRedirectCallback: async () => {},
+    getAccessToken: async () => 'token-123',
+    getToken: () => ({ accessToken: 'token-123' }),
+  };
+
+  const llm = diskd.os.llm({ auth, url: 'http://llm-router:3000' });
+  const agents = diskd.os.agents({ auth, workspaceId: 'ws-1', url: 'http://agent-hub:8081' });
+  const mcp = diskd.os.mcp({ auth, workspaceId: 'ws-1', url: 'http://mcp-hub:8300' });
+  const tg = diskd.utils.tgUserBot({ auth, workspaceId: 'ws-1', url: 'http://tg-userbot:8000' });
+  const webNavigator = diskd.utils.webNavigator({
+    auth,
+    workspaceId: 'ws-1',
+    url: 'http://web-navigator:8080',
+  });
+
+  assert.equal(typeof llm.completions.create, 'function');
+  assert.equal(typeof agents.agents.list, 'function');
+  assert.equal(typeof mcp.catalog.list, 'function');
+  assert.equal(typeof tg.channels.list, 'function');
+  assert.equal(typeof webNavigator.scrape.submit, 'function');
 });

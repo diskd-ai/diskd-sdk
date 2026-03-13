@@ -1,7 +1,7 @@
 /**
  * Drive DB Repository -- shop database example
  *
- * Demonstrates diskd.database() with table-scoped repository CRUD:
+ * Demonstrates diskd.os.database() with table-scoped repository CRUD:
  * insert, find, findOne, count, update, deleteRows, plus raw SQL queries.
  *
  * Environment:
@@ -13,7 +13,6 @@
  *   npm run examples:build && node dist-examples/node/drive-db-repository-example.js
  */
 
-import { createApiKeyAuth } from '../../src/auth/createApiKeyAuth.js';
 import { diskd } from '../../src/sdk/diskd.js';
 import type { DriveDbSchema } from '../../src/drive/driveDbTypes.js';
 
@@ -24,7 +23,7 @@ import type { DriveDbSchema } from '../../src/drive/driveDbTypes.js';
 const DRIVE_API_KEY = process.env.DRIVE_API_KEY ?? 'key-dev-1234567890';
 const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
 
-const auth = createApiKeyAuth({ apiKey: DRIVE_API_KEY, workspaceId: WORKSPACE_ID });
+const auth = diskd.auth.apiKey({ apiKey: DRIVE_API_KEY, workspaceId: WORKSPACE_ID });
 
 // ---------------------------------------------------------------------------
 // 1. Define shop database schema
@@ -52,7 +51,7 @@ const shopSchema: DriveDbSchema = {
 // 2. Create database + table-scoped repositories
 // ---------------------------------------------------------------------------
 
-const db = diskd.database({
+const db = diskd.os.database({
   auth,
   dbName: `shop.${WORKSPACE_ID}.main`,
   dbType: 'database',

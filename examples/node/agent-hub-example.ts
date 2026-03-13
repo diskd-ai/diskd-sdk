@@ -13,7 +13,6 @@
  *   npm run examples:build && node dist-examples/node/agent-hub-example.js
  */
 
-import { createApiKeyAuth } from '../../src/auth/createApiKeyAuth.js';
 import { diskd } from '../../src/sdk/diskd.js';
 import { StreamProtocolHandler } from '../../src/agentHub/StreamProtocolHandler.js';
 import type { TextOutputDeltaEvent, ResponseCompletedEvent, ResponseFailedEvent, StreamProtocolErrorEvent } from '../../src/agentHub/streamProtocolMap.js';
@@ -30,12 +29,12 @@ const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
 // Create Agent Hub client via diskd factory (internal service pattern)
 // ---------------------------------------------------------------------------
 
-const auth = createApiKeyAuth({
+const auth = diskd.auth.apiKey({
   apiKey: AGENT_HUB_API_KEY,
   workspaceId: WORKSPACE_ID,
 });
 
-const agentHub = diskd.agentHub({ auth, workspaceId: WORKSPACE_ID, url: AGENT_HUB_URL });
+const agentHub = diskd.os.agents({ auth, workspaceId: WORKSPACE_ID, url: AGENT_HUB_URL });
 
 console.log(`Connecting to Agent Hub at ${AGENT_HUB_URL}`);
 console.log(`Workspace: ${WORKSPACE_ID}\n`);

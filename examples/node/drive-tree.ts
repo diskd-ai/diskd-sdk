@@ -14,7 +14,7 @@
 
 import path from "node:path";
 
-import { createAuth, diskd } from "@diskd/sdk";
+import { diskd } from "@diskd/sdk";
 import type { DrivePathEntry } from "@diskd/sdk";
 
 // ---------------------------------------------------------------------------
@@ -266,11 +266,11 @@ const main = async (): Promise<void> => {
 
   // Auth
   console.log("Authenticating...");
-  const auth = await createAuth({
+  const auth = await diskd.auth.credentials({
     scopes: ["openid"],
     keyfilePath: credentialsPath
   });
-  const drive = diskd.drive({ version: "v1", auth });
+  const drive = diskd.os.drive({ version: "v1", auth });
 
   // Init
   console.log("Initializing drive...");

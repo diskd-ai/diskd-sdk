@@ -2,8 +2,8 @@
 
 This SDK follows a Google-style shape:
 
-- `const auth = await createAuth(...)`
-- `const drive = diskd.drive({ version: 'v1', auth })`
+- `const auth = await diskd.auth.credentials(...)`
+- `const drive = diskd.os.drive({ version: 'v1', auth })`
 
 Drive base URL is configured via `DISKD_BASE_URL`:
 
@@ -21,17 +21,17 @@ Prereqs:
 
 ```ts
 import path from 'node:path';
-import { createAuth, diskd } from '@diskd/sdk';
+import { diskd } from '@diskd/sdk';
 
 const SCOPES = ['openid'];
 const CREDENTIALS_PATH = path.resolve(process.cwd(), 'credentials.json');
 
-const auth = await createAuth({
+const auth = await diskd.auth.credentials({
   scopes: SCOPES,
   keyfilePath: CREDENTIALS_PATH,
 });
 
-const drive = diskd.drive({ version: 'v1', auth });
+const drive = diskd.os.drive({ version: 'v1', auth });
 await drive.init();
 
 const entries = await drive.list({ path: '/' });
@@ -49,9 +49,9 @@ Prereqs:
 In a bundler (Vite/Webpack/etc):
 
 ```ts
-import { createAuth, diskd } from '@diskd/sdk/browser';
+import { diskd } from '@diskd/sdk/browser';
 
-const auth = await createAuth({
+const auth = await diskd.auth.credentials({
   issuer: 'https://oauth2.upgraide.dev:8080',
   clientId: '<YOUR_CLIENT_ID>',
   redirectUri: window.location.origin + window.location.pathname,
@@ -59,7 +59,7 @@ const auth = await createAuth({
   audience: 'diskd-api',
 });
 
-const drive = diskd.drive({ version: 'v1', auth });
+const drive = diskd.os.drive({ version: 'v1', auth });
 
 await auth.handleRedirectCallback();
 

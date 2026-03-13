@@ -38,8 +38,15 @@ const auth = diskd.auth.apiKey({
   orgId: DRIVE_ORG_ID,
 });
 
-const drive = diskd.drive({ version: 'v1', auth, url: DRIVE_API_URL });
-const sessions = diskd.session({ auth, url: DRIVE_API_URL });
+const drive = diskd.os.drive({ version: 'v1', auth, url: DRIVE_API_URL });
+const sessions = diskd.platform.sessions({
+  auth,
+  scope: {
+    scopeType: 'project',
+    projectId: PROJECT_ID,
+  },
+  url: DRIVE_API_URL,
+});
 
 console.log(`Connecting to Drive at ${DRIVE_API_URL}`);
 console.log(`Project: ${PROJECT_ID}\n`);
@@ -72,7 +79,7 @@ console.log(`[ok] Project folder /Projects/${PROJECT_ID} ready`);
 // 2. Start a new session
 // ---------------------------------------------------------------------------
 
-const session = await sessions.start({ projectId: PROJECT_ID, title: 'SDK Integration Test', workspaceId: DRIVE_ORG_ID });
+const session = await sessions.start({ title: 'SDK Integration Test', workspaceId: DRIVE_ORG_ID });
 console.log(`[ok] Started session: ${session.sessionId}`);
 
 // ---------------------------------------------------------------------------
@@ -99,7 +106,7 @@ console.log(`[ok] Appended turn pair (count: ${session.messageCount})`);
 // 4. Open with preview (newest N messages)
 // ---------------------------------------------------------------------------
 
-const preview = await sessions.open({ projectId: PROJECT_ID, sessionId: session.sessionId, limit: 2 });
+const preview = await sessions.open({ sessionId: session.sessionId, limit: 2 });
 console.log(`[ok] Opened preview: ${preview.messages.length} messages loaded, ${preview.messageCount} total`);
 
 // ---------------------------------------------------------------------------
@@ -116,7 +123,7 @@ preview.dispose();
 // 6. Fork session
 // ---------------------------------------------------------------------------
 
-const full = await sessions.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
+const full = await sessions.open({ sessionId: session.sessionId });
 const forkPointId = full.messages[1]!.id; // fork after first assistant response
 const forked = await full.fork({ atMessageId: forkPointId });
 console.log(`[ok] Forked session: ${forked.sessionId}`);
@@ -136,7 +143,7 @@ full.dispose();
 // 7. Rollback (undo last turn)
 // ---------------------------------------------------------------------------
 
-const rollbackSession = await sessions.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
+const rollbackSession = await sessions.open({ sessionId: session.sessionId });
 const rollbackPoint = rollbackSession.messages[rollbackSession.messages.length - 2]!.id;
 await rollbackSession.rollback(rollbackPoint);
 console.log(`[ok] Rolled back after ${rollbackPoint}`);
@@ -148,7 +155,7 @@ rollbackSession.dispose();
 // 8. Remove specific messages
 // ---------------------------------------------------------------------------
 
-const editSession = await sessions.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
+const editSession = await sessions.open({ sessionId: session.sessionId });
 if (editSession.messages.length > 1) {
   const toRemove = editSession.messages[1]!.id;
   await editSession.remove([toRemove]);
@@ -162,7 +169,7 @@ editSession.dispose();
 // 9. List sessions
 // ---------------------------------------------------------------------------
 
-const listResult = await sessions.list({ projectId: PROJECT_ID });
+const listResult = await sessions.list();
 console.log(`\n[ok] Sessions in project "${PROJECT_ID}":`);
 for (const item of listResult.items) {
   console.log(`     - ${item.sessionId}: "${item.title ?? '(untitled)'}" (${item.messageCount} msgs)`);
@@ -172,7 +179,7 @@ for (const item of listResult.items) {
 // 10. Refresh and verify final state
 // ---------------------------------------------------------------------------
 
-const finalSession = await sessions.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
+const finalSession = await sessions.open({ sessionId: session.sessionId });
 console.log(`\n[ok] Final session state:`);
 console.log(`     ID: ${finalSession.sessionId}`);
 console.log(`     Title: ${finalSession.document.title}`);

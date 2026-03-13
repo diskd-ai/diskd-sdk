@@ -34,8 +34,14 @@ const PROJECT_ID = process.env.DISKD_PROJECT_ID ?? 'my-project';
 // ---------------------------------------------------------------------------
 
 const auth = await diskd.auth.credentials({ scopes, keyfilePath: credentialsPath });
-const drive = diskd.drive({ version: 'v1', auth });
-const sessions = diskd.session({ auth });
+const drive = diskd.os.drive({ version: 'v1', auth });
+const sessions = diskd.platform.sessions({
+  auth,
+  scope: {
+    scopeType: 'project',
+    projectId: PROJECT_ID,
+  },
+});
 
 console.log(`Connecting to Drive via gateway`);
 console.log(`Project: ${PROJECT_ID}\n`);
@@ -51,7 +57,7 @@ console.log('[ok] Drive initialized');
 // 2. Start a new session
 // ---------------------------------------------------------------------------
 
-const session = await sessions.start({ projectId: PROJECT_ID, title: 'Deployment help' });
+const session = await sessions.start({ title: 'Deployment help' });
 console.log(`[ok] Started session: ${session.sessionId}`);
 
 // ---------------------------------------------------------------------------
@@ -79,7 +85,6 @@ console.log(`[ok] Appended turn pair (count: ${session.messageCount})`);
 // ---------------------------------------------------------------------------
 
 const preview = await sessions.open({
-  projectId: PROJECT_ID,
   sessionId: session.sessionId,
   limit: 2,
 });
@@ -101,7 +106,7 @@ preview.dispose();
 // 6. Fork session
 // ---------------------------------------------------------------------------
 
-const full = await sessions.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
+const full = await sessions.open({ sessionId: session.sessionId });
 if (full.messages.length > 1) {
   const forkPointId = full.messages[1]!.id;
   const forked = await full.fork({ atMessageId: forkPointId });
@@ -123,7 +128,7 @@ full.dispose();
 // 7. Rollback (undo last turn)
 // ---------------------------------------------------------------------------
 
-const rollbackSession = await sessions.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
+const rollbackSession = await sessions.open({ sessionId: session.sessionId });
 const rollbackPoint = rollbackSession.messages[rollbackSession.messages.length - 2]!.id;
 await rollbackSession.rollback(rollbackPoint);
 console.log(`[ok] Rolled back after ${rollbackPoint}`);
@@ -135,7 +140,7 @@ rollbackSession.dispose();
 // 8. Remove specific messages
 // ---------------------------------------------------------------------------
 
-const editSession = await sessions.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
+const editSession = await sessions.open({ sessionId: session.sessionId });
 if (editSession.messages.length > 1) {
   const toRemove = editSession.messages[1]!.id;
   await editSession.remove([toRemove]);
@@ -148,7 +153,7 @@ editSession.dispose();
 // 9. List sessions
 // ---------------------------------------------------------------------------
 
-const listResult = await sessions.list({ projectId: PROJECT_ID });
+const listResult = await sessions.list();
 console.log(`\n[ok] Sessions in project "${PROJECT_ID}":`);
 for (const item of listResult.items) {
   console.log(`     - ${item.sessionId}: "${item.title ?? '(untitled)'}" (${item.messageCount} msgs)`);
@@ -158,7 +163,7 @@ for (const item of listResult.items) {
 // 10. Delete session
 // ---------------------------------------------------------------------------
 
-await sessions.delete({ projectId: PROJECT_ID, sessionId: session.sessionId });
+await sessions.delete({ sessionId: session.sessionId });
 console.log(`\n[ok] Deleted session ${session.sessionId}`);
 
 session.dispose();
@@ -169,7 +174,6 @@ session.dispose();
 
 // save() is stateless -- use it for bulk import / migration
 const importResult = await sessions.save({
-  projectId: PROJECT_ID,
   session: {
     id: 'imported-session-001',
     workspaceId: 'ws-1',

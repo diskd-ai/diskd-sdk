@@ -85,8 +85,8 @@ export type {
   DriveDataSourceParams,
   DriveDataSourceRepository,
 } from './drive/typeorm/datasourceTypes.js';
-export type { DriveSession, DriveSessionManager } from './drive/sessionObject.js';
-export { createDriveSessionManager } from './drive/sessionObject.js';
+export type { DriveSession, DriveSessionManager, DriveScopedSessionManager } from './drive/sessionObject.js';
+export { createDriveSessionManager, createScopedDriveSessionManager } from './drive/sessionObject.js';
 export type { MessageParams } from './drive/sessionBuilder.js';
 export { buildMessage, generateUlid } from './drive/sessionBuilder.js';
 export { createDriveSessionClient } from './drive/session.js';
@@ -119,10 +119,17 @@ export type {
   DriveCrontabSaveParams,
   DriveCrontabSaveResult,
   DriveCrontabSchedule,
+  DriveScopedCrontabClient,
+  DriveScopedCrontabCreateJobParams,
+  DriveScopedCrontabSaveParams,
   DriveCrontabScopeRef,
   DriveCrontabUriPayload,
 } from './drive/crontabTypes.js';
 export type {
+  DriveScopedSessionDeleteParams,
+  DriveScopedSessionOpenParams,
+  DriveScopedSessionSaveParams,
+  DriveScopedSessionStartParams,
   DriveSessionAppendMessagesParams,
   DriveSessionAppendMessagesResult,
   DriveSessionClient,
@@ -148,6 +155,8 @@ export type {
   DriveSessionParticipant,
   DriveSessionSaveParams,
   DriveSessionSaveResult,
+  DriveSessionProjectScopeRef,
+  DriveSessionScopeRef,
   JsonObject,
   JsonScalar,
   JsonValue,

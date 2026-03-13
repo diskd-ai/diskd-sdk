@@ -3,23 +3,30 @@
 Unified TypeScript SDK for the Upgraide platform APIs.
 
 All services are accessible via the `diskd` factory, which provides a consistent
-`diskd.auth.*` + `diskd.<service>()` pattern:
+`diskd.auth.*` + namespaced service pattern across `diskd.os.*`, `diskd.platform.*`,
+and `diskd.utils.*`:
 
 ```ts
 import { diskd } from '@diskd/sdk';
 
 const auth = diskd.auth.apiKey({ apiKey: '...', workspaceId: '...' });
 
-const drive      = diskd.drive({ version: 'v1', auth });
-const sessions   = diskd.session({ auth });
-const crontab    = diskd.crontab({ auth });
-const db         = diskd.database({ auth, dbName: '...', schema: { ... } });
-const ds         = diskd.datasource({ auth, dbName: '...', entities: [...] });
-const llm        = diskd.llm({ auth });
-const agentHub   = diskd.agentHub({ auth, workspaceId: '...' });
-const mcpHub     = diskd.mcpHub({ auth, workspaceId: '...' });
-const tg         = diskd.tgUserbot({ auth, workspaceId: '...' });
-const webNav     = diskd.webNavigator({ auth, workspaceId: '...' });
+const drive      = diskd.os.drive({ version: 'v1', auth });
+const sessions   = diskd.platform.sessions({
+  auth,
+  scope: { scopeType: 'project', projectId: 'proj-1' },
+});
+const crontab    = diskd.platform.crontab({
+  auth,
+  scope: { scopeType: 'project', projectId: 'proj-1' },
+});
+const db         = diskd.os.database({ auth, dbName: '...', schema: { ... } });
+const ds         = diskd.os.datasource({ auth, dbName: '...', entities: [...] });
+const llm        = diskd.os.llm({ auth });
+const agents     = diskd.os.agents({ auth, workspaceId: '...' });
+const mcp        = diskd.os.mcp({ auth, workspaceId: '...' });
+const tg         = diskd.utils.tgUserBot({ auth, workspaceId: '...' });
+const webNav     = diskd.utils.webNavigator({ auth, workspaceId: '...' });
 ```
 
 Installation
@@ -70,7 +77,15 @@ const auth = await diskd.auth.credentials({
   keyfilePath: 'credentials.json',
 });
 
-const drive = diskd.drive({ version: 'v1', auth });
+const drive = diskd.os.drive({ version: 'v1', auth });
+const sessions = diskd.platform.sessions({
+  auth,
+  scope: { scopeType: 'project', projectId: 'proj-1' },
+});
+const crontab = diskd.platform.crontab({
+  auth,
+  scope: { scopeType: 'project', projectId: 'proj-1' },
+});
 ```
 
 ### Internal services (API key)
@@ -85,7 +100,7 @@ const auth = diskd.auth.apiKey({
   workspaceId: process.env.WORKSPACE_ID!,
 });
 
-const drive = diskd.drive({
+const drive = diskd.os.drive({
   version: 'v1',
   auth,
   url: 'http://drive-service:8000/drive/api/v1',
@@ -168,7 +183,7 @@ const grep = await drive.tools.grep({ pattern: 'TODO' });
 
 ### Sessions
 
-The SDK exposes these session methods on `diskd.session({ auth })`:
+The SDK exposes these session methods on `diskd.platform.sessions({ auth, scope })`:
 
 - `start`
 - `open`
@@ -179,7 +194,6 @@ The SDK exposes these session methods on `diskd.session({ auth })`:
 
 ```ts
 const session = await sessions.start({
-  projectId: 'proj-1',
   title: 'Deployment help',
 });
 
@@ -187,25 +201,23 @@ await session.append([
   sessions.message({ role: 'user', content: 'How do I deploy to production?' }),
 ]);
 
-const sessionList = await sessions.list({ projectId: 'proj-1' });
+const sessionList = await sessions.list();
 ```
 
 ### Crontab scheduler
 
-The SDK exposes these scheduler methods on `diskd.crontab({ auth })`:
+The SDK exposes these scheduler methods on `diskd.platform.crontab({ auth, scope, timezone? })`.
+If `timezone` is omitted, the SDK uses the caller runtime timezone by default.
 
 - `save`
 - `get`
 - `getStatus`
 - `listJobs`
 - `runJob`
-- `createProjectJob`
-- `createProfileJob`
+- `createJob`
 
 ```ts
-await crontab.createProjectJob({
-  projectId: 'proj-1',
-  timezone: 'UTC',
+await crontab.createJob({
   job: {
     jobId: '01JABCD2FGH3JK4MNP5QRST6VW',
     enabled: true,
@@ -227,9 +239,7 @@ await crontab.createProjectJob({
   },
 });
 
-const status = await crontab.getStatus({
-  scope: { scopeType: 'project', projectId: 'proj-1' },
-});
+const status = await crontab.getStatus();
 ```
 
 See `examples/node/drive-upload-download.ts`, `examples/node/drive-session-external.ts`, and `examples/node/drive-crontab.ts`.
@@ -240,7 +250,7 @@ Drive Database API
 JSON-RPC client for Drive's SQLite-backed database operations:
 
 ```ts
-const drive = diskd.drive({ version: 'v1', auth });
+const drive = diskd.os.drive({ version: 'v1', auth });
 
 // Create a database with schema
 const db = await drive.db.create({
@@ -282,7 +292,7 @@ that use Drive DB as their persistence layer:
 
 ```ts
 // Create database with schema
-const db = diskd.database({
+const db = diskd.os.database({
   auth,
   dbName: 'shop.workspace-123.main',
   dbType: 'database',
@@ -335,7 +345,7 @@ const meta = await db.metadata();
 
 See `examples/node/drive-db-repository-example.ts`.
 
-TypeORM Driver (`diskd.datasource()`)
+TypeORM Driver (`diskd.os.datasource()`)
 -------------------------------------
 
 Use TypeORM entities, relations, and repositories against Drive DB. SQL is routed
@@ -370,7 +380,7 @@ class User {
 // Create DataSource backed by Drive DB
 const auth = diskd.auth.apiKey({ apiKey: '...', workspaceId: '...' });
 
-const ds = diskd.datasource({
+const ds = diskd.os.datasource({
   auth,
   url: 'https://apis.upgraide.me/drive/api/v1',
   dbName: 'shop.workspace-123.main',
@@ -418,7 +428,7 @@ LLM Router API
 JSON-RPC 2.0 + NDJSON streaming for multi-provider LLM completions:
 
 ```ts
-const llm = diskd.llm({ auth, url: 'http://llm-router:3000' });
+const llm = diskd.os.llm({ auth, url: 'http://llm-router:3000' });
 
 // Non-streaming completion
 const result = await llm.completions.create({
@@ -447,12 +457,12 @@ SSE streaming with `StreamProtocolHandler` + `StreamProtocolFetcher` for agent i
 ```ts
 import { diskd, StreamProtocolHandler } from '@diskd/sdk';
 
-const agentHub = diskd.agentHub({ auth, workspaceId: '...' });
+const agents = diskd.os.agents({ auth, workspaceId: '...' });
 
 // List agents and models
-const agents = await agentHub.agents.list();
-const models = await agentHub.agents.getSupportedModels('assistant');
-const billing = await agentHub.billing.getAliases();
+const agentList = await agents.agents.list();
+const models = await agents.agents.getSupportedModels('assistant');
+const billing = await agents.billing.getAliases();
 
 // Invoke with fluent stream handling
 const handler = new StreamProtocolHandler()
@@ -461,7 +471,7 @@ const handler = new StreamProtocolHandler()
   .on('response.failed', (e) => console.error(e.response.error.message))
   .on('error', (e) => console.error(e.message));
 
-const stream = await agentHub.invoke({
+const stream = await agents.invoke({
   agentName: 'assistant',
   query: 'Hello',
   agentOptions: { maxTokens: 256 },
@@ -484,22 +494,22 @@ MCP Hub API
 REST client for MCP server catalog, registry, and integrations:
 
 ```ts
-const mcpHub = diskd.mcpHub({ auth, workspaceId: '...' });
+const mcp = diskd.os.mcp({ auth, workspaceId: '...' });
 
 // Catalog
-const catalog = await mcpHub.catalog.list({ search: 'github' });
-const details = await mcpHub.catalog.getServerDetails(serverId);
+const catalog = await mcp.catalog.list({ search: 'github' });
+const details = await mcp.catalog.getServerDetails(serverId);
 
 // Registry (installed servers)
-const registry = await mcpHub.registry.list();
-const added = await mcpHub.registry.addServer({ catalogServerId: '...' });
-await mcpHub.registry.toggleTool(serverId, toolId, false);
-const logs = await mcpHub.registry.getServerLogs(serverId, { limit: 10 });
-await mcpHub.registry.deleteServer(serverId);
+const registry = await mcp.registry.list();
+const added = await mcp.registry.addServer({ catalogServerId: '...' });
+await mcp.registry.toggleTool(serverId, toolId, false);
+const logs = await mcp.registry.getServerLogs(serverId, { limit: 10 });
+await mcp.registry.deleteServer(serverId);
 
 // Env vars, connection settings, remote servers
-await mcpHub.registry.upsertEnvVar(serverId, { key: 'TOKEN', value: '...' });
-await mcpHub.registry.addRemoteServer({ name: 'My MCP', url: '...', authType: 'pat' });
+await mcp.registry.upsertEnvVar(serverId, { key: 'TOKEN', value: '...' });
+await mcp.registry.addRemoteServer({ name: 'My MCP', url: '...', authType: 'pat' });
 ```
 
 See `examples/node/mcp-hub-example.ts`.
@@ -510,7 +520,7 @@ Telegram Userbot API
 REST client for Telegram channel resolution, importing, and message retrieval:
 
 ```ts
-const tg = diskd.tgUserbot({ auth, workspaceId: '...' });
+const tg = diskd.utils.tgUserBot({ auth, workspaceId: '...' });
 
 // Resolve channel (public, no auth required)
 const resolved = await tg.channels.resolve('durov');
@@ -538,7 +548,7 @@ Web Navigator API
 REST client for URL resolution and web scraping jobs:
 
 ```ts
-const webNav = diskd.webNavigator({ auth, workspaceId: '...' });
+const webNav = diskd.utils.webNavigator({ auth, workspaceId: '...' });
 
 // Resolve URL metadata
 const meta = await webNav.resolve({ url: 'https://example.com' });

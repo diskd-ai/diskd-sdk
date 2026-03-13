@@ -1,8 +1,9 @@
 import type { AgentHubClient } from '../agentHub/agentHubTypes.js';
 import type { ApiKeyAuthParams, AuthModule, SdkCreateParams } from '../auth/types.js';
-import type { DriveCrontabClient } from '../drive/crontabTypes.js';
+import type { DriveCrontabScopeRef, DriveScopedCrontabClient } from '../drive/crontabTypes.js';
 import type { DriveDatabaseParams, DriveDatabase } from '../drive/DriveRepository.js';
-import type { DriveSessionManager } from '../drive/sessionObject.js';
+import type { DriveScopedSessionManager } from '../drive/sessionObject.js';
+import type { DriveSessionScopeRef } from '../drive/sessionTypes.js';
 import type { DriveClient } from '../drive/types.js';
 import type {
   DriveDataSource,
@@ -22,56 +23,65 @@ export type DiskD = {
     readonly credentials: (params: SdkCreateParams) => Promise<AuthModule>;
   };
 
-  readonly drive: (params: {
-    readonly version: 'v1';
-    readonly auth: AuthModule;
-    readonly url?: string;
-  }) => DriveClient;
+  readonly os: {
+    readonly drive: (params: {
+      readonly version: 'v1';
+      readonly auth: AuthModule;
+      readonly url?: string;
+    }) => DriveClient;
 
-  readonly session: (params: {
-    readonly auth: AuthModule;
-    readonly url?: string;
-  }) => DriveSessionManager;
+    readonly database: (params: DriveDatabaseParams & {
+      readonly auth: AuthModule;
+      readonly url?: string;
+    }) => DriveDatabase;
 
-  readonly crontab: (params: {
-    readonly auth: AuthModule;
-    readonly url?: string;
-  }) => DriveCrontabClient;
+    /** Create a TypeORM DataSource backed by Drive DB (requires `typeorm` peer). */
+    readonly datasource: (params: DriveDataSourceParams) => DriveDataSource;
 
-  readonly database: (params: DriveDatabaseParams & {
-    readonly auth: AuthModule;
-    readonly url?: string;
-  }) => DriveDatabase;
+    readonly llm: (params: {
+      readonly auth: AuthModule;
+      readonly url?: string;
+    }) => LlmRouterClient;
 
-  /** Create a TypeORM DataSource backed by Drive DB (requires `typeorm` peer). */
-  readonly datasource: (params: DriveDataSourceParams) => DriveDataSource;
+    readonly mcp: (params: {
+      readonly auth: AuthModule;
+      readonly workspaceId: string;
+      readonly url?: string;
+    }) => McpHubClient;
 
-  readonly llm: (params: {
-    readonly auth: AuthModule;
-    readonly url?: string;
-  }) => LlmRouterClient;
+    readonly agents: (params: {
+      readonly auth: AuthModule;
+      readonly workspaceId: string;
+      readonly url?: string;
+    }) => AgentHubClient;
+  };
 
-  readonly mcpHub: (params: {
-    readonly auth: AuthModule;
-    readonly workspaceId: string;
-    readonly url?: string;
-  }) => McpHubClient;
+  readonly platform: {
+    readonly sessions: (params: {
+      readonly auth: AuthModule;
+      readonly scope: DriveSessionScopeRef;
+      readonly url?: string;
+    }) => DriveScopedSessionManager;
 
-  readonly agentHub: (params: {
-    readonly auth: AuthModule;
-    readonly workspaceId: string;
-    readonly url?: string;
-  }) => AgentHubClient;
+    readonly crontab: (params: {
+      readonly auth: AuthModule;
+      readonly scope: DriveCrontabScopeRef;
+      readonly timezone?: string | null;
+      readonly url?: string;
+    }) => DriveScopedCrontabClient;
+  };
 
-  readonly tgUserbot: (params: {
-    readonly auth: AuthModule;
-    readonly workspaceId: string;
-    readonly url?: string;
-  }) => TgUserbotClient;
+  readonly utils: {
+    readonly tgUserBot: (params: {
+      readonly auth: AuthModule;
+      readonly workspaceId: string;
+      readonly url?: string;
+    }) => TgUserbotClient;
 
-  readonly webNavigator: (params: {
-    readonly auth: AuthModule;
-    readonly workspaceId: string;
-    readonly url?: string;
-  }) => WebNavigatorClient;
+    readonly webNavigator: (params: {
+      readonly auth: AuthModule;
+      readonly workspaceId: string;
+      readonly url?: string;
+    }) => WebNavigatorClient;
+  };
 };
