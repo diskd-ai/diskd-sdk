@@ -15,7 +15,7 @@
  */
 import path from 'node:path';
 
-import { createAuth, diskd } from '@diskd/sdk';
+import { diskd } from '@diskd/sdk';
 
 // ---------------------------------------------------------------------------
 // Configuration from environment
@@ -33,8 +33,9 @@ const PROJECT_ID = process.env.DISKD_PROJECT_ID ?? 'my-project';
 // Create Drive client with OAuth2 auth (external client pattern)
 // ---------------------------------------------------------------------------
 
-const auth = await createAuth({ scopes, keyfilePath: credentialsPath });
+const auth = await diskd.auth.credentials({ scopes, keyfilePath: credentialsPath });
 const drive = diskd.drive({ version: 'v1', auth });
+const sessions = diskd.session({ auth });
 
 console.log(`Connecting to Drive via gateway`);
 console.log(`Project: ${PROJECT_ID}\n`);
@@ -50,7 +51,7 @@ console.log('[ok] Drive initialized');
 // 2. Start a new session
 // ---------------------------------------------------------------------------
 
-const session = await drive.session.start({ projectId: PROJECT_ID, title: 'Deployment help' });
+const session = await sessions.start({ projectId: PROJECT_ID, title: 'Deployment help' });
 console.log(`[ok] Started session: ${session.sessionId}`);
 
 // ---------------------------------------------------------------------------
@@ -58,18 +59,18 @@ console.log(`[ok] Started session: ${session.sessionId}`);
 // ---------------------------------------------------------------------------
 
 await session.append([
-  drive.session.message({ role: 'user', content: 'How do I deploy to production?' }),
+  sessions.message({ role: 'user', content: 'How do I deploy to production?' }),
 ]);
 console.log(`[ok] Appended user message (count: ${session.messageCount})`);
 
 await session.append([
-  drive.session.message({ role: 'assistant', content: 'Here are the steps to deploy...' }),
+  sessions.message({ role: 'assistant', content: 'Here are the steps to deploy...' }),
 ]);
 console.log(`[ok] Appended assistant message (count: ${session.messageCount})`);
 
 await session.append([
-  drive.session.message({ role: 'user', content: 'What about rollback?' }),
-  drive.session.message({ role: 'assistant', content: 'To rollback, use: kubectl rollout undo deployment/<name>' }),
+  sessions.message({ role: 'user', content: 'What about rollback?' }),
+  sessions.message({ role: 'assistant', content: 'To rollback, use: kubectl rollout undo deployment/<name>' }),
 ]);
 console.log(`[ok] Appended turn pair (count: ${session.messageCount})`);
 
@@ -77,7 +78,7 @@ console.log(`[ok] Appended turn pair (count: ${session.messageCount})`);
 // 4. Open with preview (newest N messages)
 // ---------------------------------------------------------------------------
 
-const preview = await drive.session.open({
+const preview = await sessions.open({
   projectId: PROJECT_ID,
   sessionId: session.sessionId,
   limit: 2,
@@ -100,7 +101,7 @@ preview.dispose();
 // 6. Fork session
 // ---------------------------------------------------------------------------
 
-const full = await drive.session.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
+const full = await sessions.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
 if (full.messages.length > 1) {
   const forkPointId = full.messages[1]!.id;
   const forked = await full.fork({ atMessageId: forkPointId });
@@ -110,7 +111,7 @@ if (full.messages.length > 1) {
   console.log(`     Messages copied: ${forked.messages.length}`);
 
   await forked.append([
-    drive.session.message({ role: 'user', content: 'Actually, let me try a different approach...' }),
+    sessions.message({ role: 'user', content: 'Actually, let me try a different approach...' }),
   ]);
   console.log(`[ok] Appended to forked session (count: ${forked.messageCount})`);
 
@@ -122,7 +123,7 @@ full.dispose();
 // 7. Rollback (undo last turn)
 // ---------------------------------------------------------------------------
 
-const rollbackSession = await drive.session.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
+const rollbackSession = await sessions.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
 const rollbackPoint = rollbackSession.messages[rollbackSession.messages.length - 2]!.id;
 await rollbackSession.rollback(rollbackPoint);
 console.log(`[ok] Rolled back after ${rollbackPoint}`);
@@ -134,7 +135,7 @@ rollbackSession.dispose();
 // 8. Remove specific messages
 // ---------------------------------------------------------------------------
 
-const editSession = await drive.session.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
+const editSession = await sessions.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
 if (editSession.messages.length > 1) {
   const toRemove = editSession.messages[1]!.id;
   await editSession.remove([toRemove]);
@@ -147,7 +148,7 @@ editSession.dispose();
 // 9. List sessions
 // ---------------------------------------------------------------------------
 
-const listResult = await drive.session.list({ projectId: PROJECT_ID });
+const listResult = await sessions.list({ projectId: PROJECT_ID });
 console.log(`\n[ok] Sessions in project "${PROJECT_ID}":`);
 for (const item of listResult.items) {
   console.log(`     - ${item.sessionId}: "${item.title ?? '(untitled)'}" (${item.messageCount} msgs)`);
@@ -157,7 +158,7 @@ for (const item of listResult.items) {
 // 10. Delete session
 // ---------------------------------------------------------------------------
 
-await drive.session.delete({ projectId: PROJECT_ID, sessionId: session.sessionId });
+await sessions.delete({ projectId: PROJECT_ID, sessionId: session.sessionId });
 console.log(`\n[ok] Deleted session ${session.sessionId}`);
 
 session.dispose();
@@ -167,7 +168,7 @@ session.dispose();
 // ---------------------------------------------------------------------------
 
 // save() is stateless -- use it for bulk import / migration
-const importResult = await drive.session.save({
+const importResult = await sessions.save({
   projectId: PROJECT_ID,
   session: {
     id: 'imported-session-001',
@@ -184,8 +185,8 @@ const importResult = await drive.session.save({
     exchanges: [],
     participants: [],
     messages: [
-      drive.session.message({ id: 'legacy-msg-1', role: 'user', content: 'Original user message' }),
-      drive.session.message({ id: 'legacy-msg-2', role: 'assistant', content: 'Original AI response' }),
+      sessions.message({ id: 'legacy-msg-1', role: 'user', content: 'Original user message' }),
+      sessions.message({ id: 'legacy-msg-2', role: 'assistant', content: 'Original AI response' }),
     ],
     createdAt: '2025-01-01T00:00:00Z',
     updatedAt: '2025-01-01T00:00:00Z',

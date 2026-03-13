@@ -1,6 +1,8 @@
 import type { AgentHubClient } from '../agentHub/agentHubTypes.js';
 import type { ApiKeyAuthParams, AuthModule, SdkCreateParams } from '../auth/types.js';
+import type { DriveCrontabClient } from '../drive/crontabTypes.js';
 import type { DriveDatabaseParams, DriveDatabase } from '../drive/DriveRepository.js';
+import type { DriveSessionManager } from '../drive/sessionObject.js';
 import type { DriveClient } from '../drive/types.js';
 import type {
   DriveDataSource,
@@ -25,6 +27,16 @@ export type DiskD = {
     readonly auth: AuthModule;
     readonly url?: string;
   }) => DriveClient;
+
+  readonly session: (params: {
+    readonly auth: AuthModule;
+    readonly url?: string;
+  }) => DriveSessionManager;
+
+  readonly crontab: (params: {
+    readonly auth: AuthModule;
+    readonly url?: string;
+  }) => DriveCrontabClient;
 
   readonly database: (params: DriveDatabaseParams & {
     readonly auth: AuthModule;
@@ -63,4 +75,3 @@ export type DiskD = {
     readonly url?: string;
   }) => WebNavigatorClient;
 };
-

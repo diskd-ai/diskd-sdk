@@ -60,8 +60,14 @@ Notes:
 Drive crontab example
 ---------------------
 
-See `examples/node/drive-crontab.ts` for a project-scoped `drive.crontab`
+See `examples/node/drive-crontab.ts` for a project-scoped `diskd.crontab()`
 `createProjectJob/get/getStatus/listJobs` flow using `diskd.auth.credentials(...)`.
+
+Drive session examples
+----------------------
+
+See `examples/node/drive-session-external.ts` and
+`examples/node/drive-session-internal.ts` for `diskd.session()` flows.
 
 Web quickstart (Vite, real OAuth client)
 ----------------------------------------

@@ -3,7 +3,7 @@
 Unified TypeScript SDK for the Upgraide platform APIs.
 
 All services are accessible via the `diskd` factory, which provides a consistent
-`createApiKeyAuth` / `createAuth` + `diskd.<service>()` pattern:
+`diskd.auth.*` + `diskd.<service>()` pattern:
 
 ```ts
 import { diskd } from '@diskd/sdk';
@@ -11,6 +11,8 @@ import { diskd } from '@diskd/sdk';
 const auth = diskd.auth.apiKey({ apiKey: '...', workspaceId: '...' });
 
 const drive      = diskd.drive({ version: 'v1', auth });
+const sessions   = diskd.session({ auth });
+const crontab    = diskd.crontab({ auth });
 const db         = diskd.database({ auth, dbName: '...', schema: { ... } });
 const ds         = diskd.datasource({ auth, dbName: '...', entities: [...] });
 const llm        = diskd.llm({ auth });
@@ -58,7 +60,7 @@ The SDK supports two authentication modes via the `AuthModule` interface.
 
 ### External clients (OAuth2)
 
-Use `createAuth` for OAuth2 service-account or PKCE browser flows:
+Use `diskd.auth.credentials()` for OAuth2 service-account or PKCE browser flows:
 
 ```ts
 import { diskd } from '@diskd/sdk';
@@ -73,7 +75,7 @@ const drive = diskd.drive({ version: 'v1', auth });
 
 ### Internal services (API key)
 
-Use `createApiKeyAuth` for service-to-service communication within the cluster:
+Use `diskd.auth.apiKey()` for service-to-service communication within the cluster:
 
 ```ts
 import { diskd } from '@diskd/sdk';
@@ -155,7 +157,7 @@ const file = await drive.download.file({
 await file.stream.pipeTo(writableStream);
 ```
 
-### File metadata, disk usage, tools, sessions
+### File metadata, disk usage, tools
 
 ```ts
 const meta = await drive.files.metadata({ inode: 'abc' });
@@ -164,9 +166,33 @@ const ls = await drive.tools.ls({ path: '/', recursive: true });
 const grep = await drive.tools.grep({ pattern: 'TODO' });
 ```
 
+### Sessions
+
+The SDK exposes these session methods on `diskd.session({ auth })`:
+
+- `start`
+- `open`
+- `save`
+- `list`
+- `delete`
+- `message`
+
+```ts
+const session = await sessions.start({
+  projectId: 'proj-1',
+  title: 'Deployment help',
+});
+
+await session.append([
+  sessions.message({ role: 'user', content: 'How do I deploy to production?' }),
+]);
+
+const sessionList = await sessions.list({ projectId: 'proj-1' });
+```
+
 ### Crontab scheduler
 
-The Drive client exposes these scheduler methods on `drive.crontab`:
+The SDK exposes these scheduler methods on `diskd.crontab({ auth })`:
 
 - `save`
 - `get`
@@ -177,7 +203,7 @@ The Drive client exposes these scheduler methods on `drive.crontab`:
 - `createProfileJob`
 
 ```ts
-await drive.crontab.createProjectJob({
+await crontab.createProjectJob({
   projectId: 'proj-1',
   timezone: 'UTC',
   job: {
@@ -201,7 +227,7 @@ await drive.crontab.createProjectJob({
   },
 });
 
-const status = await drive.crontab.getStatus({
+const status = await crontab.getStatus({
   scope: { scopeType: 'project', projectId: 'proj-1' },
 });
 ```

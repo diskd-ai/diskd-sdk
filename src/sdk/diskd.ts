@@ -27,6 +27,10 @@ export const diskd: DiskD = {
     return createDriveClient({ version, auth, url });
   },
 
+  session: ({ auth, url }) => createDriveClient({ version: 'v1', auth, url }).session,
+
+  crontab: ({ auth, url }) => createDriveClient({ version: 'v1', auth, url }).crontab,
+
   database: ({ auth, url, dbName, dbType, schema }) => {
     const drive = createDriveClient({ version: 'v1', auth, url });
     return createDriveDatabase({ db: drive.db, dbName, dbType, schema });
@@ -50,4 +54,3 @@ export const diskd: DiskD = {
 
   webNavigator: ({ auth, workspaceId, url }) => createWebNavigatorClient({ auth, workspaceId, url }),
 };
-

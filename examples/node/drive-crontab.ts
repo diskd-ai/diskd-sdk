@@ -23,6 +23,7 @@ const PROJECT_ID = process.env.DISKD_PROJECT_ID ?? 'my-project';
 
 const auth = await diskd.auth.credentials({ scopes, keyfilePath: credentialsPath });
 const drive = diskd.drive({ version: 'v1', auth });
+const crontab = diskd.crontab({ auth });
 
 await drive.init();
 console.log('[ok] Drive initialized');
@@ -32,7 +33,7 @@ const scope = {
   projectId: PROJECT_ID,
 };
 
-const saveResult = await drive.crontab.createProjectJob({
+const saveResult = await crontab.createProjectJob({
   projectId: PROJECT_ID,
   timezone: 'UTC',
   job: {
@@ -63,14 +64,14 @@ console.log(`[ok] Saved crontab document (${saveResult.jobCount} job)`);
 console.log(`     Updated at: ${saveResult.updatedAt}`);
 console.log(`     Next run: ${saveResult.nextRunAt ?? 'none'}`);
 
-const getResult = await drive.crontab.get({ scope });
+const getResult = await crontab.get({ scope });
 console.log(`[ok] Loaded document version ${getResult.document.version}`);
 console.log(`     Timezone: ${getResult.document.timezone ?? '(none)'}`);
 
-const statusResult = await drive.crontab.getStatus({ scope });
+const statusResult = await crontab.getStatus({ scope });
 console.log(`[ok] Status: ${statusResult.jobCount} job, next run ${statusResult.nextRunAt ?? 'none'}`);
 
-const listResult = await drive.crontab.listJobs({ scope });
+const listResult = await crontab.listJobs({ scope });
 console.log(`[ok] Normalized jobs: ${listResult.items.length}`);
 for (const item of listResult.items) {
   console.log(`     - ${item.jobId} ${item.method} ${item.url} enabled=${item.enabled}`);

@@ -16,7 +16,7 @@
  *   npm run examples:build && node dist-examples/node/drive-session-internal.js
  */
 
-import { createApiKeyAuth, diskd } from '@diskd/sdk';
+import { diskd } from '@diskd/sdk';
 
 // ---------------------------------------------------------------------------
 // Configuration from environment
@@ -32,13 +32,14 @@ const PROJECT_ID = process.env.DRIVE_PROJECT_ID ?? 'sdk-test';
 // Create Drive client with API key auth (internal service pattern)
 // ---------------------------------------------------------------------------
 
-const auth = createApiKeyAuth({
+const auth = diskd.auth.apiKey({
   apiKey: DRIVE_API_KEY,
   workspaceId: DRIVE_WORKSPACE_ID,
   orgId: DRIVE_ORG_ID,
 });
 
 const drive = diskd.drive({ version: 'v1', auth, url: DRIVE_API_URL });
+const sessions = diskd.session({ auth, url: DRIVE_API_URL });
 
 console.log(`Connecting to Drive at ${DRIVE_API_URL}`);
 console.log(`Project: ${PROJECT_ID}\n`);
@@ -71,7 +72,7 @@ console.log(`[ok] Project folder /Projects/${PROJECT_ID} ready`);
 // 2. Start a new session
 // ---------------------------------------------------------------------------
 
-const session = await drive.session.start({ projectId: PROJECT_ID, title: 'SDK Integration Test', workspaceId: DRIVE_ORG_ID });
+const session = await sessions.start({ projectId: PROJECT_ID, title: 'SDK Integration Test', workspaceId: DRIVE_ORG_ID });
 console.log(`[ok] Started session: ${session.sessionId}`);
 
 // ---------------------------------------------------------------------------
@@ -79,18 +80,18 @@ console.log(`[ok] Started session: ${session.sessionId}`);
 // ---------------------------------------------------------------------------
 
 await session.append([
-  drive.session.message({ role: 'user', content: 'How do I deploy to production?' }),
+  sessions.message({ role: 'user', content: 'How do I deploy to production?' }),
 ]);
 console.log(`[ok] Appended user message (count: ${session.messageCount})`);
 
 await session.append([
-  drive.session.message({ role: 'assistant', content: 'Here are the deployment steps:\n1. Build the image\n2. Push to registry\n3. Update k8s manifests\n4. Apply with kubectl' }),
+  sessions.message({ role: 'assistant', content: 'Here are the deployment steps:\n1. Build the image\n2. Push to registry\n3. Update k8s manifests\n4. Apply with kubectl' }),
 ]);
 console.log(`[ok] Appended assistant message (count: ${session.messageCount})`);
 
 await session.append([
-  drive.session.message({ role: 'user', content: 'What about rollback?' }),
-  drive.session.message({ role: 'assistant', content: 'To rollback, use: kubectl rollout undo deployment/<name>' }),
+  sessions.message({ role: 'user', content: 'What about rollback?' }),
+  sessions.message({ role: 'assistant', content: 'To rollback, use: kubectl rollout undo deployment/<name>' }),
 ]);
 console.log(`[ok] Appended turn pair (count: ${session.messageCount})`);
 
@@ -98,7 +99,7 @@ console.log(`[ok] Appended turn pair (count: ${session.messageCount})`);
 // 4. Open with preview (newest N messages)
 // ---------------------------------------------------------------------------
 
-const preview = await drive.session.open({ projectId: PROJECT_ID, sessionId: session.sessionId, limit: 2 });
+const preview = await sessions.open({ projectId: PROJECT_ID, sessionId: session.sessionId, limit: 2 });
 console.log(`[ok] Opened preview: ${preview.messages.length} messages loaded, ${preview.messageCount} total`);
 
 // ---------------------------------------------------------------------------
@@ -115,7 +116,7 @@ preview.dispose();
 // 6. Fork session
 // ---------------------------------------------------------------------------
 
-const full = await drive.session.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
+const full = await sessions.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
 const forkPointId = full.messages[1]!.id; // fork after first assistant response
 const forked = await full.fork({ atMessageId: forkPointId });
 console.log(`[ok] Forked session: ${forked.sessionId}`);
@@ -124,7 +125,7 @@ console.log(`     Fork point: ${forked.document.forkSourceMessageId}`);
 console.log(`     Messages copied: ${forked.messages.length}`);
 
 await forked.append([
-  drive.session.message({ role: 'user', content: 'Actually, let me try a different approach...' }),
+  sessions.message({ role: 'user', content: 'Actually, let me try a different approach...' }),
 ]);
 console.log(`[ok] Appended to forked session (count: ${forked.messageCount})`);
 
@@ -135,7 +136,7 @@ full.dispose();
 // 7. Rollback (undo last turn)
 // ---------------------------------------------------------------------------
 
-const rollbackSession = await drive.session.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
+const rollbackSession = await sessions.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
 const rollbackPoint = rollbackSession.messages[rollbackSession.messages.length - 2]!.id;
 await rollbackSession.rollback(rollbackPoint);
 console.log(`[ok] Rolled back after ${rollbackPoint}`);
@@ -147,7 +148,7 @@ rollbackSession.dispose();
 // 8. Remove specific messages
 // ---------------------------------------------------------------------------
 
-const editSession = await drive.session.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
+const editSession = await sessions.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
 if (editSession.messages.length > 1) {
   const toRemove = editSession.messages[1]!.id;
   await editSession.remove([toRemove]);
@@ -161,7 +162,7 @@ editSession.dispose();
 // 9. List sessions
 // ---------------------------------------------------------------------------
 
-const listResult = await drive.session.list({ projectId: PROJECT_ID });
+const listResult = await sessions.list({ projectId: PROJECT_ID });
 console.log(`\n[ok] Sessions in project "${PROJECT_ID}":`);
 for (const item of listResult.items) {
   console.log(`     - ${item.sessionId}: "${item.title ?? '(untitled)'}" (${item.messageCount} msgs)`);
@@ -171,7 +172,7 @@ for (const item of listResult.items) {
 // 10. Refresh and verify final state
 // ---------------------------------------------------------------------------
 
-const finalSession = await drive.session.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
+const finalSession = await sessions.open({ projectId: PROJECT_ID, sessionId: session.sessionId });
 console.log(`\n[ok] Final session state:`);
 console.log(`     ID: ${finalSession.sessionId}`);
 console.log(`     Title: ${finalSession.document.title}`);
