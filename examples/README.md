@@ -57,6 +57,12 @@ Notes:
 - If you omit the argument, the script uses `./credentials.json` in the current directory.
 - You can also set `DISKD_CREDENTIALS_PATH` instead of passing a CLI arg.
 
+Drive crontab example
+---------------------
+
+See `examples/node/drive-crontab.ts` for a project-scoped `drive.crontab`
+`createProjectJob/get/getStatus/listJobs` flow using `diskd.auth.credentials(...)`.
+
 Web quickstart (Vite, real OAuth client)
 ----------------------------------------
 

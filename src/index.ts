@@ -90,7 +90,38 @@ export { createDriveSessionManager } from './drive/sessionObject.js';
 export type { MessageParams } from './drive/sessionBuilder.js';
 export { buildMessage, generateUlid } from './drive/sessionBuilder.js';
 export { createDriveSessionClient } from './drive/session.js';
+export { createDriveCrontabClient } from './drive/crontab.js';
 export { jsonRpcCall } from './drive/rpc.js';
+export type {
+  DriveCrontabClient,
+  DriveCrontabCreateProfileJobParams,
+  DriveCrontabCreateProjectJobParams,
+  DriveCrontabDocument,
+  DriveCrontabGetParams,
+  DriveCrontabGetResult,
+  DriveCrontabGetStatusParams,
+  DriveCrontabGetStatusResult,
+  DriveCrontabHttpMethod,
+  DriveCrontabJob,
+  DriveCrontabJobListItem,
+  DriveCrontabJsonContainer,
+  DriveCrontabJsonPayload,
+  DriveCrontabListJobsParams,
+  DriveCrontabListJobsResult,
+  DriveCrontabPathPayload,
+  DriveCrontabPayload,
+  DriveCrontabPayloadKind,
+  DriveCrontabProfileScopeRef,
+  DriveCrontabProjectScopeRef,
+  DriveCrontabRequest,
+  DriveCrontabRunJobParams,
+  DriveCrontabRunJobResult,
+  DriveCrontabSaveParams,
+  DriveCrontabSaveResult,
+  DriveCrontabSchedule,
+  DriveCrontabScopeRef,
+  DriveCrontabUriPayload,
+} from './drive/crontabTypes.js';
 export type {
   DriveSessionAppendMessagesParams,
   DriveSessionAppendMessagesResult,
