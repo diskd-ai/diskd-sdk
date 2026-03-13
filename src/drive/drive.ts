@@ -1,4 +1,5 @@
 import type { AuthModule } from '../auth/types.js';
+import { createDriveCrontabClient } from './crontab.js';
 import { resolveDiskdBaseUrl } from '../env/baseUrl.js';
 import { createDriveDbClient } from './driveDb.js';
 import { jsonRpcCall } from './rpc.js';
@@ -252,8 +253,9 @@ export const createDriveClient = (params: {
   };
 
   const db = createDriveDbClient({ call });
-  const rpc = createDriveSessionClient({ call });
-  const session = createDriveSessionManager({ rpc });
+  const crontab = createDriveCrontabClient({ call });
+  const sessionRpc = createDriveSessionClient({ call });
+  const session = createDriveSessionManager({ rpc: sessionRpc });
 
   return {
     // -- Init --
@@ -537,6 +539,9 @@ export const createDriveClient = (params: {
 
     // -- Database --
     db,
+
+    // -- Crontab --
+    crontab,
 
     // -- Session --
     session,

@@ -164,7 +164,39 @@ const ls = await drive.tools.ls({ path: '/', recursive: true });
 const grep = await drive.tools.grep({ pattern: 'TODO' });
 ```
 
-See `examples/node/drive-upload-download.ts` and `examples/node/drive-session-external.ts`.
+### Crontab scheduler
+
+```ts
+await drive.crontab.createProjectJob({
+  projectId: 'proj-1',
+  timezone: 'UTC',
+  job: {
+    jobId: '01JABCD2FGH3JK4MNP5QRST6VW',
+    enabled: true,
+    schedule: {
+      minute: '*/5',
+      hour: '*',
+      dayOfMonth: '*',
+      month: '*',
+      dayOfWeek: '*',
+    },
+    request: {
+      method: 'POST',
+      url: 'https://example.internal/hooks/sync',
+      payload: {
+        kind: 'json',
+        value: { source: 'sdk-example' },
+      },
+    },
+  },
+});
+
+const status = await drive.crontab.getStatus({
+  scope: { scopeType: 'project', projectId: 'proj-1' },
+});
+```
+
+See `examples/node/drive-upload-download.ts`, `examples/node/drive-session-external.ts`, and `examples/node/drive-crontab.ts`.
 
 Drive Database API
 ------------------

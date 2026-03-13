@@ -1,4 +1,5 @@
 import type { DriveDbClient } from './driveDbTypes.js';
+import type { DriveCrontabClient } from './crontabTypes.js';
 import type { DriveSessionManager } from './sessionObject.js';
 import type {
   DriveCreateParams,
@@ -77,6 +78,9 @@ export type DriveClient = {
 
   // Database operations (Drive DB -- SQLite via JSON-RPC)
   readonly db: DriveDbClient;
+
+  // Crontab scheduler management
+  readonly crontab: DriveCrontabClient;
 
   // Session management
   readonly session: DriveSessionManager;
