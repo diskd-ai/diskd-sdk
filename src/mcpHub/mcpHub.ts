@@ -1,4 +1,5 @@
 import type { AuthModule } from '../auth/types.js';
+import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import type {
   AddRemoteServerParams,
   AddServerParams,
@@ -28,28 +29,6 @@ import type {
   UpdateServerResult,
   UpsertEnvVarParams,
 } from './mcpHubTypes.js';
-
-// ---------------------------------------------------------------------------
-// Environment URL resolution
-// ---------------------------------------------------------------------------
-
-const readEnvString = (value: unknown): string | undefined =>
-  typeof value === 'string' && value.length > 0 ? value : undefined;
-
-const resolveMcpHubBaseUrl = (): string => {
-  const nodeEnv = readEnvString(
-    (globalThis as { process?: { env?: { MCP_HUB_BASE_URL?: string } } }).process?.env
-      ?.MCP_HUB_BASE_URL,
-  );
-  if (nodeEnv) return nodeEnv;
-
-  const runtime = readEnvString(
-    (globalThis as { MCP_HUB_BASE_URL?: unknown }).MCP_HUB_BASE_URL,
-  );
-  if (runtime) return runtime;
-
-  return 'http://mcp-hub:8300';
-};
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -181,8 +160,8 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
 /**
  * Creates an MCP Hub REST client bound to a given auth module and workspace.
  *
- * The URL defaults to the `MCP_HUB_BASE_URL` environment variable, falling
- * back to `http://mcp-hub:8300` for K8s in-cluster use.
+ * The URL defaults to the centralized `DISKD_BASE_URL` gateway with the
+ * `/os/mcp` path prefix.
  *
  * The `workspaceId` is forwarded as `X-Workspace-Id` on all registry and
  * integration endpoints. Catalog endpoints are public and do not require it.
@@ -198,7 +177,7 @@ export const createMcpHubClient = (params: {
   readonly url?: string;
   readonly workspaceId: string;
 }): McpHubClient => {
-  const baseUrl = (params.url ?? resolveMcpHubBaseUrl()).replace(/\/+$/, '');
+  const baseUrl = (params.url ?? resolveDiskdGatewayUrl('os/mcp')).replace(/\/+$/, '');
 
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
     if (params.auth.getRequestHeaders) {

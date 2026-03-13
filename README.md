@@ -100,11 +100,7 @@ const auth = diskd.auth.apiKey({
   workspaceId: process.env.WORKSPACE_ID!,
 });
 
-const drive = diskd.os.drive({
-  version: 'v1',
-  auth,
-  url: 'http://drive-service:8000/drive/api/v1',
-});
+const drive = diskd.os.drive({ version: 'v1', auth });
 ```
 
 Both auth modes produce identical client instances.
@@ -112,19 +108,39 @@ Both auth modes produce identical client instances.
 Environment variables
 ---------------------
 
-Each service resolves its base URL from an environment variable, falling back
-to an in-cluster K8s service name:
+All resource APIs resolve from the centralized gateway base URL:
 
-| Service        | Env Variable             | Default                        |
-|----------------|--------------------------|--------------------------------|
-| Drive          | `DISKD_BASE_URL`         | `https://apis.upgraide.dev:8080` |
-| LLM Router     | `LLM_ROUTER_BASE_URL`   | `http://llm-router:3000`      |
-| Agent Hub      | `AGENT_HUB_BASE_URL`    | `http://agent-hub:8081`       |
-| MCP Hub        | `MCP_HUB_BASE_URL`      | `http://mcp-hub:8300`         |
-| TG Userbot     | `TG_USERBOT_BASE_URL`   | `http://tg-userbot:8000`      |
-| Web Navigator  | `WEB_NAVIGATOR_BASE_URL` | `http://web-navigator:8080`  |
+| Env Variable | Default |
+|--------------|---------|
+| `DISKD_BASE_URL` | `https://apis.diskd.local:8080` |
 
-All can be overridden per-client via the `url` parameter.
+The gateway is the single resource entrypoint. The SDK derives API paths from
+the same namespace structure as the public SDK surface and lets the gateway
+handle API orchestration and auth strategy.
+
+Derived default paths:
+- `/os/drive`
+- `/os/llm`
+- `/os/agents`
+- `/os/mcp`
+- `/utils/tg-userbot`
+- `/utils/web-navigator`
+
+You can still override a client with an explicit `url`, but the default mode is
+the centralized gateway.
+
+Gateway Decision
+----------------
+
+This SDK does not treat resource APIs as independently-discovered hosts.
+The canonical model is one centralized `apis` gateway behind `DISKD_BASE_URL`.
+
+That means:
+- no per-service default env vars such as `LLM_ROUTER_BASE_URL`, `AGENT_HUB_BASE_URL`, or `MCP_HUB_BASE_URL`
+- resource clients derive their route from `DISKD_BASE_URL` plus a namespace-derived path prefix
+- the gateway is responsible for request routing, API orchestration, and auth-strategy handling
+
+Per-client `url` remains available only as an explicit override.
 
 Drive API
 ---------
@@ -428,7 +444,7 @@ LLM Router API
 JSON-RPC 2.0 + NDJSON streaming for multi-provider LLM completions:
 
 ```ts
-const llm = diskd.os.llm({ auth, url: 'http://llm-router:3000' });
+const llm = diskd.os.llm({ auth });
 
 // Non-streaming completion
 const result = await llm.completions.create({

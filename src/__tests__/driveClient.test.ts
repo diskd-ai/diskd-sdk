@@ -33,7 +33,7 @@ test('drive.init calls JSON-RPC with Bearer token', async () => {
     const drive = diskd.os.drive({ version: 'v1', auth });
     await drive.init();
 
-    assert.equal(calls[0]?.url, 'https://apis.example/drive/api/v1');
+    assert.equal(calls[0]?.url, 'https://apis.example/os/drive/api/v1');
     const init = calls[0]?.init;
     const authHeader = (init?.headers as { Authorization?: string } | undefined)?.Authorization;
     assert.equal(authHeader, 'Bearer token-123');
@@ -89,7 +89,7 @@ test('drive.crontab.getStatus uses the drive JSON-RPC endpoint', async () => {
       nextRunAt: null,
       updatedAt: '2026-03-13T10:00:00Z',
     });
-    assert.equal(calls[0]?.url, 'https://apis.example/drive/api/v1');
+    assert.equal(calls[0]?.url, 'https://apis.example/os/drive/api/v1');
     assert.ok(String(calls[0]?.init?.body).includes('"method":"drive/crontab/get-status"'));
     assert.ok(String(calls[0]?.init?.body).includes('"scope_type":"profile"'));
   } finally {
@@ -147,7 +147,7 @@ test('diskd.platform.crontab binds scope + timezone in the constructor', async (
       nextRunAt: null,
       updatedAt: '2026-03-13T10:00:00Z',
     });
-    assert.equal(calls[0]?.url, 'https://apis.example/drive/api/v1');
+    assert.equal(calls[0]?.url, 'https://apis.example/os/drive/api/v1');
     assert.ok(String(calls[0]?.init?.body).includes('"method":"drive/crontab/save"'));
     assert.ok(String(calls[0]?.init?.body).includes('"scope_type":"project"'));
     assert.ok(String(calls[0]?.init?.body).includes('"project_id":"proj-1"'));
@@ -269,7 +269,7 @@ test('diskd.platform.sessions.list uses the drive JSON-RPC endpoint', async () =
         model: 'gpt-5',
       }],
     });
-    assert.equal(calls[0]?.url, 'https://apis.example/drive/api/v1');
+    assert.equal(calls[0]?.url, 'https://apis.example/os/drive/api/v1');
     assert.ok(String(calls[0]?.init?.body).includes('"method":"drive/session/list"'));
     assert.ok(String(calls[0]?.init?.body).includes('"project_id":"proj-1"'));
   } finally {
@@ -302,4 +302,102 @@ test('diskd exposes namespaced os and utils factories for non-drive services', (
   assert.equal(typeof mcp.catalog.list, 'function');
   assert.equal(typeof tg.channels.list, 'function');
   assert.equal(typeof webNavigator.scrape.submit, 'function');
+});
+
+test('resource clients derive gateway paths from SDK namespaces', async () => {
+  process.env.DISKD_BASE_URL = 'https://apis.example';
+
+  const calls: FetchCall[] = [];
+  const originalFetch = globalThis.fetch;
+  const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const url = typeof input === 'string' ? input : input.toString();
+    calls.push({ url, init });
+
+    if (url === 'https://apis.example/os/llm/api/v1/invoke') {
+      return new Response(JSON.stringify({
+        jsonrpc: '2.0',
+        result: {
+          models: [],
+        },
+        id: 1,
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (url === 'https://apis.example/os/agents/supported-agents') {
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (url === 'https://apis.example/os/mcp/api/catalog') {
+      return new Response(JSON.stringify({
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 20,
+        totalPages: 0,
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (url === 'https://apis.example/utils/tg-userbot/api/v1/channels') {
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (url === 'https://apis.example/utils/web-navigator/api/v1/resolve') {
+      return new Response(JSON.stringify({
+        title: null,
+        description: null,
+        favicon: null,
+        dbname: 'web.sqlite',
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response('not found', { status: 404 });
+  };
+  (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
+
+  const auth: AuthModule = {
+    signIn: async () => {},
+    signOut: () => {},
+    handleRedirectCallback: async () => {},
+    getAccessToken: async () => 'token-123',
+    getToken: () => ({ accessToken: 'token-123' }),
+  };
+
+  try {
+    await diskd.os.llm({ auth }).models.listAll();
+    await diskd.os.agents({ auth, workspaceId: 'ws-1' }).agents.list();
+    await diskd.os.mcp({ auth, workspaceId: 'ws-1' }).catalog.list();
+    await diskd.utils.tgUserBot({ auth, workspaceId: 'ws-1' }).channels.list();
+    await diskd.utils.webNavigator({ auth, workspaceId: 'ws-1' }).resolve({
+      url: 'https://example.com',
+    });
+
+    assert.deepEqual(
+      calls.map((call) => call.url),
+      [
+        'https://apis.example/os/llm/api/v1/invoke',
+        'https://apis.example/os/agents/supported-agents',
+        'https://apis.example/os/mcp/api/catalog',
+        'https://apis.example/utils/tg-userbot/api/v1/channels',
+        'https://apis.example/utils/web-navigator/api/v1/resolve',
+      ],
+    );
+  } finally {
+    (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
+    delete process.env.DISKD_BASE_URL;
+  }
 });

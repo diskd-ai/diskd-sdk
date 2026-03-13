@@ -1,4 +1,5 @@
 import type { AuthModule } from '../auth/types.js';
+import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import type {
   TgChannel,
   TgChannelAddParams,
@@ -14,28 +15,6 @@ import type {
   TgTaskListResult,
   TgUserbotClient,
 } from './tgUserbotTypes.js';
-
-// ---------------------------------------------------------------------------
-// Environment URL resolution
-// ---------------------------------------------------------------------------
-
-const readEnvString = (value: unknown): string | undefined =>
-  typeof value === 'string' && value.length > 0 ? value : undefined;
-
-const resolveTgUserbotBaseUrl = (): string => {
-  const nodeEnv = readEnvString(
-    (globalThis as { process?: { env?: { TG_USERBOT_BASE_URL?: string } } }).process?.env
-      ?.TG_USERBOT_BASE_URL,
-  );
-  if (nodeEnv) return nodeEnv;
-
-  const runtime = readEnvString(
-    (globalThis as { TG_USERBOT_BASE_URL?: unknown }).TG_USERBOT_BASE_URL,
-  );
-  if (runtime) return runtime;
-
-  return 'http://tg-userbot:8000';
-};
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -291,8 +270,8 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
 /**
  * Creates a TG Userbot REST client bound to a given auth module and workspace.
  *
- * The URL defaults to the `TG_USERBOT_BASE_URL` environment variable, falling
- * back to `http://tg-userbot:8000` for K8s in-cluster use.
+ * The URL defaults to the centralized `DISKD_BASE_URL` gateway with the
+ * `/utils/tg-userbot` path prefix.
  *
  * The `workspaceId` is forwarded as `X-Workspace-Id` on all authenticated
  * endpoints. The `channels.resolve` endpoint is public and does not require it.
@@ -308,7 +287,7 @@ export const createTgUserbotClient = (params: {
   readonly url?: string;
   readonly workspaceId: string;
 }): TgUserbotClient => {
-  const baseUrl = (params.url ?? resolveTgUserbotBaseUrl()).replace(/\/+$/, '');
+  const baseUrl = (params.url ?? resolveDiskdGatewayUrl('utils/tg-userbot')).replace(/\/+$/, '');
 
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
     if (params.auth.getRequestHeaders) {

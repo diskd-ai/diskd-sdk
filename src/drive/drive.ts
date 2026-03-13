@@ -1,6 +1,6 @@
 import type { AuthModule } from '../auth/types.js';
 import { createDriveCrontabClient } from './crontab.js';
-import { resolveDiskdBaseUrl } from '../env/baseUrl.js';
+import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import { createDriveDbClient } from './driveDb.js';
 import { jsonRpcCall } from './rpc.js';
 import { createDriveSessionClient } from './session.js';
@@ -236,7 +236,7 @@ export const createDriveClient = (params: {
 }): DriveClient => {
   const rpcUrl = params.url
     ? params.url.replace(/\/+$/, '')
-    : `${resolveDiskdBaseUrl().replace(/\/+$/, '')}/drive/api/v1`;
+    : `${resolveDiskdGatewayUrl('os/drive')}/api/v1`;
   let nextId = 1;
 
   const call = async (method: string, rpcParams: unknown): Promise<unknown> => {

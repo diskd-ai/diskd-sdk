@@ -1,4 +1,5 @@
 import type { AuthModule } from '../auth/types.js';
+import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import type {
   JobStatusResult,
   ResolveParams,
@@ -9,28 +10,6 @@ import type {
   ScrapeSubmitResult,
   WebNavigatorClient,
 } from './webNavigatorTypes.js';
-
-// ---------------------------------------------------------------------------
-// Environment URL resolution
-// ---------------------------------------------------------------------------
-
-const readEnvString = (value: unknown): string | undefined =>
-  typeof value === 'string' && value.length > 0 ? value : undefined;
-
-const resolveWebNavigatorBaseUrl = (): string => {
-  const nodeEnv = readEnvString(
-    (globalThis as { process?: { env?: { WEB_NAVIGATOR_BASE_URL?: string } } }).process?.env
-      ?.WEB_NAVIGATOR_BASE_URL,
-  );
-  if (nodeEnv) return nodeEnv;
-
-  const runtime = readEnvString(
-    (globalThis as { WEB_NAVIGATOR_BASE_URL?: unknown }).WEB_NAVIGATOR_BASE_URL,
-  );
-  if (runtime) return runtime;
-
-  return 'http://web-navigator:8080';
-};
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -117,8 +96,8 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
 /**
  * Creates a Web Navigator REST client bound to a given auth module and workspace.
  *
- * The URL defaults to the `WEB_NAVIGATOR_BASE_URL` environment variable, falling
- * back to `http://web-navigator:8080` for K8s in-cluster use.
+ * The URL defaults to the centralized `DISKD_BASE_URL` gateway with the
+ * `/utils/web-navigator` path prefix.
  *
  * The `workspaceId` is forwarded as `X-Workspace-Id` on all requests.
  *
@@ -133,7 +112,7 @@ export const createWebNavigatorClient = (params: {
   readonly url?: string;
   readonly workspaceId: string;
 }): WebNavigatorClient => {
-  const baseUrl = (params.url ?? resolveWebNavigatorBaseUrl()).replace(/\/+$/, '');
+  const baseUrl = (params.url ?? resolveDiskdGatewayUrl('utils/web-navigator')).replace(/\/+$/, '');
 
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
     if (params.auth.getRequestHeaders) {

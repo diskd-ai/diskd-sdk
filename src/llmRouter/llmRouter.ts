@@ -1,4 +1,5 @@
 import type { AuthModule } from '../auth/types.js';
+import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import { jsonRpcCall } from '../drive/rpc.js';
 import type {
   ChatCompletionMessage,
@@ -22,28 +23,6 @@ import type {
   TranscribeResult,
   LlmRouterClient,
 } from './llmRouterTypes.js';
-
-// ---------------------------------------------------------------------------
-// Environment URL resolution
-// ---------------------------------------------------------------------------
-
-const readEnvString = (value: unknown): string | undefined =>
-  typeof value === 'string' && value.length > 0 ? value : undefined;
-
-const resolveLlmRouterBaseUrl = (): string => {
-  const nodeEnv = readEnvString(
-    (globalThis as { process?: { env?: { LLM_ROUTER_BASE_URL?: string } } }).process?.env
-      ?.LLM_ROUTER_BASE_URL,
-  );
-  if (nodeEnv) return nodeEnv;
-
-  const runtime = readEnvString(
-    (globalThis as { LLM_ROUTER_BASE_URL?: unknown }).LLM_ROUTER_BASE_URL,
-  );
-  if (runtime) return runtime;
-
-  return 'http://llm-router:3000';
-};
 
 // ---------------------------------------------------------------------------
 // Decode helpers (wire snake_case -> domain camelCase)
@@ -505,8 +484,8 @@ async function* readNdjsonStream(response: Response): AsyncGenerator<unknown, vo
 /**
  * Creates an LLM Router client bound to a given auth module and optional base URL.
  *
- * The URL defaults to the `LLM_ROUTER_BASE_URL` environment variable, falling
- * back to `http://llm-router:3000` for K8s in-cluster use.
+ * The URL defaults to the centralized `DISKD_BASE_URL` gateway with the
+ * `/os/llm` path prefix.
  *
  * Example:
  * ```ts
@@ -522,7 +501,7 @@ export const createLlmRouterClient = (params: {
   readonly auth: AuthModule;
   readonly url?: string;
 }): LlmRouterClient => {
-  const baseUrl = (params.url ?? resolveLlmRouterBaseUrl()).replace(/\/+$/, '');
+  const baseUrl = (params.url ?? resolveDiskdGatewayUrl('os/llm')).replace(/\/+$/, '');
   const invokeUrl = `${baseUrl}/api/v1/invoke`;
   const streamUrl = `${baseUrl}/api/v1/stream`;
   const ocrUrl = `${baseUrl}/api/v1/ocr`;

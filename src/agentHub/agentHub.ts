@@ -1,4 +1,5 @@
 import type { AuthModule } from '../auth/types.js';
+import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import { StreamProtocolFetcher } from './StreamProtocolFetcher.js';
 import type {
   AgentHubClient,
@@ -7,28 +8,6 @@ import type {
   BillingAliasesResult,
   SupportedModelsResult,
 } from './agentHubTypes.js';
-
-// ---------------------------------------------------------------------------
-// Environment URL resolution
-// ---------------------------------------------------------------------------
-
-const readEnvString = (value: unknown): string | undefined =>
-  typeof value === 'string' && value.length > 0 ? value : undefined;
-
-const resolveAgentHubBaseUrl = (): string => {
-  const nodeEnv = readEnvString(
-    (globalThis as { process?: { env?: { AGENT_HUB_BASE_URL?: string } } }).process?.env
-      ?.AGENT_HUB_BASE_URL,
-  );
-  if (nodeEnv) return nodeEnv;
-
-  const runtime = readEnvString(
-    (globalThis as { AGENT_HUB_BASE_URL?: unknown }).AGENT_HUB_BASE_URL,
-  );
-  if (runtime) return runtime;
-
-  return 'http://agent-hub:8081';
-};
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -139,8 +118,8 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
 /**
  * Creates an Agent Hub client bound to a given auth module and workspace.
  *
- * The URL defaults to the `AGENT_HUB_BASE_URL` environment variable, falling
- * back to `http://agent-hub:8081` for K8s in-cluster use.
+ * The URL defaults to the centralized `DISKD_BASE_URL` gateway with the
+ * `/os/agents` path prefix.
  *
  * The `invoke` method returns a `StreamProtocolStream` for fluent event handling
  * via `StreamProtocolHandler`:
@@ -162,7 +141,7 @@ export const createAgentHubClient = (params: {
   readonly url?: string;
   readonly workspaceId: string;
 }): AgentHubClient => {
-  const baseUrl = (params.url ?? resolveAgentHubBaseUrl()).replace(/\/+$/, '');
+  const baseUrl = (params.url ?? resolveDiskdGatewayUrl('os/agents')).replace(/\/+$/, '');
 
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
     if (params.auth.getRequestHeaders) {
