@@ -166,6 +166,16 @@ const grep = await drive.tools.grep({ pattern: 'TODO' });
 
 ### Crontab scheduler
 
+The Drive client exposes these scheduler methods on `drive.crontab`:
+
+- `save`
+- `get`
+- `getStatus`
+- `listJobs`
+- `runJob`
+- `createProjectJob`
+- `createProfileJob`
+
 ```ts
 await drive.crontab.createProjectJob({
   projectId: 'proj-1',
