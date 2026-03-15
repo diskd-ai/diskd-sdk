@@ -169,8 +169,8 @@ export type DriveToolsGlobParams = {
 };
 
 export type DriveToolsGrepParams = {
-  readonly pattern: string;
-  readonly path?: string;
+  readonly query: string;
+  readonly paths: readonly string[];
 };
 
 export type DriveToolsVsearchParams = {

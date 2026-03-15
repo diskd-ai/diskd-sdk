@@ -150,7 +150,7 @@ try {
 
 // -- tools.grep --
 try {
-  const result = await drive.tools.grep({ pattern: 'tools-write test', path: TEST_DIR });
+  const result = await drive.tools.grep({ query: 'tools-write test', paths: [TOOLS_FILE] });
   h.ok('drive.tools.grep', `${result.items.length} matches`);
 } catch (err) {
   h.fail('drive.tools.grep', err);

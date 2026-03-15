@@ -558,8 +558,8 @@ export const createDriveClient = (params: {
 
       grep: async (p) => {
         const result = await call('paths/tools/grep', {
-          pattern: p.pattern,
-          ...optional('path', p.path),
+          query: p.query,
+          paths: [...p.paths],
         });
         return decodeToolsResult(result);
       },
