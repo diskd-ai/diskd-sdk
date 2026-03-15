@@ -273,6 +273,44 @@ export type {
   TgUserbotClient,
 } from './tgUserbot/tgUserbotTypes.js';
 
+// -- Operatives --
+export { createOperativesClient } from './operatives/operatives.js';
+export type {
+  Operative,
+  OperativeAddFilesParams,
+  OperativeAddSkillsParams,
+  OperativeAddToolsParams,
+  OperativeCreateParams,
+  OperativeEngine,
+  OperativeFile,
+  OperativeFileAccess,
+  OperativeGetBySlugParams,
+  OperativeListParams,
+  OperativeSkill,
+  OperativeStatus,
+  OperativeTool,
+  OperativeTrustLevel,
+  OperativeUpdateParams,
+  OperativesClient,
+} from './operatives/operativesTypes.js';
+
+// -- Routines --
+export { createRoutinesClient } from './routines/routines.js';
+export type {
+  Routine,
+  RoutineCreateParams,
+  RoutineDeleteParams,
+  RoutineGetParams,
+  RoutineListParams,
+  RoutineScope,
+  RoutineScopeRef,
+  RoutineStatus,
+  RoutineStep,
+  RoutineTriggerType,
+  RoutineUpdateParams,
+  RoutinesClient,
+} from './routines/routinesTypes.js';
+
 // -- Web Navigator --
 export { createWebNavigatorClient } from './webNavigator/webNavigator.js';
 export type {

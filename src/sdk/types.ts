@@ -11,6 +11,8 @@ import type {
 } from '../drive/typeorm/datasourceTypes.js';
 import type { LlmRouterClient } from '../llmRouter/llmRouterTypes.js';
 import type { McpHubClient } from '../mcpHub/mcpHubTypes.js';
+import type { OperativesClient } from '../operatives/operativesTypes.js';
+import type { RoutinesClient } from '../routines/routinesTypes.js';
 import type { TgUserbotClient } from '../tgUserbot/tgUserbotTypes.js';
 import type { WebNavigatorClient } from '../webNavigator/webNavigatorTypes.js';
 
@@ -69,6 +71,16 @@ export type DiskD = {
       readonly timezone?: string | null;
       readonly url?: string;
     }) => DriveScopedCrontabClient;
+
+    readonly routines: (params: {
+      readonly auth: AuthModule;
+      readonly url?: string;
+    }) => RoutinesClient;
+
+    readonly operatives: (params: {
+      readonly auth: AuthModule;
+      readonly url?: string;
+    }) => OperativesClient;
   };
 
   readonly utils: {

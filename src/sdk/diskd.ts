@@ -8,7 +8,9 @@ import type { DriveScopedCrontabClient } from '../drive/crontabTypes.js';
 import { createScopedDriveSessionManager } from '../drive/sessionObject.js';
 import { createLlmRouterClient } from '../llmRouter/llmRouter.js';
 import { createMcpHubClient } from '../mcpHub/mcpHub.js';
+import { createOperativesClient } from '../operatives/operatives.js';
 import { createTgUserbotClient } from '../tgUserbot/tgUserbot.js';
+import { createRoutinesClient } from '../routines/routines.js';
 import { createWebNavigatorClient } from '../webNavigator/webNavigator.js';
 import type { DriveDataSource } from '../drive/typeorm/datasourceTypes.js';
 import type { DriveDataSourceParams } from '../drive/typeorm/datasourceTypes.js';
@@ -116,6 +118,10 @@ export const diskd: DiskD = {
 
       return scopedClient;
     },
+
+    routines: ({ auth, url }) => createRoutinesClient({ auth, url }),
+
+    operatives: ({ auth, url }) => createOperativesClient({ auth, url }),
   },
 
   utils: {
