@@ -49,7 +49,9 @@ const bool = (obj: RawObject, key: string): boolean | undefined => {
   return typeof v === 'boolean' ? v : undefined;
 };
 
-const buildQueryString = (params: Readonly<Record<string, string | number | undefined>>): string => {
+const buildQueryString = (
+  params: Readonly<Record<string, string | number | undefined>>
+): string => {
   const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== '');
   if (entries.length === 0) return '';
   const searchParams = new URLSearchParams();
@@ -74,7 +76,7 @@ const decodeServerLog = (o: unknown): McpServerLog => {
 
 const decodeEnvVarKey = (o: unknown): EnvVarKey => {
   if (!isObject(o)) throw new Error('Invalid MCP Hub response: env var entry must be an object');
-  const raw = o['value'];
+  const raw = o.value;
   return {
     key: str(o, 'key') ?? '',
     configured: bool(o, 'configured'),
@@ -133,11 +135,11 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
     try {
       const errorData = (await response.json()) as unknown;
       if (isObject(errorData)) {
-        const err = errorData['error'];
-        if (isObject(err) && typeof err['message'] === 'string') {
-          message = err['message'];
-        } else if (typeof errorData['message'] === 'string') {
-          message = errorData['message'];
+        const err = errorData.error;
+        if (isObject(err) && typeof err.message === 'string') {
+          message = err.message;
+        } else if (typeof errorData.message === 'string') {
+          message = errorData.message;
         }
       }
     } catch {
@@ -194,7 +196,7 @@ export const createMcpHubClient = (params: {
       readonly withWorkspace?: boolean;
       readonly body?: unknown;
       readonly query?: Readonly<Record<string, string | number | undefined>>;
-    } = {},
+    } = {}
   ): Promise<T> => {
     const authHeaders = await getAuthHeaders();
     const qs = opts.query ? buildQueryString(opts.query) : '';
@@ -218,24 +220,32 @@ export const createMcpHubClient = (params: {
           body: addParams,
         }),
 
-      addRemoteServer: async (addParams: AddRemoteServerParams): Promise<{ readonly server: McpServer }> =>
+      addRemoteServer: async (
+        addParams: AddRemoteServerParams
+      ): Promise<{ readonly server: McpServer }> =>
         request<{ readonly server: McpServer }>('POST', '/api/registry/servers/remote', {
           withWorkspace: true,
           body: addParams,
         }),
 
-      updateServer: async (serverId: string, updateParams: UpdateServerParams): Promise<UpdateServerResult> =>
+      updateServer: async (
+        serverId: string,
+        updateParams: UpdateServerParams
+      ): Promise<UpdateServerResult> =>
         request<UpdateServerResult>(
           'PATCH',
           `/api/registry/servers/${encodeURIComponent(serverId)}`,
-          { withWorkspace: true, body: updateParams },
+          { withWorkspace: true, body: updateParams }
         ),
 
-      updateServerAlias: async (serverId: string, aliasParams: UpdateServerAliasParams): Promise<McpServer> => {
+      updateServerAlias: async (
+        serverId: string,
+        aliasParams: UpdateServerAliasParams
+      ): Promise<McpServer> => {
         const raw = await request<unknown>(
           'PATCH',
           `/api/registry/servers/${encodeURIComponent(serverId)}/alias`,
-          { withWorkspace: true, body: aliasParams },
+          { withWorkspace: true, body: aliasParams }
         );
         return decodeServer(raw);
       },
@@ -244,24 +254,27 @@ export const createMcpHubClient = (params: {
         request<DeleteServerResult>(
           'DELETE',
           `/api/registry/servers/${encodeURIComponent(serverId)}`,
-          { withWorkspace: true },
+          { withWorkspace: true }
         ),
 
       restartServer: async (serverId: string): Promise<RestartServerResult> =>
         request<RestartServerResult>(
           'POST',
           `/api/registry/servers/${encodeURIComponent(serverId)}/restart`,
-          { withWorkspace: true },
+          { withWorkspace: true }
         ),
 
-      getServerLogs: async (serverId: string, logParams?: GetServerLogsParams): Promise<GetServerLogsResult> => {
+      getServerLogs: async (
+        serverId: string,
+        logParams?: GetServerLogsParams
+      ): Promise<GetServerLogsResult> => {
         const raw = await request<{ readonly serverId: string; readonly logs: readonly unknown[] }>(
           'GET',
           `/api/registry/servers/${encodeURIComponent(serverId)}/logs`,
           {
             withWorkspace: true,
             query: { since: logParams?.since, limit: logParams?.limit },
-          },
+          }
         );
         return {
           serverId: raw.serverId,
@@ -269,35 +282,38 @@ export const createMcpHubClient = (params: {
         };
       },
 
-      toggleTool: async (serverId: string, toolId: string, enabled: boolean): Promise<ToggleToolResult> =>
+      toggleTool: async (
+        serverId: string,
+        toolId: string,
+        enabled: boolean
+      ): Promise<ToggleToolResult> =>
         request<ToggleToolResult>(
           'PATCH',
           `/api/registry/servers/${encodeURIComponent(serverId)}/tools/${encodeURIComponent(toolId)}`,
-          { withWorkspace: true, body: { enabled } },
+          { withWorkspace: true, body: { enabled } }
         ),
 
       listEnvVars: async (serverId: string): Promise<ListEnvVarsResult> => {
         const raw = await request<{ readonly items: readonly unknown[] }>(
           'GET',
           `/api/registry/servers/${encodeURIComponent(serverId)}/env`,
-          { withWorkspace: true },
+          { withWorkspace: true }
         );
         return { items: raw.items.map(decodeEnvVarKey) };
       },
 
       upsertEnvVar: async (serverId: string, envParams: UpsertEnvVarParams): Promise<void> => {
-        await request<void>(
-          'PUT',
-          `/api/registry/servers/${encodeURIComponent(serverId)}/env`,
-          { withWorkspace: true, body: envParams },
-        );
+        await request<void>('PUT', `/api/registry/servers/${encodeURIComponent(serverId)}/env`, {
+          withWorkspace: true,
+          body: envParams,
+        });
       },
 
       deleteEnvVar: async (serverId: string, key: string): Promise<void> => {
         await request<void>(
           'DELETE',
           `/api/registry/servers/${encodeURIComponent(serverId)}/env/${encodeURIComponent(key)}`,
-          { withWorkspace: true },
+          { withWorkspace: true }
         );
       },
 
@@ -305,25 +321,28 @@ export const createMcpHubClient = (params: {
         request<ListConnectionSettingsResult>(
           'GET',
           `/api/registry/servers/${encodeURIComponent(serverId)}/settings`,
-          { withWorkspace: true },
+          { withWorkspace: true }
         ),
 
-      revealConnectionSetting: async (serverId: string, settingId: string): Promise<RevealConnectionSettingResult> =>
+      revealConnectionSetting: async (
+        serverId: string,
+        settingId: string
+      ): Promise<RevealConnectionSettingResult> =>
         request<RevealConnectionSettingResult>(
           'POST',
           `/api/registry/servers/${encodeURIComponent(serverId)}/settings/${encodeURIComponent(settingId)}/reveal`,
-          { withWorkspace: true },
+          { withWorkspace: true }
         ),
 
       updateConnectionSetting: async (
         serverId: string,
         settingId: string,
-        settingParams: UpdateConnectionSettingParams,
+        settingParams: UpdateConnectionSettingParams
       ): Promise<void> => {
         await request<void>(
           'PUT',
           `/api/registry/servers/${encodeURIComponent(serverId)}/settings/${encodeURIComponent(settingId)}`,
-          { withWorkspace: true, body: settingParams },
+          { withWorkspace: true, body: settingParams }
         );
       },
 
@@ -331,29 +350,31 @@ export const createMcpHubClient = (params: {
         await request<void>(
           'DELETE',
           `/api/registry/servers/${encodeURIComponent(serverId)}/settings/${encodeURIComponent(settingId)}`,
-          { withWorkspace: true },
+          { withWorkspace: true }
         );
       },
     },
 
     catalog: {
       list: async (catalogParams?: CatalogQueryParams): Promise<CatalogListResult> => {
-        const raw = await request<{ readonly items: readonly unknown[]; readonly total: number; readonly page: number; readonly pageSize: number; readonly totalPages: number }>(
-          'GET',
-          '/api/catalog',
-          {
-            withWorkspace: false,
-            query: catalogParams
-              ? {
-                  search: catalogParams.search,
-                  category: catalogParams.category,
-                  type: catalogParams.type,
-                  page: catalogParams.page,
-                  pageSize: catalogParams.pageSize,
-                }
-              : undefined,
-          },
-        );
+        const raw = await request<{
+          readonly items: readonly unknown[];
+          readonly total: number;
+          readonly page: number;
+          readonly pageSize: number;
+          readonly totalPages: number;
+        }>('GET', '/api/catalog', {
+          withWorkspace: false,
+          query: catalogParams
+            ? {
+                search: catalogParams.search,
+                category: catalogParams.category,
+                type: catalogParams.type,
+                page: catalogParams.page,
+                pageSize: catalogParams.pageSize,
+              }
+            : undefined,
+        });
         return {
           items: raw.items.map(decodeCatalogServer),
           total: raw.total,
@@ -364,17 +385,17 @@ export const createMcpHubClient = (params: {
       },
 
       getServerDetails: async (serverId: string): Promise<McpServerDetails> => {
-        const raw = await request<unknown>(
-          'GET',
-          `/api/catalog/${encodeURIComponent(serverId)}`,
-          { withWorkspace: false },
-        );
+        const raw = await request<unknown>('GET', `/api/catalog/${encodeURIComponent(serverId)}`, {
+          withWorkspace: false,
+        });
         return decodeServerDetails(raw);
       },
     },
 
     integrations: {
-      requestIntegration: async (integrationParams: RequestIntegrationParams): Promise<RequestIntegrationResult> =>
+      requestIntegration: async (
+        integrationParams: RequestIntegrationParams
+      ): Promise<RequestIntegrationResult> =>
         request<RequestIntegrationResult>('POST', '/api/integration-requests', {
           withWorkspace: true,
           body: integrationParams,

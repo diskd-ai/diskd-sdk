@@ -1,6 +1,6 @@
 import type { AuthModule } from '../auth/types.js';
-import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import { jsonRpcCall } from '../drive/rpc.js';
+import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import type {
   ChatCompletionMessage,
   CompletionParams,
@@ -12,6 +12,7 @@ import type {
   ListModelsResult,
   ListProviderModelsParams,
   ListProviderModelsResult,
+  LlmRouterClient,
   ModelInfo,
   OcrDocument,
   OcrPage,
@@ -21,7 +22,6 @@ import type {
   ToolCall,
   TranscribeParams,
   TranscribeResult,
-  LlmRouterClient,
 } from './llmRouterTypes.js';
 
 // ---------------------------------------------------------------------------
@@ -52,8 +52,7 @@ const num = (obj: RawObject, key: string): number | null => {
 
 const numRequired = (obj: RawObject, key: string): number => {
   const v = num(obj, key);
-  if (v === null)
-    throw new Error(`Invalid LLM Router response: '${key}' must be a number`);
+  if (v === null) throw new Error(`Invalid LLM Router response: '${key}' must be a number`);
   return v;
 };
 
@@ -78,13 +77,12 @@ const decodeToolCall = (o: unknown): ToolCall => {
     index: num(r, 'index'),
     id: str(r, 'id'),
     type: str(r, 'type') === 'function' ? 'function' : null,
-    function:
-      isObject(fn)
-        ? {
-            name: str(fn, 'name'),
-            arguments: str(fn, 'arguments'),
-          }
-        : null,
+    function: isObject(fn)
+      ? {
+          name: str(fn, 'name'),
+          arguments: str(fn, 'arguments'),
+        }
+      : null,
   };
 };
 
@@ -115,18 +113,14 @@ const decodeCompletionResult = (result: unknown): CompletionResult => {
           ? {
               content: str(msg, 'content'),
               role: str(msg, 'role') ?? 'assistant',
-              toolCalls: Array.isArray(msg.tool_calls)
-                ? msg.tool_calls.map(decodeToolCall)
-                : null,
+              toolCalls: Array.isArray(msg.tool_calls) ? msg.tool_calls.map(decodeToolCall) : null,
             }
           : null,
         delta: isObject(dlt)
           ? {
               content: str(dlt, 'content'),
               role: str(dlt, 'role'),
-              toolCalls: Array.isArray(dlt.tool_calls)
-                ? dlt.tool_calls.map(decodeToolCall)
-                : null,
+              toolCalls: Array.isArray(dlt.tool_calls) ? dlt.tool_calls.map(decodeToolCall) : null,
             }
           : null,
       };
@@ -152,9 +146,7 @@ const decodeStreamChunk = (raw_: unknown): StreamChunk => {
           ? {
               content: str(dlt, 'content'),
               role: str(dlt, 'role'),
-              toolCalls: Array.isArray(dlt.tool_calls)
-                ? dlt.tool_calls.map(decodeToolCall)
-                : null,
+              toolCalls: Array.isArray(dlt.tool_calls) ? dlt.tool_calls.map(decodeToolCall) : null,
             }
           : { content: null, role: null, toolCalls: null },
       };
@@ -234,14 +226,13 @@ const decodeOcrPage = (o: unknown): OcrPage => {
     hyperlinks: arr(r, 'hyperlinks').filter((v): v is string => typeof v === 'string'),
     header: str(r, 'header'),
     footer: str(r, 'footer'),
-    dimensions:
-      isObject(dims)
-        ? {
-            dpi: num(dims, 'dpi') ?? 0,
-            height: num(dims, 'height') ?? 0,
-            width: num(dims, 'width') ?? 0,
-          }
-        : null,
+    dimensions: isObject(dims)
+      ? {
+          dpi: num(dims, 'dpi') ?? 0,
+          height: num(dims, 'height') ?? 0,
+          width: num(dims, 'width') ?? 0,
+        }
+      : null,
   };
 };
 
@@ -287,9 +278,7 @@ const decodeTranscribeResult = (result: unknown): TranscribeResult => {
 const optional = <T>(key: string, value: T | undefined): Record<string, T> =>
   value !== undefined ? { [key]: value } : {};
 
-const encodeMessageContent = (
-  content: string | readonly unknown[],
-): unknown => {
+const encodeMessageContent = (content: string | readonly unknown[]): unknown => {
   if (typeof content === 'string') return content;
   return content.map((part) => {
     if (!isObject(part)) return part;
@@ -321,7 +310,10 @@ const encodeMessage = (msg: ChatCompletionMessage): unknown => {
     case 'system':
       return { role: 'system', content: msg.content };
     case 'user':
-      return { role: 'user', content: encodeMessageContent(msg.content as string | readonly unknown[]) };
+      return {
+        role: 'user',
+        content: encodeMessageContent(msg.content as string | readonly unknown[]),
+      };
     case 'assistant':
       return {
         role: 'assistant',
@@ -344,21 +336,17 @@ const encodeToolCall = (tc: ToolCall): unknown => ({
           ...optional('name', tc.function.name ?? undefined),
           ...optional('arguments', tc.function.arguments ?? undefined),
         }
-      : undefined,
+      : undefined
   ),
 });
 
-const encodeToolChoice = (
-  tc: CompletionParams['toolChoice'],
-): unknown => {
+const encodeToolChoice = (tc: CompletionParams['toolChoice']): unknown => {
   if (tc === undefined) return undefined;
   if (typeof tc === 'string') return tc;
   return { type: 'function', function: { name: tc.function.name } };
 };
 
-const encodeResponseFormat = (
-  rf: CompletionParams['responseFormat'],
-): unknown => {
+const encodeResponseFormat = (rf: CompletionParams['responseFormat']): unknown => {
   if (rf === undefined) return undefined;
   if (rf.type === 'json_object') return { type: 'json_object' };
   return {
@@ -554,7 +542,7 @@ export const createLlmRouterClient = (params: {
         if (!response.ok) {
           const text = await response.text();
           throw new Error(
-            `LLM Router stream failed (HTTP ${response.status}): ${text.slice(0, 200)}`,
+            `LLM Router stream failed (HTTP ${response.status}): ${text.slice(0, 200)}`
           );
         }
 
@@ -611,9 +599,7 @@ export const createLlmRouterClient = (params: {
 
         if (!response.ok) {
           const text = await response.text();
-          throw new Error(
-            `LLM Router OCR failed (HTTP ${response.status}): ${text.slice(0, 200)}`,
-          );
+          throw new Error(`LLM Router OCR failed (HTTP ${response.status}): ${text.slice(0, 200)}`);
         }
 
         const json = await response.json();
@@ -644,7 +630,7 @@ export const createLlmRouterClient = (params: {
           transcribeParams.audio instanceof Uint8Array
             ? (transcribeParams.audio.buffer as ArrayBuffer).slice(
                 transcribeParams.audio.byteOffset,
-                transcribeParams.audio.byteOffset + transcribeParams.audio.byteLength,
+                transcribeParams.audio.byteOffset + transcribeParams.audio.byteLength
               )
             : (transcribeParams.audio as ArrayBuffer);
 
@@ -660,7 +646,7 @@ export const createLlmRouterClient = (params: {
         if (!response.ok) {
           const text = await response.text();
           throw new Error(
-            `LLM Router audio/transcribe failed (HTTP ${response.status}): ${text.slice(0, 200)}`,
+            `LLM Router audio/transcribe failed (HTTP ${response.status}): ${text.slice(0, 200)}`
           );
         }
 
