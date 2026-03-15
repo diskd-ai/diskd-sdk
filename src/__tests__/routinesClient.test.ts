@@ -17,6 +17,7 @@ const stubRoutine: Routine = {
   trigger: { cron: '0 9 * * *' },
   steps: [{ id: 'step-1', name: 'Summarize', action: 'summarize', order: 0 }],
   operativeSlug: 'analyst',
+  rhythms: [],
   scope: 'profile',
   createdAt: '2026-03-15T10:00:00Z',
   updatedAt: '2026-03-15T10:00:00Z',

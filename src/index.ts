@@ -297,6 +297,8 @@ export type {
 // -- Routines --
 export { createRoutinesClient } from './routines/routines.js';
 export type {
+  CrontabRhythm,
+  Rhythm,
   Routine,
   RoutineCreateParams,
   RoutineDeleteParams,
@@ -309,6 +311,7 @@ export type {
   RoutineTriggerType,
   RoutineUpdateParams,
   RoutinesClient,
+  SignalRhythm,
 } from './routines/routinesTypes.js';
 
 // -- Web Navigator --

@@ -11,6 +11,28 @@ export type RoutineScopeRef =
   | { readonly scopeType: 'profile' }
   | { readonly scopeType: 'project'; readonly projectName: string };
 
+// -- Rhythms (discriminated union) --
+
+export type CrontabRhythm = {
+  readonly kind: 'crontab';
+  readonly jobId: string;
+  readonly schedule: {
+    readonly minute: string;
+    readonly hour: string;
+    readonly dayOfMonth: string;
+    readonly month: string;
+    readonly dayOfWeek: string;
+  };
+};
+
+export type SignalRhythm = {
+  readonly kind: 'signal';
+  readonly eventName: string;
+  readonly payload?: Readonly<Record<string, string>>;
+};
+
+export type Rhythm = CrontabRhythm | SignalRhythm;
+
 // -- Domain models --
 
 export type RoutineStep = {
@@ -31,6 +53,7 @@ export type Routine = {
   readonly steps: readonly RoutineStep[];
   readonly operativeSlug: string;
   readonly projectSlug?: string;
+  readonly rhythms: readonly Rhythm[];
   readonly scope: RoutineScope;
   readonly projectName?: string;
   readonly createdAt: string;
