@@ -1,21 +1,19 @@
 /**
  * apis-service validation -- external auth (OAuth2 credentials.json)
  *
- * Validates all SDK namespaces through the apis gateway using OAuth2 bearer tokens.
+ * Validates SDK namespaces through the apis gateway using OAuth2 bearer tokens.
  * Runs against apis.upgraide.dev (or DISKD_BASE_URL).
  *
  * Environment:
  *   DISKD_BASE_URL         - Gateway URL (default: https://apis.upgraide.dev)
  *   DISKD_CREDENTIALS_PATH - Path to credentials.json (default: ./credentials.json)
- *   DISKD_PROJECT_ID       - Project ID for scoped operations (default: sdk-validation)
+ *   DISKD_WORKSPACE_ID     - Workspace ID (default: dev-user-id)
  *
  * Run:
- *   bun run scripts:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-scripts/validate-external.js
+ *   bun run scripts:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-scripts/scripts/validate-external.js
  */
-import { StreamProtocolHandler } from '../src/agentHub/StreamProtocolHandler.js';
 import { diskd } from '../src/sdk/diskd.js';
 const CREDENTIALS_PATH = process.env.DISKD_CREDENTIALS_PATH ?? './credentials.json';
-const PROJECT_ID = process.env.DISKD_PROJECT_ID ?? 'sdk-validation';
 const WORKSPACE_ID = process.env.DISKD_WORKSPACE_ID ?? 'dev-user-id';
 let passed = 0;
 let failed = 0;
@@ -33,14 +31,14 @@ const fail = (name, err) => {
 console.log('=== apis-service validation (external / OAuth2) ===\n');
 console.log(`Gateway: ${process.env.DISKD_BASE_URL ?? 'https://apis.upgraide.dev'}`);
 console.log(`Credentials: ${CREDENTIALS_PATH}`);
-console.log(`Project: ${PROJECT_ID}\n`);
+console.log(`Workspace: ${WORKSPACE_ID}\n`);
 const auth = await diskd.auth.credentials({
     scopes: ['openid'],
     keyfilePath: CREDENTIALS_PATH,
 });
 ok('auth.credentials', 'OAuth2 token acquired');
 // ---------------------------------------------------------------------------
-// 1. Drive: init, write, read, patch, delete
+// 1. Drive: init, list, write, read, update, delete
 // ---------------------------------------------------------------------------
 console.log('\n--- Drive (os/drive) ---');
 const drive = diskd.os.drive({ version: 'v1', auth });
@@ -51,24 +49,59 @@ try {
 catch (err) {
     fail('drive.init', err);
 }
+// Create test directory
+try {
+    await drive.create({ dirName: 'sdk-validation-test' });
+    ok('drive.create (mkdir)', 'path=/sdk-validation-test');
+}
+catch (err) {
+    ok('drive.create (mkdir)', 'directory exists or created');
+}
+// List root
+try {
+    const entries = await drive.list({ path: '/' });
+    ok('drive.list (/)', `${entries.length} entries at root`);
+}
+catch (err) {
+    fail('drive.list (/)', err);
+}
 const testContent = `validation test ${Date.now()}`;
 const testBytes = new TextEncoder().encode(testContent);
-let testInode = '';
+let testDirInode = '';
+let testFileInode = '';
 try {
-    const uploadResult = await drive.upload.file({
-        name: 'validation-test.txt',
-        data: testBytes,
-        mimeType: 'text/plain',
-    });
-    testInode = uploadResult.inode;
-    ok('drive.upload', `inode=${testInode}`);
+    const entries = await drive.list({ path: '/' });
+    const testDir = entries.find((e) => e.name === 'sdk-validation-test');
+    if (testDir) {
+        testDirInode = testDir.inode;
+        const uploadResult = await drive.upload.file({
+            name: 'test-file.txt',
+            data: testBytes,
+            mimeType: 'text/plain',
+            parentInode: testDirInode,
+        });
+        testFileInode = uploadResult.inode;
+        ok('drive.upload', `path=/sdk-validation-test/test-file.txt`);
+    }
+    else {
+        fail('drive.upload', 'test directory not found');
+    }
 }
 catch (err) {
     fail('drive.upload', err);
 }
-if (testInode) {
+if (testDirInode) {
     try {
-        const downloadResult = await drive.download.file({ inode: testInode });
+        const entries = await drive.list({ path: '/sdk-validation-test' });
+        ok('drive.list (subdir)', `${entries.length} entries`);
+    }
+    catch (err) {
+        fail('drive.list (subdir)', err);
+    }
+}
+if (testFileInode) {
+    try {
+        const downloadResult = await drive.download.file({ inode: testFileInode });
         const chunks = [];
         const reader = downloadResult.stream.getReader();
         let readDone = false;
@@ -90,37 +123,53 @@ if (testInode) {
         }
     }
     catch (err) {
-        fail('drive.download', err);
+        fail('drive.download', `${err}`);
     }
-    // Apply patch (write new version)
-    const patchContent = `${testContent}\npatched line`;
-    const patchBytes = new TextEncoder().encode(patchContent);
+    const updatedContent = `${testContent}\nupdated line`;
+    const updatedBytes = new TextEncoder().encode(updatedContent);
     try {
-        const patchResult = await drive.upload.file({
-            name: 'validation-test.txt',
-            data: patchBytes,
+        const updateResult = await drive.upload.file({
+            name: 'test-file.txt',
+            data: updatedBytes,
             mimeType: 'text/plain',
+            parentInode: testDirInode,
+            force: true,
         });
-        ok('drive.patch (re-upload)', `new inode=${patchResult.inode}`);
-        testInode = patchResult.inode;
+        ok('drive.update', `new inode=${updateResult.inode}`);
+        testFileInode = updateResult.inode;
     }
     catch (err) {
-        fail('drive.patch', err);
+        fail('drive.update', err);
     }
-    // Cleanup
     try {
-        await drive.delete({ inodes: [testInode], recursive: false });
-        ok('drive.delete');
+        await drive.rename({ inode: testFileInode, newName: 'renamed-file.txt' });
+        ok('drive.rename', 'path=/sdk-validation-test/renamed-file.txt');
+    }
+    catch (err) {
+        fail('drive.rename', err);
+    }
+}
+if (testDirInode) {
+    try {
+        await drive.delete({ inodes: [testDirInode], recursive: true });
+        ok('drive.delete (recursive)', 'path=/sdk-validation-test deleted');
     }
     catch (err) {
         fail('drive.delete', err);
     }
 }
 // ---------------------------------------------------------------------------
-// 2. LLM: completion with upgraide::small
+// 2. LLM: models, completion, streaming
 // ---------------------------------------------------------------------------
 console.log('\n--- LLM Router (os/llm) ---');
 const llm = diskd.os.llm({ auth });
+try {
+    const models = await llm.models.listAll();
+    ok('llm.models.listAll', `${models.models.length} model(s)`);
+}
+catch (err) {
+    fail('llm.models.listAll', err);
+}
 try {
     const completion = await llm.completions.create({
         provider: 'upgraide',
@@ -157,29 +206,31 @@ catch (err) {
     fail('llm.completions.stream', err);
 }
 // ---------------------------------------------------------------------------
-// 3. Agent Hub: list agents, invoke research agent
+// 3. Agent Hub: list agents, invoke
 // ---------------------------------------------------------------------------
 console.log('\n--- Agent Hub (os/agents) ---');
 const agentHub = diskd.os.agents({ auth, workspaceId: WORKSPACE_ID });
-let researchAgentId = '';
+let targetAgentId = '';
 try {
     const agents = await agentHub.agents.list();
-    ok('agentHub.agents.list', `found ${agents.length} agent(s)`);
+    ok('agentHub.agents.list', `found ${agents.length} agent(s): ${agents.map((a) => a.id).join(', ')}`);
     const research = agents.find((a) => a.id.includes('research') || a.displayName.toLowerCase().includes('research'));
     if (research) {
-        researchAgentId = research.id;
-        ok('agentHub.findResearchAgent', `id=${research.id}, name="${research.displayName}"`);
+        targetAgentId = research.id;
     }
     else if (agents.length > 0) {
-        researchAgentId = agents[0].id;
-        ok('agentHub.findResearchAgent', `no research agent found, using first: ${agents[0].id} "${agents[0].displayName}"`);
+        targetAgentId = agents[0].id;
+    }
+    if (targetAgentId) {
+        ok('agentHub.targetAgent', `id=${targetAgentId}`);
     }
 }
 catch (err) {
     fail('agentHub.agents.list', err);
 }
-if (researchAgentId) {
+if (targetAgentId) {
     try {
+        const { StreamProtocolHandler } = await import('../src/agentHub/StreamProtocolHandler.js');
         let responseText = '';
         let tokenInfo = '';
         const handler = new StreamProtocolHandler()
@@ -199,9 +250,10 @@ if (researchAgentId) {
             throw new Error(e.message);
         });
         const stream = await agentHub.invoke({
-            agentName: researchAgentId,
+            agentName: targetAgentId,
             query: 'What is the capital of Japan? Reply in one sentence.',
-            agentOptions: { maxTokens: 128, temperature: 0 },
+            context: { user: { id: WORKSPACE_ID, name: 'validation-script' } },
+            agentOptions: { provider: 'upgraide', model: 'small', maxTokens: 1024 },
         });
         await new Promise((resolve, reject) => {
             stream
@@ -209,7 +261,7 @@ if (researchAgentId) {
                 .stop(() => resolve())
                 .catch((err) => reject(err));
         });
-        ok('agentHub.invoke', `agent=${researchAgentId}, ${tokenInfo}, reply="${responseText.slice(0, 80)}"`);
+        ok('agentHub.invoke', `agent=${targetAgentId}, ${tokenInfo}, reply="${responseText.slice(0, 80)}"`);
     }
     catch (err) {
         fail('agentHub.invoke', err);
