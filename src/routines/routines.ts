@@ -50,7 +50,7 @@ export const createRoutinesClient = (params: {
   readonly auth: AuthModule;
   readonly url?: string;
 }): RoutinesClient => {
-  const baseUrl = (params.url ?? resolveDiskdGatewayUrl('platform/app')).replace(/\/+$/, '');
+  const baseUrl = (params.url ?? resolveDiskdGatewayUrl('platform/routines')).replace(/\/+$/, '');
 
   const request = async <T>(
     method: HttpMethod,

@@ -25,6 +25,7 @@ import type {
   DriveToolsResult,
   DriveToolsVsearchParams,
   DriveToolsWriteFileParams,
+  DriveToolsWriteResult,
   DriveUpdateAttributesParams,
   DriveUpdateMetadataParams,
   DriveUploadCommitParams,
@@ -86,8 +87,8 @@ export type DriveClient = {
     readonly grep: (params: DriveToolsGrepParams) => Promise<DriveToolsResult>;
     readonly vsearch: (params: DriveToolsVsearchParams) => Promise<DriveToolsResult>;
     readonly readFile: (params: DriveToolsReadFileParams) => Promise<DriveReadFileResult>;
-    readonly writeFile: (params: DriveToolsWriteFileParams) => Promise<void>;
-    readonly applyPatch: (params: DriveToolsApplyPatchParams) => Promise<void>;
+    readonly writeFile: (params: DriveToolsWriteFileParams) => Promise<DriveToolsWriteResult>;
+    readonly applyPatch: (params: DriveToolsApplyPatchParams) => Promise<DriveToolsWriteResult>;
   };
 
   // Database operations (Drive DB -- SQLite via JSON-RPC)

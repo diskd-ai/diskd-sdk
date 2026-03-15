@@ -147,7 +147,7 @@ export const createOperativesClient = (params: {
   readonly auth: AuthModule;
   readonly url?: string;
 }): OperativesClient => {
-  const baseUrl = (params.url ?? resolveDiskdGatewayUrl('platform/app')).replace(/\/+$/, '');
+  const baseUrl = (params.url ?? resolveDiskdGatewayUrl('platform/operatives')).replace(/\/+$/, '');
 
   const request = async <T>(
     method: HttpMethod,

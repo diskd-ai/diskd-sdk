@@ -7,6 +7,7 @@ import { createDriveDatabase } from '../drive/DriveRepository.js';
 import { createDriveClient } from '../drive/drive.js';
 import { createScopedDriveSessionManager } from '../drive/sessionObject.js';
 import type { DriveDataSource, DriveDataSourceParams } from '../drive/typeorm/datasourceTypes.js';
+import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import { createLlmRouterClient } from '../llmRouter/llmRouter.js';
 import { createMcpHubClient } from '../mcpHub/mcpHub.js';
 import { createOperativesClient } from '../operatives/operatives.js';
@@ -41,7 +42,8 @@ export const diskd: DiskD = {
     },
 
     database: ({ auth, url, dbName, dbType, schema }) => {
-      const drive = createDriveClient({ version: 'v1', auth, url });
+      const dbUrl = url ?? `${resolveDiskdGatewayUrl('os/database')}/api/v1`;
+      const drive = createDriveClient({ version: 'v1', auth, url: dbUrl });
       return createDriveDatabase({ db: drive.db, dbName, dbType, schema });
     },
 
@@ -62,7 +64,8 @@ export const diskd: DiskD = {
 
   platform: {
     sessions: ({ auth, scope, url }) => {
-      const drive = createDriveClient({ version: 'v1', auth, url });
+      const sessionUrl = url ?? `${resolveDiskdGatewayUrl('platform/sessions')}/api/v1`;
+      const drive = createDriveClient({ version: 'v1', auth, url: sessionUrl });
       return createScopedDriveSessionManager({
         manager: drive.session,
         projectId: scope.projectId,
@@ -70,7 +73,8 @@ export const diskd: DiskD = {
     },
 
     crontab: ({ auth, scope, timezone, url }) => {
-      const client = createDriveClient({ version: 'v1', auth, url }).crontab;
+      const crontabUrl = url ?? `${resolveDiskdGatewayUrl('platform/crontab')}/api/v1`;
+      const client = createDriveClient({ version: 'v1', auth, url: crontabUrl }).crontab;
       const effectiveTimezone = resolveDefaultTimezone(timezone);
       const scopedClient: DriveScopedCrontabClient = {
         save: async ({ jobs }) => {

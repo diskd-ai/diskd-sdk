@@ -142,6 +142,7 @@ export type {
   DriveToolsResult,
   DriveToolsVsearchParams,
   DriveToolsWriteFileParams,
+  DriveToolsWriteResult,
   DriveUpdateAttributesParams,
   DriveUpdateMetadataParams,
   DriveUploadCommitParams,

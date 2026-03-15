@@ -500,10 +500,14 @@ test('drive.tools.writeFile sends paths/tools/write with path and content', asyn
   const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = typeof input === 'string' ? input : input.toString();
     calls.push({ url, init });
-    return new Response(JSON.stringify({ jsonrpc: '2.0', result: { success: true }, id: 1 }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        result: { success: true, inode: 'inode-abc', path: '/docs/readme.md' },
+        id: 1,
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
   };
   (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
 
@@ -517,7 +521,7 @@ test('drive.tools.writeFile sends paths/tools/write with path and content', asyn
 
   try {
     const drive = diskd.os.drive({ version: 'v1', auth });
-    await drive.tools.writeFile({
+    const result = await drive.tools.writeFile({
       path: '/docs/readme.md',
       content: '# Hello World',
     });
@@ -526,6 +530,8 @@ test('drive.tools.writeFile sends paths/tools/write with path and content', asyn
     assert.equal(body.method, 'paths/tools/write');
     assert.equal(body.params.path, '/docs/readme.md');
     assert.equal(body.params.content, '# Hello World');
+    assert.equal(result.inode, 'inode-abc');
+    assert.equal(result.path, '/docs/readme.md');
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
     delete process.env.DISKD_BASE_URL;
@@ -540,10 +546,14 @@ test('drive.tools.applyPatch sends paths/tools/apply-patch with path and patch',
   const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = typeof input === 'string' ? input : input.toString();
     calls.push({ url, init });
-    return new Response(JSON.stringify({ jsonrpc: '2.0', result: { success: true }, id: 1 }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        result: { success: true, inode: 'inode-xyz', path: '/docs/readme.md' },
+        id: 1,
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
   };
   (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
 
@@ -559,7 +569,7 @@ test('drive.tools.applyPatch sends paths/tools/apply-patch with path and patch',
 
   try {
     const drive = diskd.os.drive({ version: 'v1', auth });
-    await drive.tools.applyPatch({
+    const result = await drive.tools.applyPatch({
       path: '/docs/readme.md',
       patch: patchContent,
     });
@@ -568,6 +578,8 @@ test('drive.tools.applyPatch sends paths/tools/apply-patch with path and patch',
     assert.equal(body.method, 'paths/tools/apply-patch');
     assert.equal(body.params.path, '/docs/readme.md');
     assert.equal(body.params.patch, patchContent);
+    assert.equal(result.inode, 'inode-xyz');
+    assert.equal(result.path, '/docs/readme.md');
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
     delete process.env.DISKD_BASE_URL;

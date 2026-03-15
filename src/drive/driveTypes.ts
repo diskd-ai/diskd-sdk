@@ -212,6 +212,11 @@ export type DriveToolsApplyPatchParams = {
   readonly patch: string;
 };
 
+export type DriveToolsWriteResult = {
+  readonly inode: string;
+  readonly path: string;
+};
+
 // -- Upload file (convenience) --
 
 export type DriveUploadFileBaseParams = {

@@ -14,6 +14,7 @@ import type {
   DriveReadFilePart,
   DriveReadFileResult,
   DriveToolsResult,
+  DriveToolsWriteResult,
   DriveUploadCommitResult,
   DriveUploadFileResult,
   DriveUploadStartResult,
@@ -227,6 +228,14 @@ const decodeReadFileResult = (o: unknown): DriveReadFileResult => {
   const arr = r.parts;
   if (!Array.isArray(arr)) throw new Error('Invalid Drive response: parts must be array');
   return { parts: arr.map(decodeReadFilePart) };
+};
+
+const decodeWriteResult = (o: unknown): DriveToolsWriteResult => {
+  const r = raw(o);
+  return {
+    inode: strRequired(r, 'inode'),
+    path: strRequired(r, 'path'),
+  };
 };
 
 // ---------------------------------------------------------------------------
@@ -578,17 +587,19 @@ export const createDriveClient = (params: {
       },
 
       writeFile: async (p) => {
-        await call('paths/tools/write', {
+        const result = await call('paths/tools/write', {
           path: p.path,
           content: p.content,
         });
+        return decodeWriteResult(result);
       },
 
       applyPatch: async (p) => {
-        await call('paths/tools/apply-patch', {
+        const result = await call('paths/tools/apply-patch', {
           path: p.path,
           patch: p.patch,
         });
+        return decodeWriteResult(result);
       },
     },
 
