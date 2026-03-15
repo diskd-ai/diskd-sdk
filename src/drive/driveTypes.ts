@@ -13,10 +13,10 @@ export type DrivePathType = 'file' | 'dir' | 'symlink' | 'index' | 'capsule' | '
  * All optional wire fields are normalised to `string | null` (never `undefined`).
  */
 export type DrivePathEntry = {
-  readonly inode: string;
+  readonly id: string;
   readonly name: string;
   readonly type: DrivePathType;
-  readonly parentInode: string | null;
+  readonly parentId: string | null;
   readonly mimeType: string | null;
   readonly fileId: string | null;
   readonly etag: string | null;
@@ -38,8 +38,8 @@ export type DrivePathEntry = {
  * updateMetadata, updateAttributes.
  */
 export type DrivePathMutationResult = {
-  readonly inode: string;
-  readonly parentInode: string | null;
+  readonly id: string;
+  readonly parentId: string | null;
   readonly name: string;
   readonly type: DrivePathType;
   readonly fileId: string | null;
@@ -53,37 +53,37 @@ export type DrivePathMutationResult = {
 
 export type DriveCreateParams = {
   readonly dirName: string;
-  readonly parentInode?: string;
+  readonly parentPath?: string;
 };
 
 export type DriveRenameParams = {
-  readonly inode: string;
+  readonly path: string;
   readonly newName: string;
-  readonly newParentInode?: string;
+  readonly newParentPath?: string;
 };
 
 export type DriveDeleteParams = {
-  readonly inodes: readonly string[];
+  readonly paths: readonly string[];
   readonly recursive?: boolean;
 };
 
 export type DriveDeleteResult = {
   readonly success: boolean;
-  readonly inodes: readonly string[];
+  readonly ids: readonly string[];
   readonly size: number;
 };
 
 export type DriveResolveParams = {
-  readonly inodes: readonly string[];
+  readonly paths: readonly string[];
 };
 
 export type DriveUpdateMetadataParams = {
-  readonly inode: string;
+  readonly path: string;
   readonly metadata: Readonly<Record<string, unknown>>;
 };
 
 export type DriveUpdateAttributesParams = {
-  readonly inode: string;
+  readonly path: string;
   readonly attributes: readonly string[];
 };
 
@@ -93,14 +93,14 @@ export type DriveUploadStartParams = {
   readonly name: string;
   readonly size: number;
   readonly sha256Root: string;
-  readonly parentInode?: string;
+  readonly parentPath?: string;
   readonly mimeType?: string;
   readonly force?: boolean;
 };
 
 export type DriveUploadStartResult = {
   readonly intentId: string;
-  readonly inode: string;
+  readonly id: string;
   readonly uploadUrl: string;
   readonly expiresIn: number;
   readonly multipart: boolean;
@@ -112,7 +112,7 @@ export type DriveUploadCommitParams = {
 };
 
 export type DriveUploadCommitResult = {
-  readonly inode: string;
+  readonly id: string;
   readonly etag: string;
   readonly version: number;
   readonly committedAt: string;
@@ -121,11 +121,11 @@ export type DriveUploadCommitResult = {
 // -- File operations --
 
 export type DriveFileMetadataParams = {
-  readonly inode: string;
+  readonly path: string;
 };
 
 export type DriveFileMetadata = {
-  readonly inode: string;
+  readonly id: string;
   readonly name: string;
   readonly size: number;
   readonly etag: string | null;
@@ -137,11 +137,11 @@ export type DriveFileMetadata = {
 };
 
 export type DriveFileMetadataBatchParams = {
-  readonly inodes: readonly string[];
+  readonly paths: readonly string[];
 };
 
 export type DriveDownloadUrlParams = {
-  readonly inode: string;
+  readonly path: string;
   readonly version?: number;
 };
 
@@ -160,25 +160,22 @@ export type DriveDiskUsageResult = {
 
 export type DriveToolsLsParams = {
   readonly path?: string;
-  readonly parentInode?: string;
   readonly recursive?: boolean;
 };
 
 export type DriveToolsGlobParams = {
   readonly pattern: string;
-  readonly parentInode?: string;
+  readonly path?: string;
 };
 
 export type DriveToolsGrepParams = {
   readonly pattern: string;
-  readonly parentInode?: string;
   readonly path?: string;
 };
 
 export type DriveToolsVsearchParams = {
   readonly query: string;
   readonly topK?: number;
-  readonly parentInode?: string;
   readonly path?: string;
 };
 
@@ -213,7 +210,7 @@ export type DriveToolsApplyPatchParams = {
 };
 
 export type DriveToolsWriteResult = {
-  readonly inode: string;
+  readonly id: string;
   readonly path: string;
 };
 
@@ -221,7 +218,7 @@ export type DriveToolsWriteResult = {
 
 export type DriveUploadFileBaseParams = {
   readonly name: string;
-  readonly parentInode?: string;
+  readonly parentPath?: string;
   readonly mimeType?: string;
   readonly force?: boolean;
   readonly onProgress?: (uploaded: number, total: number) => void;
@@ -244,7 +241,7 @@ export type DriveUploadFileStreamParams = DriveUploadFileBaseParams & {
 export type DriveUploadFileParams = DriveUploadFileBufferParams | DriveUploadFileStreamParams;
 
 export type DriveUploadFileResult = {
-  readonly inode: string;
+  readonly id: string;
   readonly etag: string;
   readonly version: number;
   readonly committedAt: string;
@@ -254,7 +251,7 @@ export type DriveUploadFileResult = {
 // -- Download file (convenience) --
 
 export type DriveDownloadFileParams = {
-  readonly inode: string;
+  readonly path: string;
   readonly version?: number;
   readonly onProgress?: (downloaded: number, total: number) => void;
 };

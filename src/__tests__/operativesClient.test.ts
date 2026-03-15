@@ -502,7 +502,7 @@ test('operatives client uses gateway URL when no url override provided', async (
 
       assert.equal(
         calls[0]?.url,
-        'https://apis.example/platform/app/api/operatives?projectId=proj-1'
+        'https://apis.example/platform/operatives/api/operatives?projectId=proj-1'
       );
     }
   );

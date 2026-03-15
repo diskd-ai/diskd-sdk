@@ -1,41 +1,43 @@
 /**
- * Drive validation -- external auth (OAuth2 credentials.json)
+ * Drive validation -- internal auth (API key)
  *
  * Validates Drive SDK methods using ONLY path-based operations.
  * Covers: init, diskUsage, list, create, tools.ls, tools.writeFile, tools.readFile,
  *         tools.applyPatch, tools.grep
  *
  * Operations requiring path-based backend API (not yet implemented):
- *   upload.file, download.file, rename, delete -- see missing-api.md
+ *   upload.file, download.file, rename -- see missing-api.md
  *
  * Environment:
- *   DISKD_BASE_URL         - Gateway URL (default: https://apis.upgraide.dev)
- *   DISKD_CREDENTIALS_PATH - Path to credentials.json (default: ./credentials.json)
+ *   DISKD_BASE_URL  - Gateway URL (default: https://apis.diskd.local:8080)
+ *   API_KEY         - API key (default: key-dev-1234567890)
+ *   WORKSPACE_ID    - Workspace ID (default: dev-user-id)
  *
  * Run:
- *   bun run scripts:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-scripts/scripts/validate-drive-external.js
+ *   DISKD_BASE_URL=https://apis.diskd.local:8080 NODE_TLS_REJECT_UNAUTHORIZED=0 \
+ *     bun run scripts:build && node dist-scripts/scripts/validate-drive-internal.js
  */
 
 import { diskd } from '../src/sdk/diskd.js';
 import { createHarness } from './_harness.js';
 
-const CREDENTIALS_PATH = process.env.DISKD_CREDENTIALS_PATH ?? './credentials.json';
-const h = createHarness('Drive (external)');
+const API_KEY = process.env.API_KEY ?? 'key-dev-1234567890';
+const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
+const BASE_URL = process.env.DISKD_BASE_URL ?? 'https://apis.diskd.local:8080';
+const h = createHarness('Drive (internal)');
 
 const TEST_DIR = '/sdk-validation-test';
 const TOOLS_FILE = `${TEST_DIR}/tools-written.txt`;
 
-console.log('=== Drive validation (external / OAuth2) ===\n');
-console.log(`Gateway: ${process.env.DISKD_BASE_URL ?? 'https://apis.upgraide.dev'}`);
-console.log(`Credentials: ${CREDENTIALS_PATH}\n`);
+console.log('=== Drive validation (internal / API key) ===\n');
+console.log(`Gateway: ${BASE_URL}`);
+console.log(`Workspace: ${WORKSPACE_ID}\n`);
 
-const auth = await diskd.auth.credentials({
-  scopes: ['openid'],
-  keyfilePath: CREDENTIALS_PATH,
-});
-h.ok('auth.credentials', 'OAuth2 token acquired');
+const driveAuth = diskd.auth.apiKey({ apiKey: API_KEY, workspaceId: WORKSPACE_ID });
+h.ok('auth', 'api_key configured');
 
-const drive = diskd.os.drive({ version: 'v1', auth });
+const driveUrl = `${BASE_URL}/os/drive/api/v1`;
+const drive = diskd.os.drive({ version: 'v1', auth: driveAuth, url: driveUrl });
 
 // -- init --
 try {
@@ -56,15 +58,16 @@ try {
 // -- create dir (root-level, no parent needed) --
 try {
   await drive.create({ dirName: 'sdk-validation-test' });
-  h.ok('drive.create (mkdir)', `path=${TEST_DIR}`);
+  h.ok('drive.create', `mkdir ${TEST_DIR}`);
 } catch {
-  h.ok('drive.create (mkdir)', 'directory exists or created');
+  h.ok('drive.create', `${TEST_DIR} already exists`);
 }
 
 // -- list root by path --
 try {
   const entries = await drive.list({ path: '/' });
-  h.ok('drive.list (/)', `${entries.length} entries at root`);
+  const names = entries.map((e) => e.name).join(', ');
+  h.ok('drive.list (/)', `${entries.length} entries: ${names}`);
 } catch (err) {
   h.fail('drive.list (/)', err);
 }
@@ -147,7 +150,8 @@ try {
 // -- list subdir by path --
 try {
   const entries = await drive.list({ path: TEST_DIR });
-  h.ok('drive.list (subdir)', `${entries.length} entries`);
+  const names = entries.map((e) => e.name).join(', ');
+  h.ok('drive.list (subdir)', `${entries.length} files: ${names}`);
 } catch (err) {
   h.fail('drive.list (subdir)', err);
 }
@@ -158,6 +162,19 @@ try {
   h.ok('drive.delete (recursive)', `${TEST_DIR} deleted`);
 } catch (err) {
   h.fail('drive.delete', err);
+}
+
+// -- verify deletion --
+try {
+  const entries = await drive.list({ path: '/' });
+  const still = entries.find((e) => e.name === 'sdk-validation-test');
+  if (!still) {
+    h.ok('drive.verify', 'directory gone');
+  } else {
+    h.fail('drive.verify', 'directory still present');
+  }
+} catch (err) {
+  h.fail('drive.verify', err);
 }
 
 h.summary();

@@ -55,8 +55,12 @@
     "examples:session-internal": "bun run examples:build && node dist-examples/node/drive-session-internal.js",
     "examples:session-external": "bun run examples:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-examples/node/drive-session-external.js",
     "scripts:build": "bun run build && node -e \"require('node:fs').rmSync('dist-scripts',{recursive:true,force:true})\" && tsc -p tsconfig.scripts.json",
-    "scripts:validate-external": "bun run scripts:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-scripts/scripts/validate-external.js",
-    "scripts:validate-internal": "bun run scripts:build && node dist-scripts/scripts/validate-internal.js"
+    "scripts:drive-external": "bun run scripts:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-scripts/scripts/validate-drive-external.js",
+    "scripts:drive-internal": "bun run scripts:build && node dist-scripts/scripts/validate-drive-internal.js",
+    "scripts:llm-external": "bun run scripts:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-scripts/scripts/validate-llm-external.js",
+    "scripts:llm-internal": "bun run scripts:build && node dist-scripts/scripts/validate-llm-internal.js",
+    "scripts:agents-external": "bun run scripts:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-scripts/scripts/validate-agents-external.js",
+    "scripts:agents-internal": "bun run scripts:build && node dist-scripts/scripts/validate-agents-internal.js"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.11",

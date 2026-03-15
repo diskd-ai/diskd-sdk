@@ -46,6 +46,7 @@ console.log(`Workspace: ${WORKSPACE_ID}\n`);
 // ---------------------------------------------------------------------------
 
 const FILENAME = `sdk-example-${Date.now()}.txt`;
+const FILE_PATH = `/${FILENAME}`;
 const ORIGINAL_CONTENT = [
   'Drive SDK upload/download example',
   `Uploaded at: ${new Date().toISOString()}`,
@@ -86,23 +87,20 @@ const uploadResult = await drive.upload.file({
 
 process.stdout.write('\n');
 console.log(`[ok] Upload complete`);
-console.log(`     inode      : ${uploadResult.inode}`);
 console.log(`     etag       : ${uploadResult.etag}`);
 console.log(`     version    : ${uploadResult.version}`);
 console.log(`     committedAt: ${uploadResult.committedAt}`);
 console.log(`     intentId   : ${uploadResult.intentId}`);
-
-const uploadedInode = uploadResult.inode;
 
 // ---------------------------------------------------------------------------
 // 3. Download the uploaded file (stream mode) with progress tracking
 // ---------------------------------------------------------------------------
 
 console.log(`\n=== 2. Download file (stream mode) ===`);
-console.log(`     inode: ${uploadedInode}`);
+console.log(`     path: ${FILE_PATH}`);
 
 const downloadResult = await drive.download.file({
-  inode: uploadedInode,
+  path: FILE_PATH,
   onProgress: (downloaded, total) => {
     const pct = total > 0 ? Math.round((downloaded / total) * 100) : 0;
     process.stdout.write(`\r     Progress : ${downloaded}/${total} bytes (${pct}%)    `);
@@ -161,7 +159,6 @@ console.log(`     Size match     : ${sizeMatches ? 'YES' : 'NO (MISMATCH)'}`);
 console.log(`     Content match  : ${contentMatches ? 'YES' : 'NO (MISMATCH)'}`);
 
 if (!contentMatches || !sizeMatches) {
-  // Print a diff preview to aid debugging
   console.log('\n     Original (first 120 chars):');
   console.log(`     ${JSON.stringify(ORIGINAL_CONTENT.slice(0, 120))}`);
   console.log('     Downloaded (first 120 chars):');
@@ -187,11 +184,11 @@ for (const line of downloadedContent.split('\n')) {
 console.log(`\n=== 6. Clean up ===`);
 
 const deleteResult = await drive.delete({
-  inodes: [uploadedInode],
+  paths: [FILE_PATH],
   recursive: false,
 });
 
-console.log(`[ok] Deleted inode ${uploadedInode}`);
+console.log(`[ok] Deleted ${FILE_PATH}`);
 console.log(`     success: ${deleteResult.success}`);
 console.log(`     freed  : ${deleteResult.size} bytes`);
 

@@ -103,10 +103,10 @@ const decodePathEntry = (o: unknown): DrivePathEntry => {
   const t = r.type;
   if (!isDrivePathType(t)) throw new Error('Invalid Drive item: type is invalid');
   return {
-    inode: strRequired(r, 'inode'),
+    id: strRequired(r, 'inode'),
     name: strRequired(r, 'name'),
     type: t,
-    parentInode: str(r, 'parent_inode') ?? str(r, 'parentInode'),
+    parentId: str(r, 'parent_inode') ?? str(r, 'parentInode'),
     mimeType: str(r, 'mime_type') ?? str(r, 'mimeType'),
     fileId: str(r, 'file_id') ?? str(r, 'fileId'),
     etag: str(r, 'etag'),
@@ -129,8 +129,8 @@ const decodeMutationResult = (o: unknown): DrivePathMutationResult => {
   const t = r.type;
   if (!isDrivePathType(t)) throw new Error('Invalid Drive mutation result: type is invalid');
   return {
-    inode: strRequired(r, 'inode'),
-    parentInode: str(r, 'parent_inode') ?? str(r, 'parentInode'),
+    id: strRequired(r, 'inode'),
+    parentId: str(r, 'parent_inode') ?? str(r, 'parentInode'),
     name: strRequired(r, 'name'),
     type: t,
     fileId: str(r, 'file_id') ?? str(r, 'fileId'),
@@ -145,7 +145,7 @@ const decodeDeleteResult = (o: unknown): DriveDeleteResult => {
   const r = raw(o);
   return {
     success: bool(r, 'success', false),
-    inodes: Array.isArray(r.inodes)
+    ids: Array.isArray(r.inodes)
       ? r.inodes.filter((x): x is string => typeof x === 'string')
       : [],
     size: numRequired(r, 'size'),
@@ -156,7 +156,7 @@ const decodeUploadStart = (o: unknown): DriveUploadStartResult => {
   const r = raw(o);
   return {
     intentId: strRequired(r, 'intent_id'),
-    inode: strRequired(r, 'inode'),
+    id: strRequired(r, 'inode'),
     uploadUrl: strRequired(r, 'upload_url'),
     expiresIn: numRequired(r, 'expires_in'),
     multipart: bool(r, 'multipart', false),
@@ -166,7 +166,7 @@ const decodeUploadStart = (o: unknown): DriveUploadStartResult => {
 const decodeUploadCommit = (o: unknown): DriveUploadCommitResult => {
   const r = raw(o);
   return {
-    inode: strRequired(r, 'inode'),
+    id: strRequired(r, 'inode'),
     etag: strRequired(r, 'etag'),
     version: numRequired(r, 'version'),
     committedAt: strRequired(r, 'committed_at'),
@@ -176,7 +176,7 @@ const decodeUploadCommit = (o: unknown): DriveUploadCommitResult => {
 const decodeFileMetadata = (o: unknown): DriveFileMetadata => {
   const r = raw(o);
   return {
-    inode: strRequired(r, 'inode'),
+    id: strRequired(r, 'inode'),
     name: strRequired(r, 'name'),
     size: numRequired(r, 'size'),
     etag: str(r, 'etag'),
@@ -233,7 +233,7 @@ const decodeReadFileResult = (o: unknown): DriveReadFileResult => {
 const decodeWriteResult = (o: unknown): DriveToolsWriteResult => {
   const r = raw(o);
   return {
-    inode: strRequired(r, 'inode'),
+    id: strRequired(r, 'inode'),
     path: strRequired(r, 'path'),
   };
 };
@@ -304,7 +304,6 @@ export const createDriveClient = (params: {
     list: async (listParams) => {
       const result = await call('drive/paths/list', {
         ...optional('path', listParams?.path),
-        ...optional('parent_inode', listParams?.parentInode),
       });
       return items(result).map(decodePathEntry);
     },
@@ -312,23 +311,23 @@ export const createDriveClient = (params: {
     create: async (p) => {
       const result = await call('drive/paths/create', {
         dir_name: p.dirName,
-        ...optional('parent_inode', p.parentInode),
+        ...optional('parent_path', p.parentPath),
       });
       return decodeMutationResult(result);
     },
 
     rename: async (p) => {
       const result = await call('drive/paths/rename', {
-        inode: p.inode,
+        path: p.path,
         new_name: p.newName,
-        ...optional('new_parent_inode', p.newParentInode),
+        ...optional('new_parent_path', p.newParentPath),
       });
       return decodeMutationResult(result);
     },
 
     delete: async (p) => {
       const result = await call('drive/paths/delete', {
-        inodes: [...p.inodes],
+        paths: [...p.paths],
         ...optional('recursive', p.recursive),
       });
       return decodeDeleteResult(result);
@@ -336,14 +335,14 @@ export const createDriveClient = (params: {
 
     resolve: async (p) => {
       const result = await call('drive/paths/resolve', {
-        inodes: [...p.inodes],
+        paths: [...p.paths],
       });
       return items(result).map(decodePathEntry);
     },
 
     updateMetadata: async (p) => {
       const result = await call('drive/paths/update-metadata', {
-        inode: p.inode,
+        path: p.path,
         metadata: { ...p.metadata },
       });
       return decodeMutationResult(result);
@@ -351,7 +350,7 @@ export const createDriveClient = (params: {
 
     updateAttributes: async (p) => {
       const result = await call('drive/paths/update-attributes', {
-        inode: p.inode,
+        path: p.path,
         attributes: [...p.attributes],
       });
       return decodeMutationResult(result);
@@ -378,7 +377,7 @@ export const createDriveClient = (params: {
             name: p.name,
             size: fileSize,
             sha256_root: hash,
-            ...optional('parent_inode', p.parentInode),
+            ...optional('parent_path', p.parentPath),
             ...optional('mime_type', p.mimeType),
             ...optional('force', p.force),
           });
@@ -427,7 +426,7 @@ export const createDriveClient = (params: {
         })();
 
         return {
-          inode: commitResult.inode,
+          id: commitResult.id,
           etag: commitResult.etag,
           version: commitResult.version,
           committedAt: commitResult.committedAt,
@@ -440,7 +439,7 @@ export const createDriveClient = (params: {
           name: p.name,
           size: p.size,
           sha256_root: p.sha256Root,
-          ...optional('parent_inode', p.parentInode),
+          ...optional('parent_path', p.parentPath),
           ...optional('mime_type', p.mimeType),
           ...optional('force', p.force),
         });
@@ -461,7 +460,7 @@ export const createDriveClient = (params: {
       file: async (p) => {
         // 1. Get signed download URL
         const dlResult = await call('drive/files/download-url', {
-          inode: p.inode,
+          path: p.path,
           ...optional('version', p.version),
         });
         const { url } = decodeDownloadUrl(dlResult);
@@ -513,20 +512,20 @@ export const createDriveClient = (params: {
     // -- Files --
     files: {
       metadata: async (p) => {
-        const result = await call('drive/files/metadata', { inode: p.inode });
+        const result = await call('drive/files/metadata', { path: p.path });
         return decodeFileMetadata(result);
       },
 
       metadataBatch: async (p) => {
         const result = await call('drive/files/metadata/batch', {
-          inodes: [...p.inodes],
+          paths: [...p.paths],
         });
         return items(result).map(decodePathEntry);
       },
 
       downloadUrl: async (p) => {
         const result = await call('drive/files/download-url', {
-          inode: p.inode,
+          path: p.path,
           ...optional('version', p.version),
         });
         return decodeDownloadUrl(result);
@@ -544,7 +543,6 @@ export const createDriveClient = (params: {
       ls: async (p) => {
         const result = await call('paths/tools/ls', {
           ...optional('path', p?.path),
-          ...optional('parent_inode', p?.parentInode),
           ...optional('recursive', p?.recursive),
         });
         return decodeToolsResult(result);
@@ -553,7 +551,7 @@ export const createDriveClient = (params: {
       glob: async (p) => {
         const result = await call('paths/tools/glob', {
           pattern: p.pattern,
-          ...optional('parent_inode', p.parentInode),
+          ...optional('path', p.path),
         });
         return decodeToolsResult(result);
       },
@@ -561,7 +559,6 @@ export const createDriveClient = (params: {
       grep: async (p) => {
         const result = await call('paths/tools/grep', {
           pattern: p.pattern,
-          ...optional('parent_inode', p.parentInode),
           ...optional('path', p.path),
         });
         return decodeToolsResult(result);
@@ -571,7 +568,6 @@ export const createDriveClient = (params: {
         const result = await call('paths/tools/vsearch', {
           query: p.query,
           ...optional('top_k', p.topK),
-          ...optional('parent_inode', p.parentInode),
           ...optional('path', p.path),
         });
         return decodeToolsResult(result);

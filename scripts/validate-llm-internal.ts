@@ -1,0 +1,95 @@
+/**
+ * LLM Router validation -- internal auth (API key)
+ *
+ * Validates LLM SDK methods: models.listAll, completions.create, completions.stream
+ *
+ * Environment:
+ *   DISKD_BASE_URL  - Gateway URL (default: https://apis.diskd.local:8080)
+ *   API_KEY         - API key (default: key-dev-1234567890)
+ *   WORKSPACE_ID    - Workspace ID (default: dev-user-id)
+ *
+ * Run:
+ *   DISKD_BASE_URL=https://apis.diskd.local:8080 NODE_TLS_REJECT_UNAUTHORIZED=0 \
+ *     bun run scripts:build && node dist-scripts/scripts/validate-llm-internal.js
+ */
+
+import type { AuthModule } from '../src/auth/types.js';
+import { diskd } from '../src/sdk/diskd.js';
+import { createHarness } from './_harness.js';
+
+const API_KEY = process.env.API_KEY ?? 'key-dev-1234567890';
+const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
+const BASE_URL = process.env.DISKD_BASE_URL ?? 'https://apis.diskd.local:8080';
+const h = createHarness('LLM Router (internal)');
+
+console.log('=== LLM Router validation (internal / API key) ===\n');
+console.log(`Gateway: ${BASE_URL}`);
+console.log(`Workspace: ${WORKSPACE_ID}\n`);
+
+const bearerAuth: AuthModule = {
+  signIn: async () => {},
+  signOut: () => {},
+  handleRedirectCallback: async () => {},
+  getAccessToken: async () => API_KEY,
+  getToken: () => ({ accessToken: API_KEY }),
+  getRequestHeaders: async () => ({
+    Authorization: `Bearer ${API_KEY}`,
+    'X-Workspace-Id': WORKSPACE_ID,
+    'X-User-Id': WORKSPACE_ID,
+  }),
+};
+h.ok('auth', 'bearer configured');
+
+const llmUrl = `${BASE_URL}/os/llm`;
+const llm = diskd.os.llm({ auth: bearerAuth, url: llmUrl });
+
+// -- models.listAll --
+try {
+  const models = await llm.models.listAll();
+  const sample = models.models.slice(0, 3).map((m) => `${m.provider}/${m.model}`);
+  h.ok('llm.models.listAll', `${models.models.length} models (${sample.join(', ')}...)`);
+} catch (err) {
+  h.fail('llm.models.listAll', err);
+}
+
+// -- completions.create --
+try {
+  const completion = await llm.completions.create({
+    provider: 'upgraide',
+    model: 'small',
+    messages: [{ role: 'user', content: 'Hello, who are you?' }],
+    maxTokens: 128,
+  });
+  const reply = completion.choices[0]?.message?.content ?? '';
+  if (reply.length > 0) {
+    h.ok('llm.completions.create', `"${reply.slice(0, 100)}"`);
+  } else {
+    h.fail('llm.completions.create', 'empty reply');
+  }
+} catch (err) {
+  h.fail('llm.completions.create', err);
+}
+
+// -- completions.stream --
+try {
+  let streamedText = '';
+  for await (const chunk of llm.completions.stream({
+    provider: 'upgraide',
+    model: 'small',
+    messages: [{ role: 'user', content: 'Count from 1 to 5.' }],
+    maxTokens: 64,
+  })) {
+    const delta = chunk.choices[0]?.delta?.content;
+    if (delta) streamedText += delta;
+  }
+  if (streamedText.length > 0) {
+    h.ok('llm.completions.stream', `"${streamedText.trim()}"`);
+  } else {
+    h.fail('llm.completions.stream', 'empty stream (0 chars)');
+  }
+} catch (err) {
+  h.fail('llm.completions.stream', err);
+}
+
+h.summary();
+process.exit(h.exitCode());

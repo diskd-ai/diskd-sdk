@@ -147,25 +147,24 @@ type TreeNode = {
 
 type DriveList = (params?: {
   readonly path?: string;
-  readonly parentInode?: string;
 }) => Promise<readonly DrivePathEntry[]>;
 
 const fetchTree = async (
   list: DriveList,
-  parentInode: string | undefined,
-  rootPath: string | undefined,
+  parentPath: string,
   depth: number,
   currentMaxDepth: number
 ): Promise<readonly TreeNode[]> => {
   if (depth >= currentMaxDepth) return [];
 
-  const entries = parentInode ? await list({ parentInode }) : await list({ path: rootPath ?? '/' });
+  const entries = await list({ path: parentPath });
 
   const nodes: TreeNode[] = [];
   for (const entry of entries) {
+    const childPath = parentPath === '/' ? `/${entry.name}` : `${parentPath}/${entry.name}`;
     const children =
       entry.type === 'dir'
-        ? await fetchTree(list, entry.inode, undefined, depth + 1, currentMaxDepth)
+        ? await fetchTree(list, childPath, depth + 1, currentMaxDepth)
         : [];
     nodes.push({ entry, children });
   }
@@ -239,7 +238,7 @@ const main = async (): Promise<void> => {
   // Fetch tree
   console.log(`Fetching tree (depth ${maxDepth})...`);
   console.log();
-  const tree = await fetchTree(drive.list.bind(drive), undefined, '/', 0, maxDepth);
+  const tree = await fetchTree(drive.list.bind(drive), '/', 0, maxDepth);
 
   // Render
   console.log('Drive');

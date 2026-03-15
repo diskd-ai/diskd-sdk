@@ -45,7 +45,6 @@ export type DriveClient = {
   // Path operations
   readonly list: (params?: {
     readonly path?: string;
-    readonly parentInode?: string;
   }) => Promise<readonly DrivePathEntry[]>;
   readonly create: (params: DriveCreateParams) => Promise<DrivePathMutationResult>;
   readonly rename: (params: DriveRenameParams) => Promise<DrivePathMutationResult>;
