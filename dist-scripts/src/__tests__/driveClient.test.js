@@ -130,7 +130,7 @@ test('diskd.platform.crontab binds scope + timezone in the constructor', async (
             nextRunAt: null,
             updatedAt: '2026-03-13T10:00:00Z',
         });
-        assert.equal(calls[0]?.url, 'https://apis.example/os/drive/api/v1');
+        assert.equal(calls[0]?.url, 'https://apis.example/platform/crontab/api/v1');
         assert.ok(String(calls[0]?.init?.body).includes('"method":"drive/crontab/save"'));
         assert.ok(String(calls[0]?.init?.body).includes('"scope_type":"project"'));
         assert.ok(String(calls[0]?.init?.body).includes('"project_id":"proj-1"'));
@@ -247,7 +247,7 @@ test('diskd.platform.sessions.list uses the drive JSON-RPC endpoint', async () =
                 },
             ],
         });
-        assert.equal(calls[0]?.url, 'https://apis.example/os/drive/api/v1');
+        assert.equal(calls[0]?.url, 'https://apis.example/platform/sessions/api/v1');
         assert.ok(String(calls[0]?.init?.body).includes('"method":"drive/session/list"'));
         assert.ok(String(calls[0]?.init?.body).includes('"project_id":"proj-1"'));
     }
@@ -453,7 +453,7 @@ test('drive.tools.writeFile sends paths/tools/write with path and content', asyn
         assert.equal(body.method, 'paths/tools/write');
         assert.equal(body.params.path, '/docs/readme.md');
         assert.equal(body.params.content, '# Hello World');
-        assert.equal(result.inode, 'inode-abc');
+        assert.equal(result.id, 'inode-abc');
         assert.equal(result.path, '/docs/readme.md');
     }
     finally {
@@ -493,7 +493,7 @@ test('drive.tools.applyPatch sends paths/tools/apply-patch with path and patch',
         assert.equal(body.method, 'paths/tools/apply-patch');
         assert.equal(body.params.path, '/docs/readme.md');
         assert.equal(body.params.patch, patchContent);
-        assert.equal(result.inode, 'inode-xyz');
+        assert.equal(result.id, 'inode-xyz');
         assert.equal(result.path, '/docs/readme.md');
     }
     finally {

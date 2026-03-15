@@ -173,7 +173,7 @@ test('routines client uses gateway URL when no url override provided', async () 
     }), async (calls) => {
         const client = diskd.platform.routines({ auth: makeAuth() });
         await client.list();
-        assert.equal(calls[0]?.url, 'https://apis.example/platform/app/api/routines');
+        assert.equal(calls[0]?.url, 'https://apis.example/platform/routines/api/routines');
     });
     delete process.env.DISKD_BASE_URL;
 });

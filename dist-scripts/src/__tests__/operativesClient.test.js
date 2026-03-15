@@ -349,7 +349,7 @@ test('operatives client uses gateway URL when no url override provided', async (
     }), async (calls) => {
         const client = diskd.platform.operatives({ auth: makeAuth() });
         await client.list({ projectId: 'proj-1' });
-        assert.equal(calls[0]?.url, 'https://apis.example/platform/app/api/operatives?projectId=proj-1');
+        assert.equal(calls[0]?.url, 'https://apis.example/platform/operatives/api/operatives?projectId=proj-1');
     });
     delete process.env.DISKD_BASE_URL;
 });

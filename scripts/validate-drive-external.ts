@@ -11,15 +11,18 @@
  * Environment:
  *   DISKD_BASE_URL         - Gateway URL (default: https://apis.upgraide.dev)
  *   DISKD_CREDENTIALS_PATH - Path to credentials.json (default: ./credentials.json)
+ *   DISKD_WORKSPACE_ID     - Workspace ID (default: dev-user-id)
  *
  * Run:
  *   bun run scripts:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-scripts/scripts/validate-drive-external.js
  */
 
+import type { AuthModule } from '../src/auth/types.js';
 import { diskd } from '../src/sdk/diskd.js';
 import { createHarness } from './_harness.js';
 
 const CREDENTIALS_PATH = process.env.DISKD_CREDENTIALS_PATH ?? './credentials.json';
+const WORKSPACE_ID = process.env.DISKD_WORKSPACE_ID ?? 'dev-user-id';
 const h = createHarness('Drive (external)');
 
 const TEST_DIR = '/sdk-validation-test';
@@ -27,12 +30,21 @@ const TOOLS_FILE = `${TEST_DIR}/tools-written.txt`;
 
 console.log('=== Drive validation (external / OAuth2) ===\n');
 console.log(`Gateway: ${process.env.DISKD_BASE_URL ?? 'https://apis.upgraide.dev'}`);
-console.log(`Credentials: ${CREDENTIALS_PATH}\n`);
+console.log(`Credentials: ${CREDENTIALS_PATH}`);
+console.log(`Workspace: ${WORKSPACE_ID}\n`);
 
-const auth = await diskd.auth.credentials({
+const baseAuth = await diskd.auth.credentials({
   scopes: ['openid'],
   keyfilePath: CREDENTIALS_PATH,
 });
+
+const auth: AuthModule = {
+  ...baseAuth,
+  getRequestHeaders: async () => ({
+    Authorization: `Bearer ${await baseAuth.getAccessToken()}`,
+    'X-Workspace-Id': WORKSPACE_ID,
+  }),
+};
 h.ok('auth.credentials', 'OAuth2 token acquired');
 
 const drive = diskd.os.drive({ version: 'v1', auth });
