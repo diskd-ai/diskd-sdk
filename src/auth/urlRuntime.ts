@@ -1,5 +1,7 @@
 type LocationLike = { href: string };
-type HistoryLike = { replaceState: (data: unknown, title: string, url?: string | URL | null) => void };
+type HistoryLike = {
+  replaceState: (data: unknown, title: string, url?: string | URL | null) => void;
+};
 
 export const getLocation = (): LocationLike => {
   const locationObj = (globalThis as { location?: LocationLike }).location;
@@ -18,4 +20,3 @@ export const replaceUrlWithoutSearchParams = (): void => {
   const clean = `${current.origin}${current.pathname}${current.hash}`;
   historyObj.replaceState({}, '', clean);
 };
-

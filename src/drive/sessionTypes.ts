@@ -221,10 +221,18 @@ export type DriveScopedSessionDeleteParams = {
 export type DriveSessionClient = {
   readonly save: (params: DriveSessionSaveParams) => Promise<DriveSessionSaveResult>;
   readonly get: (params: DriveSessionGetParams) => Promise<DriveSessionGetResult>;
-  readonly getPreview: (params: DriveSessionGetPreviewParams) => Promise<DriveSessionGetPreviewResult>;
-  readonly getMessageRange: (params: DriveSessionGetMessageRangeParams) => Promise<DriveSessionGetMessageRangeResult>;
+  readonly getPreview: (
+    params: DriveSessionGetPreviewParams
+  ) => Promise<DriveSessionGetPreviewResult>;
+  readonly getMessageRange: (
+    params: DriveSessionGetMessageRangeParams
+  ) => Promise<DriveSessionGetMessageRangeResult>;
   readonly list: (params: DriveSessionListParams) => Promise<DriveSessionListResult>;
-  readonly appendMessages: (params: DriveSessionAppendMessagesParams) => Promise<DriveSessionAppendMessagesResult>;
-  readonly deleteMessages: (params: DriveSessionDeleteMessagesParams) => Promise<DriveSessionDeleteMessagesResult>;
+  readonly appendMessages: (
+    params: DriveSessionAppendMessagesParams
+  ) => Promise<DriveSessionAppendMessagesResult>;
+  readonly deleteMessages: (
+    params: DriveSessionDeleteMessagesParams
+  ) => Promise<DriveSessionDeleteMessagesResult>;
   readonly delete: (params: DriveSessionDeleteParams) => Promise<DriveSessionDeleteResult>;
 };

@@ -8,9 +8,9 @@ import type {
   DriveCrontabGetStatusParams,
   DriveCrontabGetStatusResult,
   DriveCrontabHttpMethod,
-  DriveCrontabJsonContainer,
   DriveCrontabJob,
   DriveCrontabJobListItem,
+  DriveCrontabJsonContainer,
   DriveCrontabListJobsParams,
   DriveCrontabListJobsResult,
   DriveCrontabPayload,
@@ -33,13 +33,16 @@ const PAYLOAD_KINDS = new Set<DriveCrontabPayloadKind>(['json', 'path', 'uri']);
 const isObject = (value: unknown): value is UnknownObject =>
   typeof value === 'object' && value !== null;
 
-const hasOwn = (obj: UnknownObject, key: string): boolean =>
-  Object.prototype.hasOwnProperty.call(obj, key);
+const hasOwn = (obj: UnknownObject, key: string): boolean => Object.hasOwn(obj, key);
 
 const readField = (obj: UnknownObject, snakeKey: string, camelKey: string): unknown =>
   hasOwn(obj, snakeKey) ? obj[snakeKey] : obj[camelKey];
 
-const readRequiredNonEmptyString = (obj: UnknownObject, snakeKey: string, camelKey: string): string => {
+const readRequiredNonEmptyString = (
+  obj: UnknownObject,
+  snakeKey: string,
+  camelKey: string
+): string => {
   const value = readField(obj, snakeKey, camelKey);
   if (typeof value !== 'string' || value.length === 0) {
     throw new Error(`Invalid Drive crontab payload: '${snakeKey}' must be a non-empty string`);
@@ -47,7 +50,11 @@ const readRequiredNonEmptyString = (obj: UnknownObject, snakeKey: string, camelK
   return value;
 };
 
-const readNullableString = (obj: UnknownObject, snakeKey: string, camelKey: string): string | null => {
+const readNullableString = (
+  obj: UnknownObject,
+  snakeKey: string,
+  camelKey: string
+): string | null => {
   const value = readField(obj, snakeKey, camelKey);
   if (value === undefined || value === null) return null;
   if (typeof value !== 'string') {
@@ -56,7 +63,11 @@ const readNullableString = (obj: UnknownObject, snakeKey: string, camelKey: stri
   return value;
 };
 
-const readNullableNumber = (obj: UnknownObject, snakeKey: string, camelKey: string): number | null => {
+const readNullableNumber = (
+  obj: UnknownObject,
+  snakeKey: string,
+  camelKey: string
+): number | null => {
   const value = readField(obj, snakeKey, camelKey);
   if (value === undefined || value === null) return null;
   if (typeof value !== 'number') {
@@ -81,7 +92,11 @@ const readRequiredBoolean = (obj: UnknownObject, snakeKey: string, camelKey: str
   return value;
 };
 
-const readRequiredArray = (obj: UnknownObject, snakeKey: string, camelKey: string): readonly unknown[] => {
+const readRequiredArray = (
+  obj: UnknownObject,
+  snakeKey: string,
+  camelKey: string
+): readonly unknown[] => {
   const value = readField(obj, snakeKey, camelKey);
   if (!Array.isArray(value)) {
     throw new Error(`Invalid Drive crontab payload: '${snakeKey}' must be an array`);
@@ -92,7 +107,7 @@ const readRequiredArray = (obj: UnknownObject, snakeKey: string, camelKey: strin
 const readRequiredHttpMethod = (
   obj: UnknownObject,
   snakeKey: string,
-  camelKey: string,
+  camelKey: string
 ): DriveCrontabHttpMethod => {
   const value = readField(obj, snakeKey, camelKey);
   if (typeof value !== 'string' || !HTTP_METHODS.has(value as DriveCrontabHttpMethod)) {
@@ -104,11 +119,13 @@ const readRequiredHttpMethod = (
 const readRequiredPayloadKind = (
   obj: UnknownObject,
   snakeKey: string,
-  camelKey: string,
+  camelKey: string
 ): DriveCrontabPayloadKind => {
   const value = readField(obj, snakeKey, camelKey);
   if (typeof value !== 'string' || !PAYLOAD_KINDS.has(value as DriveCrontabPayloadKind)) {
-    throw new Error(`Invalid Drive crontab payload: '${snakeKey}' must be a supported payload kind`);
+    throw new Error(
+      `Invalid Drive crontab payload: '${snakeKey}' must be a supported payload kind`
+    );
   }
   return value as DriveCrontabPayloadKind;
 };
@@ -282,13 +299,13 @@ const encodeScope = (scope: DriveCrontabScopeRef): unknown => {
 
 const upsertJob = (
   jobs: readonly DriveCrontabJob[],
-  job: DriveCrontabJob,
+  job: DriveCrontabJob
 ): readonly DriveCrontabJob[] => {
   const existingIndex = jobs.findIndex((item) => item.jobId === job.jobId);
   if (existingIndex < 0) {
     return [...jobs, job];
   }
-  return jobs.map((item, index) => index === existingIndex ? job : item);
+  return jobs.map((item, index) => (index === existingIndex ? job : item));
 };
 
 const decodeSaveResult = (raw: unknown): DriveCrontabSaveResult => {
@@ -311,7 +328,8 @@ const decodeGetResult = (raw: unknown): DriveCrontabGetResult => {
 };
 
 const decodeGetStatusResult = (raw: unknown): DriveCrontabGetStatusResult => {
-  if (!isObject(raw) || Array.isArray(raw)) throw new Error('Invalid drive/crontab/get-status result');
+  if (!isObject(raw) || Array.isArray(raw))
+    throw new Error('Invalid drive/crontab/get-status result');
   return {
     jobCount: readRequiredNumber(raw, 'job_count', 'jobCount'),
     nextRunAt: readNullableString(raw, 'next_run_at', 'nextRunAt'),
@@ -339,7 +357,8 @@ const decodeListJobItem = (raw: unknown): DriveCrontabJobListItem => {
 };
 
 const decodeListJobsResult = (raw: unknown): DriveCrontabListJobsResult => {
-  if (!isObject(raw) || Array.isArray(raw)) throw new Error('Invalid drive/crontab/list-jobs result');
+  if (!isObject(raw) || Array.isArray(raw))
+    throw new Error('Invalid drive/crontab/list-jobs result');
   return {
     items: readRequiredArray(raw, 'items', 'items').map(decodeListJobItem),
   };
@@ -355,7 +374,9 @@ const decodeRunJobResult = (raw: unknown): DriveCrontabRunJobResult => {
   };
 };
 
-export const createDriveCrontabClient = (params: { readonly call: RpcCall }): DriveCrontabClient => {
+export const createDriveCrontabClient = (params: {
+  readonly call: RpcCall;
+}): DriveCrontabClient => {
   const save = async (clientParams: DriveCrontabSaveParams): Promise<DriveCrontabSaveResult> => {
     const result = await params.call('drive/crontab/save', {
       scope: encodeScope(clientParams.scope),
@@ -395,7 +416,8 @@ export const createDriveCrontabClient = (params: { readonly call: RpcCall }): Dr
       scope: paramsForJob.scope,
       document: {
         version: nextDocument.version,
-        timezone: paramsForJob.timezone !== undefined ? paramsForJob.timezone : nextDocument.timezone,
+        timezone:
+          paramsForJob.timezone !== undefined ? paramsForJob.timezone : nextDocument.timezone,
         jobs: upsertJob(nextDocument.jobs, paramsForJob.job),
       },
     });
@@ -406,14 +428,18 @@ export const createDriveCrontabClient = (params: { readonly call: RpcCall }): Dr
 
     get,
 
-    getStatus: async (clientParams: DriveCrontabGetStatusParams): Promise<DriveCrontabGetStatusResult> => {
+    getStatus: async (
+      clientParams: DriveCrontabGetStatusParams
+    ): Promise<DriveCrontabGetStatusResult> => {
       const result = await params.call('drive/crontab/get-status', {
         scope: encodeScope(clientParams.scope),
       });
       return decodeGetStatusResult(result);
     },
 
-    createProjectJob: async (clientParams: DriveCrontabCreateProjectJobParams): Promise<DriveCrontabSaveResult> => {
+    createProjectJob: async (
+      clientParams: DriveCrontabCreateProjectJobParams
+    ): Promise<DriveCrontabSaveResult> => {
       return saveSingleJob({
         scope: {
           scopeType: 'project',
@@ -424,7 +450,9 @@ export const createDriveCrontabClient = (params: { readonly call: RpcCall }): Dr
       });
     },
 
-    createProfileJob: async (clientParams: DriveCrontabCreateProfileJobParams): Promise<DriveCrontabSaveResult> => {
+    createProfileJob: async (
+      clientParams: DriveCrontabCreateProfileJobParams
+    ): Promise<DriveCrontabSaveResult> => {
       return saveSingleJob({
         scope: {
           scopeType: 'profile',
@@ -434,7 +462,9 @@ export const createDriveCrontabClient = (params: { readonly call: RpcCall }): Dr
       });
     },
 
-    listJobs: async (clientParams: DriveCrontabListJobsParams): Promise<DriveCrontabListJobsResult> => {
+    listJobs: async (
+      clientParams: DriveCrontabListJobsParams
+    ): Promise<DriveCrontabListJobsResult> => {
       const result = await params.call('drive/crontab/list-jobs', {
         scope: encodeScope(clientParams.scope),
       });

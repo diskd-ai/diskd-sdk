@@ -2,12 +2,12 @@
 // DriveDriver -- TypeORM driver that routes SQL through Drive DB JSON-RPC
 // ---------------------------------------------------------------------------
 
-import { AbstractSqliteDriver } from 'typeorm/driver/sqlite-abstract/AbstractSqliteDriver.js';
 import type { DataSource, QueryRunner, ReplicationMode } from 'typeorm';
-import { createDriveDbClient } from '../driveDb.js';
-import { jsonRpcCall } from '../rpc.js';
+import { AbstractSqliteDriver } from 'typeorm/driver/sqlite-abstract/AbstractSqliteDriver.js';
 import type { AuthModule } from '../../auth/types.js';
-import type { DriveDbClient, DriveDbType, DriveDbSchema } from '../driveDbTypes.js';
+import { createDriveDbClient } from '../driveDb.js';
+import type { DriveDbClient, DriveDbSchema, DriveDbType } from '../driveDbTypes.js';
+import { jsonRpcCall } from '../rpc.js';
 import { DriveQueryRunner } from './DriveQueryRunner.js';
 
 // ---------------------------------------------------------------------------
@@ -28,7 +28,7 @@ export type DriveConnectionOptions = {
 
 const createCallFn = (
   auth: AuthModule,
-  rpcUrl: string,
+  rpcUrl: string
 ): ((method: string, rpcParams: unknown) => Promise<unknown>) => {
   let nextId = 1;
 
@@ -56,11 +56,12 @@ export class DriveDriver extends AbstractSqliteDriver {
   constructor(connection: DataSource) {
     super(connection);
 
-    const opts = (connection.options as unknown as Record<string, unknown>)
-      ._driveOptions as DriveConnectionOptions | undefined;
+    const opts = (connection.options as unknown as Record<string, unknown>)._driveOptions as
+      | DriveConnectionOptions
+      | undefined;
     if (!opts) {
       throw new Error(
-        '@diskd/sdk: missing Drive options. Use diskd.os.datasource() to create the DataSource.',
+        '@diskd/sdk: missing Drive options. Use diskd.os.datasource() to create the DataSource.'
       );
     }
 
@@ -100,8 +101,7 @@ export class DriveDriver extends AbstractSqliteDriver {
 
   createQueryRunner(_mode: ReplicationMode): QueryRunner {
     if (!(this as unknown as Record<string, unknown>).queryRunner) {
-      (this as unknown as Record<string, unknown>).queryRunner =
-        new DriveQueryRunner(this);
+      (this as unknown as Record<string, unknown>).queryRunner = new DriveQueryRunner(this);
     }
     return (this as unknown as Record<string, unknown>).queryRunner as QueryRunner;
   }

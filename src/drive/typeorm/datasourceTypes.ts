@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 
 import type { AuthModule } from '../../auth/types.js';
-import type { DriveDbType, DriveDbSchema } from '../driveDbTypes.js';
+import type { DriveDbSchema, DriveDbType } from '../driveDbTypes.js';
 
 // ---------------------------------------------------------------------------
 // Input params

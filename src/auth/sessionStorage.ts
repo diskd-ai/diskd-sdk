@@ -11,4 +11,3 @@ export const getSessionStorage = (): SessionStorageLike => {
   }
   return storage;
 };
-

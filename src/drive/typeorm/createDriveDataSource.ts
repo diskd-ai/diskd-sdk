@@ -21,16 +21,13 @@ export const createDriveDataSource = (params: DriveDataSourceParams): unknown =>
   // Temporarily intercept DriverFactory to inject DriveDriver.
   // TypeORM has no extension point for custom driver types, so we
   // monkey-patch the factory during DataSource construction only.
-  const DriverFactory =
-    require('typeorm/driver/DriverFactory').DriverFactory as {
-      prototype: { create: (connection: DataSource) => unknown };
-    };
+  const DriverFactory = require('typeorm/driver/DriverFactory').DriverFactory as {
+    prototype: { create: (connection: DataSource) => unknown };
+  };
 
   const originalCreate = DriverFactory.prototype.create;
 
-  DriverFactory.prototype.create = function (_connection: DataSource) {
-    return new DriveDriver(_connection);
-  };
+  DriverFactory.prototype.create = (_connection: DataSource) => new DriveDriver(_connection);
 
   try {
     return new DataSource({

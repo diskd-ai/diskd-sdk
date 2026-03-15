@@ -1,6 +1,5 @@
-import type { DriveDbClient } from './driveDbTypes.js';
 import type { DriveCrontabClient } from './crontabTypes.js';
-import type { DriveSessionManager } from './sessionObject.js';
+import type { DriveDbClient } from './driveDbTypes.js';
 import type {
   DriveCreateParams,
   DriveDeleteParams,
@@ -31,6 +30,7 @@ import type {
   DriveUploadStartParams,
   DriveUploadStartResult,
 } from './driveTypes.js';
+import type { DriveSessionManager } from './sessionObject.js';
 
 export type { DrivePathEntry, DrivePathType } from './driveTypes.js';
 
@@ -38,13 +38,18 @@ export type DriveClient = {
   readonly init: () => Promise<void>;
 
   // Path operations
-  readonly list: (params?: { readonly path?: string; readonly parentInode?: string }) => Promise<readonly DrivePathEntry[]>;
+  readonly list: (params?: {
+    readonly path?: string;
+    readonly parentInode?: string;
+  }) => Promise<readonly DrivePathEntry[]>;
   readonly create: (params: DriveCreateParams) => Promise<DrivePathMutationResult>;
   readonly rename: (params: DriveRenameParams) => Promise<DrivePathMutationResult>;
   readonly delete: (params: DriveDeleteParams) => Promise<DriveDeleteResult>;
   readonly resolve: (params: DriveResolveParams) => Promise<readonly DrivePathEntry[]>;
   readonly updateMetadata: (params: DriveUpdateMetadataParams) => Promise<DrivePathMutationResult>;
-  readonly updateAttributes: (params: DriveUpdateAttributesParams) => Promise<DrivePathMutationResult>;
+  readonly updateAttributes: (
+    params: DriveUpdateAttributesParams
+  ) => Promise<DrivePathMutationResult>;
 
   // Upload operations
   readonly upload: {
@@ -61,7 +66,9 @@ export type DriveClient = {
   // File operations
   readonly files: {
     readonly metadata: (params: DriveFileMetadataParams) => Promise<DriveFileMetadata>;
-    readonly metadataBatch: (params: DriveFileMetadataBatchParams) => Promise<readonly DrivePathEntry[]>;
+    readonly metadataBatch: (
+      params: DriveFileMetadataBatchParams
+    ) => Promise<readonly DrivePathEntry[]>;
     readonly downloadUrl: (params: DriveDownloadUrlParams) => Promise<DriveDownloadUrlResult>;
   };
 

@@ -1,10 +1,5 @@
 export { createAuth } from '../auth/createAuthBrowser.js';
 export type { AuthModule, SdkCreateParams } from '../auth/types.js';
-
-export { diskd } from '../sdk/diskd.js';
-export type { DiskD } from '../sdk/types.js';
-
-export type { DriveClient, DrivePathEntry, DrivePathType } from '../drive/types.js';
 export type {
   DriveCrontabClient,
   DriveCrontabCreateProfileJobParams,
@@ -66,11 +61,15 @@ export type {
   DriveSessionListResult,
   DriveSessionMessage,
   DriveSessionParticipant,
+  DriveSessionProjectScopeRef,
   DriveSessionSaveParams,
   DriveSessionSaveResult,
-  DriveSessionProjectScopeRef,
   DriveSessionScopeRef,
   JsonObject,
   JsonScalar,
   JsonValue,
 } from '../drive/sessionTypes.js';
+
+export type { DriveClient, DrivePathEntry, DrivePathType } from '../drive/types.js';
+export { diskd } from '../sdk/diskd.js';
+export type { DiskD } from '../sdk/types.js';

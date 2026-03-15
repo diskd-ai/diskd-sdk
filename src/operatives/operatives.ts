@@ -1,6 +1,6 @@
 import type { AuthModule } from '../auth/types.js';
 import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
-import { httpRequest, resolveAuthHeaders, type HttpMethod } from '../sdk/http.js';
+import { type HttpMethod, httpRequest, resolveAuthHeaders } from '../sdk/http.js';
 import type {
   Operative,
   OperativeAddFilesParams,
@@ -11,9 +11,9 @@ import type {
   OperativeGetBySlugParams,
   OperativeListParams,
   OperativeSkill,
+  OperativesClient,
   OperativeTool,
   OperativeUpdateParams,
-  OperativesClient,
 } from './operativesTypes.js';
 
 // ---------------------------------------------------------------------------
@@ -92,20 +92,20 @@ const decodeTool = (wire: WireEquipment): OperativeTool => ({
 const encodeParams = (params: Record<string, unknown>): Record<string, unknown> => {
   const wire: Record<string, unknown> = { ...params };
   if ('fileAccess' in wire) {
-    wire['intelAccess'] = wire['fileAccess'];
-    delete wire['fileAccess'];
+    wire.intelAccess = wire.fileAccess;
+    delete wire.fileAccess;
   }
   if ('engineProvider' in wire) {
-    wire['brainProvider'] = wire['engineProvider'];
-    delete wire['engineProvider'];
+    wire.brainProvider = wire.engineProvider;
+    delete wire.engineProvider;
   }
   if ('engineModel' in wire) {
-    wire['brainModel'] = wire['engineModel'];
-    delete wire['engineModel'];
+    wire.brainModel = wire.engineModel;
+    delete wire.engineModel;
   }
   if ('engine' in wire) {
-    wire['brainMode'] = wire['engine'];
-    delete wire['engine'];
+    wire.brainMode = wire.engine;
+    delete wire.engine;
   }
   return wire;
 };
@@ -152,15 +152,18 @@ export const createOperativesClient = (params: {
   const request = async <T>(
     method: HttpMethod,
     path: string,
-    opts: { readonly body?: unknown } = {},
+    opts: { readonly body?: unknown } = {}
   ): Promise<T> => {
     const authHeaders = await resolveAuthHeaders(params.auth);
-    return httpRequest<T>({
-      method,
-      url: `${baseUrl}${path}`,
-      authHeaders,
-      body: opts.body,
-    }, 'Operatives');
+    return httpRequest<T>(
+      {
+        method,
+        url: `${baseUrl}${path}`,
+        authHeaders,
+        body: opts.body,
+      },
+      'Operatives'
+    );
   };
 
   const encId = (id: string): string => encodeURIComponent(id);
@@ -193,7 +196,10 @@ export const createOperativesClient = (params: {
       return decodeOperative(wire);
     },
 
-    update: async (operativeId: string, updateParams: OperativeUpdateParams): Promise<Operative> => {
+    update: async (
+      operativeId: string,
+      updateParams: OperativeUpdateParams
+    ): Promise<Operative> => {
       const wire = await request<WireOperative>('PATCH', `/api/operatives/${encId(operativeId)}`, {
         body: encodeParams({ ...updateParams }),
       });
@@ -206,67 +212,106 @@ export const createOperativesClient = (params: {
 
     files: {
       list: async (operativeId: string): Promise<readonly OperativeFile[]> => {
-        const items = await request<readonly WireIntel[]>('GET', `/api/operatives/${encId(operativeId)}/intel`);
+        const items = await request<readonly WireIntel[]>(
+          'GET',
+          `/api/operatives/${encId(operativeId)}/intel`
+        );
         return items.map(decodeFile);
       },
 
-      add: async (operativeId: string, addParams: OperativeAddFilesParams): Promise<readonly OperativeFile[]> => {
+      add: async (
+        operativeId: string,
+        addParams: OperativeAddFilesParams
+      ): Promise<readonly OperativeFile[]> => {
         const results: OperativeFile[] = [];
         for (const path of addParams.paths) {
-          const wire = await request<WireIntel>('POST', `/api/operatives/${encId(operativeId)}/intel`, {
-            body: { sourceId: path },
-          });
+          const wire = await request<WireIntel>(
+            'POST',
+            `/api/operatives/${encId(operativeId)}/intel`,
+            {
+              body: { sourceId: path },
+            }
+          );
           results.push(decodeFile(wire));
         }
         return results;
       },
 
       remove: async (operativeId: string, linkId: string): Promise<void> => {
-        await request<unknown>('DELETE', `/api/operatives/${encId(operativeId)}/intel/${encId(linkId)}`);
+        await request<unknown>(
+          'DELETE',
+          `/api/operatives/${encId(operativeId)}/intel/${encId(linkId)}`
+        );
       },
     },
 
     skills: {
       list: async (operativeId: string): Promise<readonly OperativeSkill[]> => {
-        const result = await request<WireEquipmentList>('GET', `/api/operatives/${encId(operativeId)}/equipment`);
+        const result = await request<WireEquipmentList>(
+          'GET',
+          `/api/operatives/${encId(operativeId)}/equipment`
+        );
         return result.items.filter((e) => e.equipmentType === 'skill').map(decodeSkill);
       },
 
-      add: async (operativeId: string, addParams: OperativeAddSkillsParams): Promise<readonly OperativeSkill[]> => {
+      add: async (
+        operativeId: string,
+        addParams: OperativeAddSkillsParams
+      ): Promise<readonly OperativeSkill[]> => {
         const results: OperativeSkill[] = [];
         for (const refId of addParams.refIds) {
-          const wire = await request<WireEquipment>('POST', `/api/operatives/${encId(operativeId)}/equipment`, {
-            body: { equipmentType: 'skill', refId },
-          });
+          const wire = await request<WireEquipment>(
+            'POST',
+            `/api/operatives/${encId(operativeId)}/equipment`,
+            {
+              body: { equipmentType: 'skill', refId },
+            }
+          );
           results.push(decodeSkill(wire));
         }
         return results;
       },
 
       remove: async (operativeId: string, linkId: string): Promise<void> => {
-        await request<unknown>('DELETE', `/api/operatives/${encId(operativeId)}/equipment/${encId(linkId)}`);
+        await request<unknown>(
+          'DELETE',
+          `/api/operatives/${encId(operativeId)}/equipment/${encId(linkId)}`
+        );
       },
     },
 
     tools: {
       list: async (operativeId: string): Promise<readonly OperativeTool[]> => {
-        const result = await request<WireEquipmentList>('GET', `/api/operatives/${encId(operativeId)}/equipment`);
+        const result = await request<WireEquipmentList>(
+          'GET',
+          `/api/operatives/${encId(operativeId)}/equipment`
+        );
         return result.items.filter((e) => e.equipmentType === 'mcp_tool').map(decodeTool);
       },
 
-      add: async (operativeId: string, addParams: OperativeAddToolsParams): Promise<readonly OperativeTool[]> => {
+      add: async (
+        operativeId: string,
+        addParams: OperativeAddToolsParams
+      ): Promise<readonly OperativeTool[]> => {
         const results: OperativeTool[] = [];
         for (const selector of addParams.selectors) {
-          const wire = await request<WireEquipment>('POST', `/api/operatives/${encId(operativeId)}/equipment`, {
-            body: { equipmentType: 'mcp_tool', selector },
-          });
+          const wire = await request<WireEquipment>(
+            'POST',
+            `/api/operatives/${encId(operativeId)}/equipment`,
+            {
+              body: { equipmentType: 'mcp_tool', selector },
+            }
+          );
           results.push(decodeTool(wire));
         }
         return results;
       },
 
       remove: async (operativeId: string, linkId: string): Promise<void> => {
-        await request<unknown>('DELETE', `/api/operatives/${encId(operativeId)}/equipment/${encId(linkId)}`);
+        await request<unknown>(
+          'DELETE',
+          `/api/operatives/${encId(operativeId)}/equipment/${encId(linkId)}`
+        );
       },
     },
   };

@@ -1,10 +1,7 @@
 import type { AuthModule } from '../auth/types.js';
-import { createDriveCrontabClient } from './crontab.js';
 import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
+import { createDriveCrontabClient } from './crontab.js';
 import { createDriveDbClient } from './driveDb.js';
-import { jsonRpcCall } from './rpc.js';
-import { createDriveSessionClient } from './session.js';
-import { createDriveSessionManager } from './sessionObject.js';
 import type {
   DriveDeleteResult,
   DriveDiskUsageResult,
@@ -19,6 +16,9 @@ import type {
   DriveUploadFileResult,
   DriveUploadStartResult,
 } from './driveTypes.js';
+import { jsonRpcCall } from './rpc.js';
+import { createDriveSessionClient } from './session.js';
+import { createDriveSessionManager } from './sessionObject.js';
 import type { DriveClient } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -83,8 +83,13 @@ const raw = (result: unknown): RawObject => {
 };
 
 const isDrivePathType = (v: unknown): v is DrivePathType =>
-  v === 'file' || v === 'dir' || v === 'symlink' || v === 'index' ||
-  v === 'capsule' || v === 'note' || v === 'chat';
+  v === 'file' ||
+  v === 'dir' ||
+  v === 'symlink' ||
+  v === 'index' ||
+  v === 'capsule' ||
+  v === 'note' ||
+  v === 'chat';
 
 // ---------------------------------------------------------------------------
 // Decoders
@@ -137,7 +142,9 @@ const decodeDeleteResult = (o: unknown): DriveDeleteResult => {
   const r = raw(o);
   return {
     success: bool(r, 'success', false),
-    inodes: Array.isArray(r.inodes) ? r.inodes.filter((x): x is string => typeof x === 'string') : [],
+    inodes: Array.isArray(r.inodes)
+      ? r.inodes.filter((x): x is string => typeof x === 'string')
+      : [],
     size: numRequired(r, 'size'),
   };
 };
@@ -213,7 +220,7 @@ const optional = <T>(key: string, value: T | undefined): Record<string, T> =>
 // ---------------------------------------------------------------------------
 
 const toArrayBuffer = (data: Uint8Array | ArrayBuffer): ArrayBuffer =>
-  data instanceof ArrayBuffer ? data : new Uint8Array(data).buffer as ArrayBuffer;
+  data instanceof ArrayBuffer ? data : (new Uint8Array(data).buffer as ArrayBuffer);
 
 const sha256hex = async (data: Uint8Array | ArrayBuffer): Promise<string> => {
   const buf = await globalThis.crypto.subtle.digest('SHA-256', toArrayBuffer(data));
@@ -325,7 +332,11 @@ export const createDriveClient = (params: {
       file: async (p) => {
         // Resolve size, hash, and body based on input type (buffer vs stream)
         const isStream = p.stream !== undefined;
-        const fileSize = isStream ? p.size : (p.data instanceof Uint8Array ? p.data.byteLength : p.data.byteLength);
+        const fileSize = isStream
+          ? p.size
+          : p.data instanceof Uint8Array
+            ? p.data.byteLength
+            : p.data.byteLength;
         const hash = isStream ? p.sha256Root : await sha256hex(p.data);
         const body: ArrayBuffer | ReadableStream<Uint8Array> = isStream
           ? p.stream
@@ -368,7 +379,7 @@ export const createDriveClient = (params: {
           throw new Error(`Upload PUT failed (HTTP ${putResponse.status}): ${text.slice(0, 200)}`);
         }
 
-        const putBody = await putResponse.json() as { etag?: string };
+        const putBody = (await putResponse.json()) as { etag?: string };
         const etag = putBody.etag ?? putResponse.headers.get('etag') ?? '';
         if (!etag) {
           throw new Error('Upload PUT response missing etag');
@@ -446,7 +457,7 @@ export const createDriveClient = (params: {
           ? (() => {
               let downloaded = 0;
               const reader = body.getReader();
-              p.onProgress!(0, size);
+              p.onProgress?.(0, size);
               return new ReadableStream<Uint8Array>({
                 async pull(controller) {
                   const { done, value } = await reader.read();
@@ -455,7 +466,7 @@ export const createDriveClient = (params: {
                     return;
                   }
                   downloaded += value.byteLength;
-                  p.onProgress!(downloaded, size);
+                  p.onProgress?.(downloaded, size);
                   controller.enqueue(value);
                 },
                 cancel(reason) {
@@ -463,7 +474,7 @@ export const createDriveClient = (params: {
                 },
               });
             })()
-          : body as ReadableStream<Uint8Array>;
+          : (body as ReadableStream<Uint8Array>);
 
         return { stream, size, mimeType } satisfies DriveDownloadFileResult;
       },

@@ -355,7 +355,9 @@ export type StreamProtocolMap = {
   readonly 'response.refusal.delta': (event: RefusalDeltaEvent) => void;
   readonly 'response.refusal.done': (event: RefusalDoneEvent) => void;
 
-  readonly 'response.function_call_arguments.delta': (event: FunctionCallArgumentsDeltaEvent) => void;
+  readonly 'response.function_call_arguments.delta': (
+    event: FunctionCallArgumentsDeltaEvent
+  ) => void;
   readonly 'response.function_call_arguments.done': (event: FunctionCallArgumentsDoneEvent) => void;
   readonly 'response.function_call.result': (event: FunctionCallResultEvent) => void;
 

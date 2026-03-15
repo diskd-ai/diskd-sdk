@@ -14,8 +14,8 @@
  *   npm run examples:build && node dist-examples/node/typeorm-drive-example.js
  */
 
+import { Column, Entity, PrimaryColumn } from 'typeorm';
 import { diskd } from '../../src/index.js';
-import { Entity, PrimaryColumn, Column } from 'typeorm';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -161,13 +161,13 @@ for (const o of aliceOrders) {
 
 console.log('\n=== 7. Raw SQL -- revenue per user ===');
 
-const summary = await ds.query(`
+const summary = (await ds.query(`
   SELECT u.name, COUNT(o.id) AS order_count, SUM(o.total) AS revenue
   FROM users u
   LEFT JOIN orders o ON o.user_id = u.id
   GROUP BY u.id
   ORDER BY revenue DESC
-`) as ReadonlyArray<Record<string, unknown>>;
+`)) as ReadonlyArray<Record<string, unknown>>;
 
 for (const row of summary) {
   const dollars = (Number(row.revenue ?? 0) / 100).toFixed(2);

@@ -1,13 +1,13 @@
+import { readKeyfileFromPath } from './keyfile.js';
 import { fetchOidcDiscovery } from './oidcDiscovery.js';
 import { createPkceChallenge, createPkceState, createPkceVerifier } from './pkce.js';
 import { getSessionStorage } from './sessionStorage.js';
-import { replaceUrlWithoutSearchParams, getLocation } from './urlRuntime.js';
-import { readKeyfileFromPath } from './keyfile.js';
 import { requestAuthorizationCodeToken, requestClientCredentialsToken } from './tokenRequests.js';
 import type { AuthModule, AuthToken, SdkCreateParams } from './types.js';
+import { getLocation, replaceUrlWithoutSearchParams } from './urlRuntime.js';
 
 const hasKeyfilePath = (
-  params: SdkCreateParams,
+  params: SdkCreateParams
 ): params is Extract<SdkCreateParams, { keyfilePath: string }> => 'keyfilePath' in params;
 
 const storageKeys = {
@@ -17,9 +17,10 @@ const storageKeys = {
 
 export const createAuth = async (params: SdkCreateParams): Promise<AuthModule> => {
   let token: AuthToken | null = null;
-  let discovery:
-    | { readonly authorization_endpoint: string; readonly token_endpoint: string }
-    | null = null;
+  let discovery: {
+    readonly authorization_endpoint: string;
+    readonly token_endpoint: string;
+  } | null = null;
 
   const ensureDiscovery = async (issuer: string) => {
     if (discovery) return discovery;
@@ -129,7 +130,9 @@ export const createAuth = async (params: SdkCreateParams): Promise<AuthModule> =
 
   const getAccessToken = async (): Promise<string> => {
     if (!token) {
-      throw new Error('No access token available. Call signIn() and handleRedirectCallback() first.');
+      throw new Error(
+        'No access token available. Call signIn() and handleRedirectCallback() first.'
+      );
     }
     return token.accessToken;
   };
@@ -142,4 +145,3 @@ export const createAuth = async (params: SdkCreateParams): Promise<AuthModule> =
     getToken: () => token,
   };
 };
-

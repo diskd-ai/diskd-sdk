@@ -3,7 +3,7 @@ const isObject = (value: unknown): value is { readonly [key: string]: unknown } 
 
 const readOptionalString = (
   obj: { readonly [key: string]: unknown },
-  key: string,
+  key: string
 ): string | undefined => {
   const value = obj[key];
   return typeof value === 'string' && value.length > 0 ? value : undefined;

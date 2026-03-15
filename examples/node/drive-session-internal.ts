@@ -92,13 +92,20 @@ await session.append([
 console.log(`[ok] Appended user message (count: ${session.messageCount})`);
 
 await session.append([
-  sessions.message({ role: 'assistant', content: 'Here are the deployment steps:\n1. Build the image\n2. Push to registry\n3. Update k8s manifests\n4. Apply with kubectl' }),
+  sessions.message({
+    role: 'assistant',
+    content:
+      'Here are the deployment steps:\n1. Build the image\n2. Push to registry\n3. Update k8s manifests\n4. Apply with kubectl',
+  }),
 ]);
 console.log(`[ok] Appended assistant message (count: ${session.messageCount})`);
 
 await session.append([
   sessions.message({ role: 'user', content: 'What about rollback?' }),
-  sessions.message({ role: 'assistant', content: 'To rollback, use: kubectl rollout undo deployment/<name>' }),
+  sessions.message({
+    role: 'assistant',
+    content: 'To rollback, use: kubectl rollout undo deployment/<name>',
+  }),
 ]);
 console.log(`[ok] Appended turn pair (count: ${session.messageCount})`);
 
@@ -107,7 +114,9 @@ console.log(`[ok] Appended turn pair (count: ${session.messageCount})`);
 // ---------------------------------------------------------------------------
 
 const preview = await sessions.open({ sessionId: session.sessionId, limit: 2 });
-console.log(`[ok] Opened preview: ${preview.messages.length} messages loaded, ${preview.messageCount} total`);
+console.log(
+  `[ok] Opened preview: ${preview.messages.length} messages loaded, ${preview.messageCount} total`
+);
 
 // ---------------------------------------------------------------------------
 // 5. Load more (older messages)
@@ -124,7 +133,7 @@ preview.dispose();
 // ---------------------------------------------------------------------------
 
 const full = await sessions.open({ sessionId: session.sessionId });
-const forkPointId = full.messages[1]!.id; // fork after first assistant response
+const forkPointId = full.messages[1]?.id; // fork after first assistant response
 const forked = await full.fork({ atMessageId: forkPointId });
 console.log(`[ok] Forked session: ${forked.sessionId}`);
 console.log(`     Fork source: ${forked.document.forkSourceSessionId}`);
@@ -144,7 +153,7 @@ full.dispose();
 // ---------------------------------------------------------------------------
 
 const rollbackSession = await sessions.open({ sessionId: session.sessionId });
-const rollbackPoint = rollbackSession.messages[rollbackSession.messages.length - 2]!.id;
+const rollbackPoint = rollbackSession.messages[rollbackSession.messages.length - 2]?.id;
 await rollbackSession.rollback(rollbackPoint);
 console.log(`[ok] Rolled back after ${rollbackPoint}`);
 console.log(`     Messages remaining: ${rollbackSession.messages.length}`);
@@ -157,7 +166,7 @@ rollbackSession.dispose();
 
 const editSession = await sessions.open({ sessionId: session.sessionId });
 if (editSession.messages.length > 1) {
-  const toRemove = editSession.messages[1]!.id;
+  const toRemove = editSession.messages[1]?.id;
   await editSession.remove([toRemove]);
   console.log(`[ok] Removed message ${toRemove}`);
   console.log(`     Messages remaining: ${editSession.messages.length}`);
@@ -172,7 +181,9 @@ editSession.dispose();
 const listResult = await sessions.list();
 console.log(`\n[ok] Sessions in project "${PROJECT_ID}":`);
 for (const item of listResult.items) {
-  console.log(`     - ${item.sessionId}: "${item.title ?? '(untitled)'}" (${item.messageCount} msgs)`);
+  console.log(
+    `     - ${item.sessionId}: "${item.title ?? '(untitled)'}" (${item.messageCount} msgs)`
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -185,7 +196,9 @@ console.log(`     ID: ${finalSession.sessionId}`);
 console.log(`     Title: ${finalSession.document.title}`);
 console.log(`     Messages: ${finalSession.messageCount}`);
 for (const msg of finalSession.messages) {
-  console.log(`     [${msg.role}] ${msg.content.slice(0, 60)}${msg.content.length > 60 ? '...' : ''}`);
+  console.log(
+    `     [${msg.role}] ${msg.content.slice(0, 60)}${msg.content.length > 60 ? '...' : ''}`
+  );
 }
 
 finalSession.dispose();

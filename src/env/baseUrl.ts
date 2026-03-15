@@ -7,7 +7,7 @@ const stripSurroundingSlashes = (value: string): string => value.replace(/^\/+|\
 
 export const resolveDiskdBaseUrl = (): string => {
   const nodeEnv = readEnvString(
-    (globalThis as { process?: { env?: { DISKD_BASE_URL?: string } } }).process?.env?.DISKD_BASE_URL,
+    (globalThis as { process?: { env?: { DISKD_BASE_URL?: string } } }).process?.env?.DISKD_BASE_URL
   );
   if (nodeEnv) return nodeEnv;
 

@@ -1,6 +1,5 @@
 import type { AuthModule } from '../auth/types.js';
 import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
-import { StreamProtocolFetcher } from './StreamProtocolFetcher.js';
 import type {
   AgentHubClient,
   AgentHubInvokeParams,
@@ -8,6 +7,7 @@ import type {
   BillingAliasesResult,
   SupportedModelsResult,
 } from './agentHubTypes.js';
+import { StreamProtocolFetcher } from './StreamProtocolFetcher.js';
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -34,7 +34,9 @@ const strArray = (obj: RawObject, key: string): readonly string[] | undefined =>
   return v.filter((item): item is string => typeof item === 'string');
 };
 
-const buildQueryString = (params: Readonly<Record<string, string | number | undefined>>): string => {
+const buildQueryString = (
+  params: Readonly<Record<string, string | number | undefined>>
+): string => {
   const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== '');
   if (entries.length === 0) return '';
   const searchParams = new URLSearchParams();
@@ -91,11 +93,11 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
     try {
       const errorData = (await response.json()) as unknown;
       if (isObject(errorData)) {
-        const err = errorData['error'];
-        if (isObject(err) && typeof err['message'] === 'string') {
-          message = err['message'];
-        } else if (typeof errorData['message'] === 'string') {
-          message = errorData['message'];
+        const err = errorData.error;
+        if (isObject(err) && typeof err.message === 'string') {
+          message = err.message;
+        } else if (typeof errorData.message === 'string') {
+          message = errorData.message;
         }
       }
     } catch {
@@ -157,7 +159,7 @@ export const createAgentHubClient = (params: {
     opts: {
       readonly body?: unknown;
       readonly query?: Readonly<Record<string, string | number | undefined>>;
-    } = {},
+    } = {}
   ): Promise<T> => {
     const authHeaders = await getAuthHeaders();
     const qs = opts.query ? buildQueryString(opts.query) : '';
@@ -193,11 +195,12 @@ export const createAgentHubClient = (params: {
         const raw = await request<RawObject>('GET', '/supported-models', {
           query: { agent: agentId },
         });
-        const modelsRaw = raw['models'];
+        const modelsRaw = raw.models;
         if (!Array.isArray(modelsRaw)) return { models: [] };
         return {
           models: modelsRaw.map((m: unknown) => {
-            if (!isObject(m)) throw new Error('Invalid Agent Hub response: model info must be an object');
+            if (!isObject(m))
+              throw new Error('Invalid Agent Hub response: model info must be an object');
             return {
               provider: str(m, 'provider') ?? '',
               model: str(m, 'model') ?? '',
@@ -215,13 +218,16 @@ export const createAgentHubClient = (params: {
       getAliases: async (): Promise<BillingAliasesResult> => {
         const raw = await request<RawObject>('GET', '/billing-aliases');
 
-        const modelsRaw = raw['models'];
-        const providersRaw = raw['providers'];
-        const agentsRaw = raw['agents'];
+        const modelsRaw = raw.models;
+        const providersRaw = raw.providers;
+        const agentsRaw = raw.agents;
 
         const models = Array.isArray(modelsRaw)
           ? modelsRaw.map((m: unknown) => {
-              if (!isObject(m)) throw new Error('Invalid Agent Hub response: billing alias model must be an object');
+              if (!isObject(m))
+                throw new Error(
+                  'Invalid Agent Hub response: billing alias model must be an object'
+                );
               return {
                 billingAlias: str(m, 'billingAlias') ?? str(m, 'billing_alias') ?? '',
                 provider: str(m, 'provider') ?? '',
@@ -229,7 +235,8 @@ export const createAgentHubClient = (params: {
                 displayName: str(m, 'displayName') ?? str(m, 'display_name') ?? '',
                 description: str(m, 'description') ?? '',
                 usedBy: strArray(m, 'usedBy') ?? strArray(m, 'used_by') ?? [],
-                supportedTypes: strArray(m, 'supportedTypes') ?? strArray(m, 'supported_types') ?? [],
+                supportedTypes:
+                  strArray(m, 'supportedTypes') ?? strArray(m, 'supported_types') ?? [],
                 isStreamModel: bool(m, 'isStreamModel') ?? bool(m, 'is_stream_model') ?? false,
               };
             })
@@ -237,7 +244,8 @@ export const createAgentHubClient = (params: {
 
         const providers = Array.isArray(providersRaw)
           ? providersRaw.map((p: unknown) => {
-              if (!isObject(p)) throw new Error('Invalid Agent Hub response: provider must be an object');
+              if (!isObject(p))
+                throw new Error('Invalid Agent Hub response: provider must be an object');
               return { id: str(p, 'id') ?? '' };
             })
           : [];

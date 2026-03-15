@@ -13,9 +13,7 @@ export type DriveCrontabProjectScopeRef = {
   readonly projectId: string;
 };
 
-export type DriveCrontabScopeRef =
-  | DriveCrontabProfileScopeRef
-  | DriveCrontabProjectScopeRef;
+export type DriveCrontabScopeRef = DriveCrontabProfileScopeRef | DriveCrontabProjectScopeRef;
 
 export type DriveCrontabSchedule = {
   readonly minute: string;
@@ -151,8 +149,12 @@ export type DriveCrontabClient = {
   readonly save: (params: DriveCrontabSaveParams) => Promise<DriveCrontabSaveResult>;
   readonly get: (params: DriveCrontabGetParams) => Promise<DriveCrontabGetResult>;
   readonly getStatus: (params: DriveCrontabGetStatusParams) => Promise<DriveCrontabGetStatusResult>;
-  readonly createProjectJob: (params: DriveCrontabCreateProjectJobParams) => Promise<DriveCrontabSaveResult>;
-  readonly createProfileJob: (params: DriveCrontabCreateProfileJobParams) => Promise<DriveCrontabSaveResult>;
+  readonly createProjectJob: (
+    params: DriveCrontabCreateProjectJobParams
+  ) => Promise<DriveCrontabSaveResult>;
+  readonly createProfileJob: (
+    params: DriveCrontabCreateProfileJobParams
+  ) => Promise<DriveCrontabSaveResult>;
   readonly listJobs: (params: DriveCrontabListJobsParams) => Promise<DriveCrontabListJobsResult>;
   readonly runJob: (params: DriveCrontabRunJobParams) => Promise<DriveCrontabRunJobResult>;
 };
@@ -161,7 +163,9 @@ export type DriveScopedCrontabClient = {
   readonly save: (params: DriveScopedCrontabSaveParams) => Promise<DriveCrontabSaveResult>;
   readonly get: () => Promise<DriveCrontabGetResult>;
   readonly getStatus: () => Promise<DriveCrontabGetStatusResult>;
-  readonly createJob: (params: DriveScopedCrontabCreateJobParams) => Promise<DriveCrontabSaveResult>;
+  readonly createJob: (
+    params: DriveScopedCrontabCreateJobParams
+  ) => Promise<DriveCrontabSaveResult>;
   readonly listJobs: () => Promise<DriveCrontabListJobsResult>;
   readonly runJob: (params: DriveCrontabRunJobParams) => Promise<DriveCrontabRunJobResult>;
 };

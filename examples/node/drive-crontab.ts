@@ -68,7 +68,9 @@ console.log(`[ok] Loaded document version ${getResult.document.version}`);
 console.log(`     Timezone: ${getResult.document.timezone ?? '(none)'}`);
 
 const statusResult = await crontab.getStatus();
-console.log(`[ok] Status: ${statusResult.jobCount} job, next run ${statusResult.nextRunAt ?? 'none'}`);
+console.log(
+  `[ok] Status: ${statusResult.jobCount} job, next run ${statusResult.nextRunAt ?? 'none'}`
+);
 
 const listResult = await crontab.listJobs();
 console.log(`[ok] Normalized jobs: ${listResult.items.length}`);

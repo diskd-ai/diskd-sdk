@@ -99,9 +99,7 @@ for (const s of registryResult.items) {
 let installedServerId: string | null = null;
 
 if (catalogServer) {
-  const alreadyInstalled = registryResult.items.some(
-    (s) => s.catalogServerId === catalogServer.id,
-  );
+  const alreadyInstalled = registryResult.items.some((s) => s.catalogServerId === catalogServer.id);
 
   if (!alreadyInstalled) {
     console.log(`\n=== 4. Add server from catalog: ${catalogServer.id} ===`);
@@ -112,7 +110,9 @@ if (catalogServer) {
 
     if ('server' in addResult) {
       installedServerId = addResult.server.id;
-      console.log(`[ok] Installed server: ${addResult.server.id} (status=${addResult.server.status})`);
+      console.log(
+        `[ok] Installed server: ${addResult.server.id} (status=${addResult.server.status})`
+      );
     } else {
       console.log(`[ok] Operation started: ${addResult.operationId}`);
     }

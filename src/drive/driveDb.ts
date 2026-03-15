@@ -42,7 +42,8 @@ const strRequired = (obj: RawObject, key: string): string => {
 
 const num = (obj: RawObject, key: string): number => {
   const v = obj[key];
-  if (typeof v !== 'number') throw new Error(`Invalid Drive DB response: '${key}' must be a number`);
+  if (typeof v !== 'number')
+    throw new Error(`Invalid Drive DB response: '${key}' must be a number`);
   return v;
 };
 
@@ -177,10 +178,7 @@ const optional = <T>(key: string, value: T | undefined): Record<string, T> =>
 
 export type DriveDbCallFn = (method: string, params: unknown) => Promise<unknown>;
 
-export const createDriveDbClient = (deps: {
-  readonly call: DriveDbCallFn;
-}): DriveDbClient => ({
-
+export const createDriveDbClient = (deps: { readonly call: DriveDbCallFn }): DriveDbClient => ({
   create: async (p) => {
     const result = await deps.call('drive/db/create', {
       name: p.name,

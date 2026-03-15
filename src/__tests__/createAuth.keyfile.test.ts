@@ -1,8 +1,8 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import test from 'node:test';
 
 import { createAuth } from '../auth/createAuth.js';
 
@@ -35,7 +35,7 @@ test('createAuth (keyfile) requests client-credentials token via discovery token
           authorization_endpoint: 'https://issuer.example/oauth2/auth',
           token_endpoint: 'https://issuer.example/oauth2/token',
         }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
@@ -70,4 +70,3 @@ test('createAuth (keyfile) requests client-credentials token via discovery token
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
   }
 });
-

@@ -1,5 +1,5 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import test from 'node:test';
 
 import { createDriveSessionClient } from '../drive/session.js';
 
@@ -55,7 +55,11 @@ test('session client deleteMessages supports rollbackAfterMessageId encoding', a
   });
 
   const client = createDriveSessionClient({ call });
-  await client.deleteMessages({ projectId: 'proj-1', sessionId: 'sess-1', rollbackAfterMessageId: 'm-10' });
+  await client.deleteMessages({
+    projectId: 'proj-1',
+    sessionId: 'sess-1',
+    rollbackAfterMessageId: 'm-10',
+  });
 
   assert.equal(calls.length, 1);
   assert.equal(calls[0]?.method, 'drive/session/delete-messages');
@@ -74,7 +78,11 @@ test('session client deleteMessages supports messageIds encoding', async () => {
   });
 
   const client = createDriveSessionClient({ call });
-  await client.deleteMessages({ projectId: 'proj-1', sessionId: 'sess-1', messageIds: ['m-2', 'm-3'] });
+  await client.deleteMessages({
+    projectId: 'proj-1',
+    sessionId: 'sess-1',
+    messageIds: ['m-2', 'm-3'],
+  });
 
   assert.equal(calls.length, 1);
   assert.equal(calls[0]?.method, 'drive/session/delete-messages');

@@ -57,7 +57,7 @@ export type DriveRepository = {
 
   /** Insert one or more rows. */
   readonly insert: (
-    rows: readonly Readonly<Record<string, unknown>>[],
+    rows: readonly Readonly<Record<string, unknown>>[]
   ) => Promise<{ readonly inserted: number }>;
 
   /** Find rows matching criteria. */
@@ -109,7 +109,7 @@ export type DriveDatabase = {
   /** Execute a raw SQL query with optional parameters. */
   readonly query: (
     sql: string,
-    parameters?: readonly unknown[],
+    parameters?: readonly unknown[]
   ) => Promise<readonly Readonly<Record<string, unknown>>[]>;
 
   /** Commit pending changes (flush WAL to S3). */
@@ -141,7 +141,7 @@ export type DriveDatabase = {
 // ---------------------------------------------------------------------------
 
 const buildWhereClause = (
-  where: WhereClause,
+  where: WhereClause
 ): { readonly sql: string; readonly params: readonly unknown[] } => {
   const keys = Object.keys(where);
   if (keys.length === 0) return { sql: '', params: [] };
@@ -162,9 +162,7 @@ const buildWhereClause = (
   return { sql: ` WHERE ${conditions.join(' AND ')}`, params };
 };
 
-const buildOrderByClause = (
-  orderBy: OrderByClause | readonly OrderByClause[],
-): string => {
+const buildOrderByClause = (orderBy: OrderByClause | readonly OrderByClause[]): string => {
   const clauses = Array.isArray(orderBy) ? orderBy : [orderBy];
   if (clauses.length === 0) return '';
   const parts = clauses.map((c) => `${c.column} ${c.direction ?? 'ASC'}`);
@@ -187,7 +185,10 @@ const createRepository = (deps: {
   readonly dbName: string;
   readonly dbType: DriveDbType | undefined;
   readonly db: DriveDbClient;
-  readonly execQuery: (sql: string, params?: readonly unknown[]) => Promise<readonly Readonly<Record<string, unknown>>[]>;
+  readonly execQuery: (
+    sql: string,
+    params?: readonly unknown[]
+  ) => Promise<readonly Readonly<Record<string, unknown>>[]>;
 }): DriveRepository => {
   const { table, db, dbName, dbType, execQuery } = deps;
 
@@ -248,7 +249,7 @@ export const createDriveDatabase = (config: DriveDatabaseConfig): DriveDatabase 
 
   const execQuery = async (
     sql: string,
-    parameters?: readonly unknown[],
+    parameters?: readonly unknown[]
   ): Promise<readonly Readonly<Record<string, unknown>>[]> => {
     const result = await db.query({ name: dbName, sql, parameters, dbType });
     return result.rows;

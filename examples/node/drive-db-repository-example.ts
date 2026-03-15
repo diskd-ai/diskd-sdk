@@ -13,8 +13,8 @@
  *   npm run examples:build && node dist-examples/node/drive-db-repository-example.js
  */
 
-import { diskd } from '../../src/sdk/diskd.js';
 import type { DriveDbSchema } from '../../src/drive/driveDbTypes.js';
+import { diskd } from '../../src/sdk/diskd.js';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -31,19 +31,19 @@ const auth = diskd.auth.apiKey({ apiKey: DRIVE_API_KEY, workspaceId: WORKSPACE_I
 
 const shopSchema: DriveDbSchema = {
   users: {
-    id:         { type: 'TEXT', primaryKey: true },
-    name:       { type: 'TEXT', notNull: true },
-    email:      { type: 'TEXT', notNull: true },
+    id: { type: 'TEXT', primaryKey: true },
+    name: { type: 'TEXT', notNull: true },
+    email: { type: 'TEXT', notNull: true },
     created_at: { type: 'TEXT', notNull: true },
   },
   orders: {
-    id:          { type: 'TEXT', primaryKey: true },
-    user_id:     { type: 'TEXT', notNull: true },
-    product:     { type: 'TEXT', notNull: true },
-    quantity:    { type: 'INTEGER', notNull: true },
+    id: { type: 'TEXT', primaryKey: true },
+    user_id: { type: 'TEXT', notNull: true },
+    product: { type: 'TEXT', notNull: true },
+    quantity: { type: 'INTEGER', notNull: true },
     price_cents: { type: 'INTEGER', notNull: true },
-    status:      { type: 'TEXT', notNull: true, defaultValue: 'pending' },
-    created_at:  { type: 'TEXT', notNull: true },
+    status: { type: 'TEXT', notNull: true, defaultValue: 'pending' },
+    created_at: { type: 'TEXT', notNull: true },
   },
 };
 
@@ -92,10 +92,42 @@ console.log(`[ok] Users count: ${await users.count()}`);
 console.log('\n=== 3. Insert orders ===');
 
 const { inserted } = await orders.insert([
-  { id: 'o1', user_id: 'u1', product: 'Widget', quantity: 2, price_cents: 1500, status: 'completed', created_at: new Date().toISOString() },
-  { id: 'o2', user_id: 'u1', product: 'Gadget', quantity: 1, price_cents: 3200, status: 'pending', created_at: new Date().toISOString() },
-  { id: 'o3', user_id: 'u2', product: 'Widget', quantity: 5, price_cents: 1500, status: 'completed', created_at: new Date().toISOString() },
-  { id: 'o4', user_id: 'u3', product: 'Gizmo', quantity: 1, price_cents: 8900, status: 'shipped', created_at: new Date().toISOString() },
+  {
+    id: 'o1',
+    user_id: 'u1',
+    product: 'Widget',
+    quantity: 2,
+    price_cents: 1500,
+    status: 'completed',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'o2',
+    user_id: 'u1',
+    product: 'Gadget',
+    quantity: 1,
+    price_cents: 3200,
+    status: 'pending',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'o3',
+    user_id: 'u2',
+    product: 'Widget',
+    quantity: 5,
+    price_cents: 1500,
+    status: 'completed',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'o4',
+    user_id: 'u3',
+    product: 'Gizmo',
+    quantity: 1,
+    price_cents: 8900,
+    status: 'shipped',
+    created_at: new Date().toISOString(),
+  },
 ]);
 
 console.log(`[ok] Inserted ${inserted} order(s)`);
@@ -140,7 +172,7 @@ const alice = await users.findOne({ id: 'u1' });
 console.log(`[ok] Found: ${alice?.name} <${alice?.email}>`);
 
 const missing = await users.findOne({ id: 'u999' });
-console.log(`[ok] Missing user: ${missing}`);  // null
+console.log(`[ok] Missing user: ${missing}`); // null
 
 // ---------------------------------------------------------------------------
 // 9. count()

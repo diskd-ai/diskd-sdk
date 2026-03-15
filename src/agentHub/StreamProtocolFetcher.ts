@@ -172,7 +172,7 @@ export const StreamProtocolFetcher = {
       readonly headers?: Readonly<Record<string, string>>;
       readonly body?: string | object;
       readonly signal?: AbortSignal;
-    } = {},
+    } = {}
   ): Promise<StreamProtocolStream<T>> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

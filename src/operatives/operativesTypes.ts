@@ -134,21 +134,30 @@ export type OperativesClient = {
   /** Drive files attached to the operative (knowledge sources). */
   readonly files: {
     readonly list: (operativeId: string) => Promise<readonly OperativeFile[]>;
-    readonly add: (operativeId: string, params: OperativeAddFilesParams) => Promise<readonly OperativeFile[]>;
+    readonly add: (
+      operativeId: string,
+      params: OperativeAddFilesParams
+    ) => Promise<readonly OperativeFile[]>;
     readonly remove: (operativeId: string, linkId: string) => Promise<void>;
   };
 
   /** Skills attached to the operative. */
   readonly skills: {
     readonly list: (operativeId: string) => Promise<readonly OperativeSkill[]>;
-    readonly add: (operativeId: string, params: OperativeAddSkillsParams) => Promise<readonly OperativeSkill[]>;
+    readonly add: (
+      operativeId: string,
+      params: OperativeAddSkillsParams
+    ) => Promise<readonly OperativeSkill[]>;
     readonly remove: (operativeId: string, linkId: string) => Promise<void>;
   };
 
   /** MCP tools attached to the operative. */
   readonly tools: {
     readonly list: (operativeId: string) => Promise<readonly OperativeTool[]>;
-    readonly add: (operativeId: string, params: OperativeAddToolsParams) => Promise<readonly OperativeTool[]>;
+    readonly add: (
+      operativeId: string,
+      params: OperativeAddToolsParams
+    ) => Promise<readonly OperativeTool[]>;
     readonly remove: (operativeId: string, linkId: string) => Promise<void>;
   };
 };

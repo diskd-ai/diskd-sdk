@@ -1,4 +1,9 @@
-import type { DriveSessionConfig, DriveSessionDocument, DriveSessionMessage, JsonObject } from './sessionTypes.js';
+import type {
+  DriveSessionConfig,
+  DriveSessionDocument,
+  DriveSessionMessage,
+  JsonObject,
+} from './sessionTypes.js';
 
 export type MessageParams = {
   readonly role: string;

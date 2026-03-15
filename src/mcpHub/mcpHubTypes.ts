@@ -2,22 +2,6 @@
 // These are pure data types only -- no classes, no I/O, no side effects.
 // The MCP Hub REST API already returns camelCase; no wire-level conversion needed.
 
-// -- Error types --
-
-export type McpHubErrorKind =
-  | 'NetworkError'
-  | 'NotFound'
-  | 'Unauthorized'
-  | 'ValidationError'
-  | 'Conflict'
-  | 'ServerError';
-
-export type McpHubError = {
-  readonly kind: McpHubErrorKind;
-  readonly message: string;
-  readonly code?: string;
-};
-
 // -- Registry types (installed MCP servers for a workspace) --
 
 export type McpServerStatus = 'active' | 'inactive';
@@ -165,9 +149,7 @@ export type AddRemoteServerParams = {
   readonly authToken?: string;
 };
 
-export type AddServerResult =
-  | { readonly server: McpServer }
-  | RuntimeOperationResponse;
+export type AddServerResult = { readonly server: McpServer } | RuntimeOperationResponse;
 
 export type UpdateServerParams = {
   readonly status?: McpServerStatus;
@@ -179,7 +161,7 @@ export type UpdateServerAliasParams = {
 
 export type UpdateServerResult = McpServer | RuntimeOperationResponse;
 
-export type DeleteServerResult = void | RuntimeOperationResponse;
+export type DeleteServerResult = undefined | RuntimeOperationResponse;
 
 export type RestartServerResult = McpServer | RuntimeOperationResponse;
 
@@ -266,19 +248,34 @@ export type McpHubClient = {
     /** POST /api/registry/servers -- install a catalog server. */
     readonly addServer: (params: AddServerParams) => Promise<AddServerResult>;
     /** POST /api/registry/servers/remote -- add a remote (self-hosted) server. */
-    readonly addRemoteServer: (params: AddRemoteServerParams) => Promise<{ readonly server: McpServer }>;
+    readonly addRemoteServer: (
+      params: AddRemoteServerParams
+    ) => Promise<{ readonly server: McpServer }>;
     /** PATCH /api/registry/servers/{id} -- update server status. */
-    readonly updateServer: (serverId: string, params: UpdateServerParams) => Promise<UpdateServerResult>;
+    readonly updateServer: (
+      serverId: string,
+      params: UpdateServerParams
+    ) => Promise<UpdateServerResult>;
     /** PATCH /api/registry/servers/{id}/alias -- rename server alias. */
-    readonly updateServerAlias: (serverId: string, params: UpdateServerAliasParams) => Promise<McpServer>;
+    readonly updateServerAlias: (
+      serverId: string,
+      params: UpdateServerAliasParams
+    ) => Promise<McpServer>;
     /** DELETE /api/registry/servers/{id} -- remove an installed server. */
     readonly deleteServer: (serverId: string) => Promise<DeleteServerResult>;
     /** POST /api/registry/servers/{id}/restart -- restart a server runtime. */
     readonly restartServer: (serverId: string) => Promise<RestartServerResult>;
     /** GET /api/registry/servers/{id}/logs -- fetch server runtime logs. */
-    readonly getServerLogs: (serverId: string, params?: GetServerLogsParams) => Promise<GetServerLogsResult>;
+    readonly getServerLogs: (
+      serverId: string,
+      params?: GetServerLogsParams
+    ) => Promise<GetServerLogsResult>;
     /** PATCH /api/registry/servers/{id}/tools/{toolId} -- enable or disable a tool. */
-    readonly toggleTool: (serverId: string, toolId: string, enabled: boolean) => Promise<ToggleToolResult>;
+    readonly toggleTool: (
+      serverId: string,
+      toolId: string,
+      enabled: boolean
+    ) => Promise<ToggleToolResult>;
     /** GET /api/registry/servers/{id}/env -- list environment variable keys. */
     readonly listEnvVars: (serverId: string) => Promise<ListEnvVarsResult>;
     /** PUT /api/registry/servers/{id}/env -- upsert an environment variable. */
@@ -288,9 +285,16 @@ export type McpHubClient = {
     /** GET /api/registry/servers/{id}/settings -- list connection settings. */
     readonly listConnectionSettings: (serverId: string) => Promise<ListConnectionSettingsResult>;
     /** POST /api/registry/servers/{id}/settings/{settingId}/reveal -- reveal a secret setting value. */
-    readonly revealConnectionSetting: (serverId: string, settingId: string) => Promise<RevealConnectionSettingResult>;
+    readonly revealConnectionSetting: (
+      serverId: string,
+      settingId: string
+    ) => Promise<RevealConnectionSettingResult>;
     /** PUT /api/registry/servers/{id}/settings/{settingId} -- update a connection setting. */
-    readonly updateConnectionSetting: (serverId: string, settingId: string, params: UpdateConnectionSettingParams) => Promise<void>;
+    readonly updateConnectionSetting: (
+      serverId: string,
+      settingId: string,
+      params: UpdateConnectionSettingParams
+    ) => Promise<void>;
     /** DELETE /api/registry/servers/{id}/settings/{settingId} -- delete a connection setting. */
     readonly deleteConnectionSetting: (serverId: string, settingId: string) => Promise<void>;
   };
@@ -304,6 +308,8 @@ export type McpHubClient = {
 
   readonly integrations: {
     /** POST /api/integration-requests -- submit a new MCP server integration request. */
-    readonly requestIntegration: (params: RequestIntegrationParams) => Promise<RequestIntegrationResult>;
+    readonly requestIntegration: (
+      params: RequestIntegrationParams
+    ) => Promise<RequestIntegrationResult>;
   };
 };

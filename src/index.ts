@@ -1,13 +1,122 @@
 import './node/fastDns.js';
 
-export { createAuth } from './auth/createAuth.js';
+// -- Agent Hub --
+export { createAgentHubClient } from './agentHub/agentHub.js';
+export type {
+  AgentHubClient,
+  AgentHubInvokeParams,
+  AgentHubModelInfo,
+  AgentInfo,
+  AgentInvokeContext,
+  AgentOptions,
+  BillingAliasesResult,
+  BillingAliasModel,
+  SupportedModelsResult,
+} from './agentHub/agentHubTypes.js';
+export { StreamProtocolFetcher, StreamProtocolStream } from './agentHub/StreamProtocolFetcher.js';
+export { StreamProtocolHandler } from './agentHub/StreamProtocolHandler.js';
+export type {
+  ContentPartAddedEvent,
+  ContentPartDoneEvent,
+  EventExternalSourceItem,
+  ExternalSourcesAddedEvent,
+  FunctionCallArgumentsDeltaEvent,
+  FunctionCallArgumentsDoneEvent,
+  FunctionCallResultEvent,
+  NotificationEvent,
+  OutputItemAddedEvent,
+  OutputItemDoneEvent,
+  RefusalDeltaEvent,
+  RefusalDoneEvent,
+  ResponseCompletedEvent,
+  ResponseCreatedEvent,
+  ResponseFailedEvent,
+  ResponseIncompleteEvent,
+  ResponseInProgressEvent,
+  SessionUpdateEvent,
+  StreamProtocolErrorEvent,
+  StreamProtocolMap,
+  TextOutputAnnotationAddedEvent,
+  TextOutputDeltaEvent,
+  TextOutputDoneEvent,
+  UpdatePlanEvent,
+} from './agentHub/streamProtocolMap.js';
 export { createApiKeyAuth } from './auth/createApiKeyAuth.js';
-export type { AuthModule, ApiKeyAuthParams, SdkCreateParams } from './auth/types.js';
-
-export { diskd } from './sdk/diskd.js';
-export type { DiskD } from './sdk/types.js';
-
-export type { DriveClient, DrivePathEntry, DrivePathType } from './drive/types.js';
+export { createAuth } from './auth/createAuth.js';
+export type { ApiKeyAuthParams, AuthModule, SdkCreateParams } from './auth/types.js';
+export { createDriveCrontabClient } from './drive/crontab.js';
+export type {
+  DriveCrontabClient,
+  DriveCrontabCreateProfileJobParams,
+  DriveCrontabCreateProjectJobParams,
+  DriveCrontabDocument,
+  DriveCrontabGetParams,
+  DriveCrontabGetResult,
+  DriveCrontabGetStatusParams,
+  DriveCrontabGetStatusResult,
+  DriveCrontabHttpMethod,
+  DriveCrontabJob,
+  DriveCrontabJobListItem,
+  DriveCrontabJsonContainer,
+  DriveCrontabJsonPayload,
+  DriveCrontabListJobsParams,
+  DriveCrontabListJobsResult,
+  DriveCrontabPathPayload,
+  DriveCrontabPayload,
+  DriveCrontabPayloadKind,
+  DriveCrontabProfileScopeRef,
+  DriveCrontabProjectScopeRef,
+  DriveCrontabRequest,
+  DriveCrontabRunJobParams,
+  DriveCrontabRunJobResult,
+  DriveCrontabSaveParams,
+  DriveCrontabSaveResult,
+  DriveCrontabSchedule,
+  DriveCrontabScopeRef,
+  DriveCrontabUriPayload,
+  DriveScopedCrontabClient,
+  DriveScopedCrontabCreateJobParams,
+  DriveScopedCrontabSaveParams,
+} from './drive/crontabTypes.js';
+export type {
+  DriveDatabase,
+  DriveDatabaseConfig,
+  DriveDatabaseParams,
+  DriveRepository,
+  FindOptions,
+  OrderByClause,
+  UpdateOptions,
+  WhereClause,
+} from './drive/DriveRepository.js';
+export { createDriveDatabase } from './drive/DriveRepository.js';
+export { createDriveDbClient } from './drive/driveDb.js';
+export type {
+  DriveDbClient,
+  DriveDbColumnDef,
+  DriveDbCommitParams,
+  DriveDbCommitResult,
+  DriveDbCreateParams,
+  DriveDbCreateResult,
+  DriveDbDropParams,
+  DriveDbDropResult,
+  DriveDbInsertParams,
+  DriveDbInsertResult,
+  DriveDbMetadataParams,
+  DriveDbMetadataResult,
+  DriveDbQueryParams,
+  DriveDbQueryResult,
+  DriveDbResolveByInodeParams,
+  DriveDbResolveByInodeResult,
+  DriveDbResolveWithSettingsParams,
+  DriveDbResolveWithSettingsResult,
+  DriveDbRollbackParams,
+  DriveDbRollbackResult,
+  DriveDbSchema,
+  DriveDbSetStatusParams,
+  DriveDbSetStatusResult,
+  DriveDbTableSchema,
+  DriveDbType,
+} from './drive/driveDbTypes.js';
 export type {
   DriveCreateParams,
   DriveDeleteParams,
@@ -40,91 +149,19 @@ export type {
   DriveUploadStartParams,
   DriveUploadStartResult,
 } from './drive/driveTypes.js';
-export { createDriveDbClient } from './drive/driveDb.js';
-export type {
-  DriveDbClient,
-  DriveDbColumnDef,
-  DriveDbCommitParams,
-  DriveDbCommitResult,
-  DriveDbCreateParams,
-  DriveDbCreateResult,
-  DriveDbDropParams,
-  DriveDbDropResult,
-  DriveDbInsertParams,
-  DriveDbInsertResult,
-  DriveDbMetadataParams,
-  DriveDbMetadataResult,
-  DriveDbQueryParams,
-  DriveDbQueryResult,
-  DriveDbResolveByInodeParams,
-  DriveDbResolveByInodeResult,
-  DriveDbResolveWithSettingsParams,
-  DriveDbResolveWithSettingsResult,
-  DriveDbRollbackParams,
-  DriveDbRollbackResult,
-  DriveDbSchema,
-  DriveDbSetStatusParams,
-  DriveDbSetStatusResult,
-  DriveDbTableSchema,
-  DriveDbType,
-} from './drive/driveDbTypes.js';
-export { createDriveDatabase } from './drive/DriveRepository.js';
-export type {
-  DriveDatabase,
-  DriveDatabaseConfig,
-  DriveDatabaseParams,
-  DriveRepository,
-  FindOptions,
-  OrderByClause,
-  UpdateOptions,
-  WhereClause,
-} from './drive/DriveRepository.js';
-export type {
-  DriveDataSource,
-  DriveDataSourceDriver,
-  DriveDataSourceParams,
-  DriveDataSourceRepository,
-} from './drive/typeorm/datasourceTypes.js';
-export type { DriveSession, DriveSessionManager, DriveScopedSessionManager } from './drive/sessionObject.js';
-export { createDriveSessionManager, createScopedDriveSessionManager } from './drive/sessionObject.js';
+export { jsonRpcCall } from './drive/rpc.js';
+export { createDriveSessionClient } from './drive/session.js';
 export type { MessageParams } from './drive/sessionBuilder.js';
 export { buildMessage, generateUlid } from './drive/sessionBuilder.js';
-export { createDriveSessionClient } from './drive/session.js';
-export { createDriveCrontabClient } from './drive/crontab.js';
-export { jsonRpcCall } from './drive/rpc.js';
 export type {
-  DriveCrontabClient,
-  DriveCrontabCreateProfileJobParams,
-  DriveCrontabCreateProjectJobParams,
-  DriveCrontabDocument,
-  DriveCrontabGetParams,
-  DriveCrontabGetResult,
-  DriveCrontabGetStatusParams,
-  DriveCrontabGetStatusResult,
-  DriveCrontabHttpMethod,
-  DriveCrontabJob,
-  DriveCrontabJobListItem,
-  DriveCrontabJsonContainer,
-  DriveCrontabJsonPayload,
-  DriveCrontabListJobsParams,
-  DriveCrontabListJobsResult,
-  DriveCrontabPathPayload,
-  DriveCrontabPayload,
-  DriveCrontabPayloadKind,
-  DriveCrontabProfileScopeRef,
-  DriveCrontabProjectScopeRef,
-  DriveCrontabRequest,
-  DriveCrontabRunJobParams,
-  DriveCrontabRunJobResult,
-  DriveCrontabSaveParams,
-  DriveCrontabSaveResult,
-  DriveCrontabSchedule,
-  DriveScopedCrontabClient,
-  DriveScopedCrontabCreateJobParams,
-  DriveScopedCrontabSaveParams,
-  DriveCrontabScopeRef,
-  DriveCrontabUriPayload,
-} from './drive/crontabTypes.js';
+  DriveScopedSessionManager,
+  DriveSession,
+  DriveSessionManager,
+} from './drive/sessionObject.js';
+export {
+  createDriveSessionManager,
+  createScopedDriveSessionManager,
+} from './drive/sessionObject.js';
 export type {
   DriveScopedSessionDeleteParams,
   DriveScopedSessionOpenParams,
@@ -153,15 +190,21 @@ export type {
   DriveSessionListResult,
   DriveSessionMessage,
   DriveSessionParticipant,
+  DriveSessionProjectScopeRef,
   DriveSessionSaveParams,
   DriveSessionSaveResult,
-  DriveSessionProjectScopeRef,
   DriveSessionScopeRef,
   JsonObject,
   JsonScalar,
   JsonValue,
 } from './drive/sessionTypes.js';
-
+export type {
+  DriveDataSource,
+  DriveDataSourceDriver,
+  DriveDataSourceParams,
+  DriveDataSourceRepository,
+} from './drive/typeorm/datasourceTypes.js';
+export type { DriveClient, DrivePathEntry, DrivePathType } from './drive/types.js';
 // -- LLM Router --
 export { createLlmRouterClient } from './llmRouter/llmRouter.js';
 export type {
@@ -196,7 +239,6 @@ export type {
   TranscribeParams,
   TranscribeResult,
 } from './llmRouter/llmRouterTypes.js';
-
 // -- MCP Hub --
 export { createMcpHubClient } from './mcpHub/mcpHub.js';
 export type {
@@ -212,49 +254,47 @@ export type {
   McpServerStatus,
   McpTool,
 } from './mcpHub/mcpHubTypes.js';
-
-// -- Agent Hub --
-export { createAgentHubClient } from './agentHub/agentHub.js';
-export { StreamProtocolHandler } from './agentHub/StreamProtocolHandler.js';
-export { StreamProtocolFetcher, StreamProtocolStream } from './agentHub/StreamProtocolFetcher.js';
+// -- Operatives --
+export { createOperativesClient } from './operatives/operatives.js';
 export type {
-  AgentHubClient,
-  AgentHubInvokeParams,
-  AgentHubModelInfo,
-  AgentInfo,
-  AgentInvokeContext,
-  AgentOptions,
-  BillingAliasModel,
-  BillingAliasesResult,
-  SupportedModelsResult,
-} from './agentHub/agentHubTypes.js';
+  Operative,
+  OperativeAddFilesParams,
+  OperativeAddSkillsParams,
+  OperativeAddToolsParams,
+  OperativeCreateParams,
+  OperativeEngine,
+  OperativeFile,
+  OperativeFileAccess,
+  OperativeGetBySlugParams,
+  OperativeListParams,
+  OperativeSkill,
+  OperativeStatus,
+  OperativesClient,
+  OperativeTool,
+  OperativeTrustLevel,
+  OperativeUpdateParams,
+} from './operatives/operativesTypes.js';
+// -- Routines --
+export { createRoutinesClient } from './routines/routines.js';
 export type {
-  ContentPartAddedEvent,
-  ContentPartDoneEvent,
-  EventExternalSourceItem,
-  ExternalSourcesAddedEvent,
-  FunctionCallArgumentsDeltaEvent,
-  FunctionCallArgumentsDoneEvent,
-  FunctionCallResultEvent,
-  NotificationEvent,
-  OutputItemAddedEvent,
-  OutputItemDoneEvent,
-  RefusalDeltaEvent,
-  RefusalDoneEvent,
-  ResponseCompletedEvent,
-  ResponseCreatedEvent,
-  ResponseFailedEvent,
-  ResponseIncompleteEvent,
-  ResponseInProgressEvent,
-  SessionUpdateEvent,
-  StreamProtocolErrorEvent,
-  StreamProtocolMap,
-  TextOutputAnnotationAddedEvent,
-  TextOutputDeltaEvent,
-  TextOutputDoneEvent,
-  UpdatePlanEvent,
-} from './agentHub/streamProtocolMap.js';
-
+  CrontabRhythm,
+  Rhythm,
+  Routine,
+  RoutineCreateParams,
+  RoutineDeleteParams,
+  RoutineGetParams,
+  RoutineListParams,
+  RoutineScope,
+  RoutineScopeRef,
+  RoutineStatus,
+  RoutineStep,
+  RoutinesClient,
+  RoutineTriggerType,
+  RoutineUpdateParams,
+  SignalRhythm,
+} from './routines/routinesTypes.js';
+export { diskd } from './sdk/diskd.js';
+export type { DiskD } from './sdk/types.js';
 // -- Telegram Userbot --
 export { createTgUserbotClient } from './tgUserbot/tgUserbot.js';
 export type {
@@ -273,47 +313,6 @@ export type {
   TgUserbotClient,
 } from './tgUserbot/tgUserbotTypes.js';
 
-// -- Operatives --
-export { createOperativesClient } from './operatives/operatives.js';
-export type {
-  Operative,
-  OperativeAddFilesParams,
-  OperativeAddSkillsParams,
-  OperativeAddToolsParams,
-  OperativeCreateParams,
-  OperativeEngine,
-  OperativeFile,
-  OperativeFileAccess,
-  OperativeGetBySlugParams,
-  OperativeListParams,
-  OperativeSkill,
-  OperativeStatus,
-  OperativeTool,
-  OperativeTrustLevel,
-  OperativeUpdateParams,
-  OperativesClient,
-} from './operatives/operativesTypes.js';
-
-// -- Routines --
-export { createRoutinesClient } from './routines/routines.js';
-export type {
-  CrontabRhythm,
-  Rhythm,
-  Routine,
-  RoutineCreateParams,
-  RoutineDeleteParams,
-  RoutineGetParams,
-  RoutineListParams,
-  RoutineScope,
-  RoutineScopeRef,
-  RoutineStatus,
-  RoutineStep,
-  RoutineTriggerType,
-  RoutineUpdateParams,
-  RoutinesClient,
-  SignalRhythm,
-} from './routines/routinesTypes.js';
-
 // -- Web Navigator --
 export { createWebNavigatorClient } from './webNavigator/webNavigator.js';
 export type {
@@ -322,11 +321,11 @@ export type {
   JobStatusResult,
   ResolveParams,
   ResolveResult,
+  ScrapedPage,
   ScrapeJob,
   ScrapeParams,
   ScrapeResult,
   ScrapeSubmitResult,
-  ScrapedPage,
   ScrapeSummary,
   WebNavigatorClient,
 } from './webNavigator/webNavigatorTypes.js';

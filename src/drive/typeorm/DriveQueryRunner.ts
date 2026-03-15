@@ -2,8 +2,8 @@
 // DriveQueryRunner -- routes SQL through Drive DB JSON-RPC
 // ---------------------------------------------------------------------------
 
-import { AbstractSqliteQueryRunner } from 'typeorm/driver/sqlite-abstract/AbstractSqliteQueryRunner.js';
 import { QueryResult } from 'typeorm';
+import { AbstractSqliteQueryRunner } from 'typeorm/driver/sqlite-abstract/AbstractSqliteQueryRunner.js';
 import type { DriveDbClient } from '../driveDbTypes.js';
 import type { DriveDriver } from './DriveDriver.js';
 
@@ -53,7 +53,7 @@ export class DriveQueryRunner extends AbstractSqliteQueryRunner {
   async query(
     sql: string,
     parameters?: unknown[],
-    useStructuredResult?: boolean,
+    useStructuredResult?: boolean
   ): Promise<unknown> {
     const trimmed = sql.trim();
 

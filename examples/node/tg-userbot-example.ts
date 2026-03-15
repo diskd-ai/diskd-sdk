@@ -54,7 +54,9 @@ try {
   console.log(`     Public      : ${resolved.isPublic}`);
   console.log(`     Participants: ${resolved.participantsCount ?? 'unknown'}`);
 } catch (err) {
-  console.log(`[error] Could not resolve "${CHANNEL_TO_RESOLVE}": ${err instanceof Error ? err.message : String(err)}`);
+  console.log(
+    `[error] Could not resolve "${CHANNEL_TO_RESOLVE}": ${err instanceof Error ? err.message : String(err)}`
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -67,7 +69,9 @@ const channels = await tg.channels.list();
 
 console.log(`[ok] ${channels.length} channel(s) in workspace`);
 for (const ch of channels.slice(0, 5)) {
-  console.log(`     [${ch.id}] ${ch.title} (tg:${ch.telegramId}) status=${ch.status} messages=${ch.totalMessages}`);
+  console.log(
+    `     [${ch.id}] ${ch.title} (tg:${ch.telegramId}) status=${ch.status} messages=${ch.totalMessages}`
+  );
 }
 if (channels.length > 5) {
   console.log(`     ... and ${channels.length - 5} more`);
@@ -108,7 +112,9 @@ if (firstChannel) {
   console.log(`\n=== 5. Recent messages ===`);
 
   const messagesResult = await tg.channels.getMessages(firstChannel.id, { limit: 5 });
-  console.log(`[ok] ${messagesResult.totalMessagesInDb} total in DB, showing ${messagesResult.messages.length}`);
+  console.log(
+    `[ok] ${messagesResult.totalMessagesInDb} total in DB, showing ${messagesResult.messages.length}`
+  );
 
   for (const msg of messagesResult.messages) {
     const sender = msg.senderName ?? `id:${msg.senderId ?? 'unknown'}`;

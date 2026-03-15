@@ -4,8 +4,6 @@
 
 // -- Shared vocabulary --
 
-export type LlmRole = 'system' | 'user' | 'assistant' | 'tool';
-
 export type LlmFinishReason = 'stop' | 'length' | 'tool_calls' | 'content_filter' | string;
 
 // -- Message content parts --

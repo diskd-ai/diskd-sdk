@@ -13,9 +13,14 @@
  *   npm run examples:build && node dist-examples/node/agent-hub-example.js
  */
 
-import { diskd } from '../../src/sdk/diskd.js';
 import { StreamProtocolHandler } from '../../src/agentHub/StreamProtocolHandler.js';
-import type { TextOutputDeltaEvent, ResponseCompletedEvent, ResponseFailedEvent, StreamProtocolErrorEvent } from '../../src/agentHub/streamProtocolMap.js';
+import type {
+  ResponseCompletedEvent,
+  ResponseFailedEvent,
+  StreamProtocolErrorEvent,
+  TextOutputDeltaEvent,
+} from '../../src/agentHub/streamProtocolMap.js';
+import { diskd } from '../../src/sdk/diskd.js';
 
 // ---------------------------------------------------------------------------
 // Configuration from environment
@@ -84,7 +89,9 @@ console.log('\n=== 3. Billing aliases ===');
 
 const billing = await agentHub.billing.getAliases();
 
-console.log(`[ok] ${billing.models.length} model alias(es), ${billing.providers.length} provider(s), ${billing.agents.length} agent(s)`);
+console.log(
+  `[ok] ${billing.models.length} model alias(es), ${billing.providers.length} provider(s), ${billing.agents.length} agent(s)`
+);
 for (const alias of billing.models.slice(0, 3)) {
   console.log(`     ${alias.billingAlias} -> ${alias.provider}/${alias.model}`);
 }
@@ -108,7 +115,9 @@ if (firstAgent) {
       console.log(`     [completed] Total events: ${eventCount}`);
       if (_event.response.usage) {
         const u = _event.response.usage;
-        console.log(`     Tokens: ${u.input_tokens} in, ${u.output_tokens} out, ${u.total_tokens} total`);
+        console.log(
+          `     Tokens: ${u.input_tokens} in, ${u.output_tokens} out, ${u.total_tokens} total`
+        );
       }
     })
     .on('response.failed', (event: ResponseFailedEvent) => {

@@ -22,7 +22,9 @@ const readJsonResponse = async (response: Response): Promise<unknown> => {
     return JSON.parse(text) as unknown;
   } catch {
     const snippet = text.length > 200 ? `${text.slice(0, 200)}…` : text;
-    throw new Error(`Invalid JSON-RPC response: expected JSON (HTTP ${response.status}): ${snippet}`);
+    throw new Error(
+      `Invalid JSON-RPC response: expected JSON (HTTP ${response.status}): ${snippet}`
+    );
   }
 };
 

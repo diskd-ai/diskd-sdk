@@ -42,7 +42,12 @@ export class StreamProtocolHandler {
       const choices = eventObj.choices as readonly { delta?: { content?: string } }[];
       const delta = choices[0]?.delta;
       if (delta?.content && this.handlers['response.output_text.delta']) {
-        (this.handlers['response.output_text.delta'] as (e: { type: string; delta: string }) => void)({
+        (
+          this.handlers['response.output_text.delta'] as (e: {
+            type: string;
+            delta: string;
+          }) => void
+        )({
           type: 'response.output_text.delta',
           delta: delta.content,
         });

@@ -1,7 +1,10 @@
 type WebCryptoLike = {
   readonly getRandomValues: (array: Uint8Array) => Uint8Array;
   readonly subtle: {
-    readonly digest: (algorithm: string, data: ArrayBuffer | ArrayBufferView) => Promise<ArrayBuffer>;
+    readonly digest: (
+      algorithm: string,
+      data: ArrayBuffer | ArrayBufferView
+    ) => Promise<ArrayBuffer>;
   };
 };
 
@@ -52,4 +55,3 @@ export const createPkceChallenge = async (verifier: string): Promise<string> => 
   const digest = await cryptoLike.subtle.digest('SHA-256', utf8Encode(verifier));
   return toBase64Url(new Uint8Array(digest));
 };
-

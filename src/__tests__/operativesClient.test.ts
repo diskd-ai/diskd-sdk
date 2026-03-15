@@ -1,9 +1,13 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
-
-import { diskd } from '../sdk/diskd.js';
+import test from 'node:test';
 import type { AuthModule } from '../auth/types.js';
-import type { Operative, OperativeFile, OperativeSkill, OperativeTool } from '../operatives/operativesTypes.js';
+import type {
+  Operative,
+  OperativeFile,
+  OperativeSkill,
+  OperativeTool,
+} from '../operatives/operativesTypes.js';
+import { diskd } from '../sdk/diskd.js';
 
 type FetchCall = { readonly url: string; readonly init?: RequestInit };
 
@@ -103,7 +107,7 @@ const makeAuth = (): AuthModule => ({
 
 const withFetchMock = async (
   handler: (input: string, init?: RequestInit) => Response,
-  fn: (calls: FetchCall[]) => Promise<void>,
+  fn: (calls: FetchCall[]) => Promise<void>
 ): Promise<void> => {
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -128,10 +132,11 @@ test('operatives.list decodes intelAccess to fileAccess', async () => {
   const url = 'http://app-service:3000';
 
   await withFetchMock(
-    () => new Response(JSON.stringify([wireOperative]), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    }),
+    () =>
+      new Response(JSON.stringify([wireOperative]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
     async (calls) => {
       const client = diskd.platform.operatives({ auth: makeAuth(), url });
       const result = await client.list({ projectId: 'proj-1' });
@@ -140,7 +145,7 @@ test('operatives.list decodes intelAccess to fileAccess', async () => {
       assert.equal(result[0]?.fileAccess, 'all');
       assert.equal(calls[0]?.url, 'http://app-service:3000/api/operatives?projectId=proj-1');
       assert.equal(calls[0]?.init?.method, 'GET');
-    },
+    }
   );
 });
 
@@ -148,17 +153,18 @@ test('operatives.get decodes intelAccess to fileAccess', async () => {
   const url = 'http://app-service:3000';
 
   await withFetchMock(
-    () => new Response(JSON.stringify(wireOperative), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    }),
+    () =>
+      new Response(JSON.stringify(wireOperative), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
     async (calls) => {
       const client = diskd.platform.operatives({ auth: makeAuth(), url });
       const result = await client.get('op-01');
 
       assert.equal(result.fileAccess, 'all');
       assert.equal(calls[0]?.url, 'http://app-service:3000/api/operatives/op-01');
-    },
+    }
   );
 });
 
@@ -166,19 +172,20 @@ test('operatives.getBySlug sends projectId and slug query params', async () => {
   const url = 'http://app-service:3000';
 
   await withFetchMock(
-    () => new Response(JSON.stringify(wireOperative), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    }),
+    () =>
+      new Response(JSON.stringify(wireOperative), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
     async (calls) => {
       const client = diskd.platform.operatives({ auth: makeAuth(), url });
       await client.getBySlug({ projectId: 'proj-1', slug: 'research-agent' });
 
       assert.equal(
         calls[0]?.url,
-        'http://app-service:3000/api/operatives/by-slug?projectId=proj-1&slug=research-agent',
+        'http://app-service:3000/api/operatives/by-slug?projectId=proj-1&slug=research-agent'
       );
-    },
+    }
   );
 });
 
@@ -186,10 +193,11 @@ test('operatives.create sends POST with body', async () => {
   const url = 'http://app-service:3000';
 
   await withFetchMock(
-    () => new Response(JSON.stringify(wireOperative), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
-    }),
+    () =>
+      new Response(JSON.stringify(wireOperative), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
     async (calls) => {
       const client = diskd.platform.operatives({ auth: makeAuth(), url });
       const result = await client.create({ projectId: 'proj-1', name: 'Research Agent' });
@@ -197,7 +205,7 @@ test('operatives.create sends POST with body', async () => {
       assert.equal(result.fileAccess, 'all');
       assert.equal(calls[0]?.url, 'http://app-service:3000/api/operatives');
       assert.equal(calls[0]?.init?.method, 'POST');
-    },
+    }
   );
 });
 
@@ -205,10 +213,11 @@ test('operatives.update encodes SDK field names to wire format', async () => {
   const url = 'http://app-service:3000';
 
   await withFetchMock(
-    () => new Response(JSON.stringify(wireOperative), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    }),
+    () =>
+      new Response(JSON.stringify(wireOperative), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
     async (calls) => {
       const client = diskd.platform.operatives({ auth: makeAuth(), url });
       await client.update('op-01', {
@@ -229,7 +238,7 @@ test('operatives.update encodes SDK field names to wire format', async () => {
       assert.equal(body.engineProvider, undefined);
       assert.equal(body.engineModel, undefined);
       assert.equal(body.engine, undefined);
-    },
+    }
   );
 });
 
@@ -244,7 +253,7 @@ test('operatives.delete sends DELETE', async () => {
 
       assert.equal(calls[0]?.url, 'http://app-service:3000/api/operatives/op-01');
       assert.equal(calls[0]?.init?.method, 'DELETE');
-    },
+    }
   );
 });
 
@@ -256,17 +265,18 @@ test('operatives.files.list decodes sourceId to path', async () => {
   const url = 'http://app-service:3000';
 
   await withFetchMock(
-    () => new Response(JSON.stringify([wireFile]), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    }),
+    () =>
+      new Response(JSON.stringify([wireFile]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
     async (calls) => {
       const client = diskd.platform.operatives({ auth: makeAuth(), url });
       const result = await client.files.list('op-01');
 
       assert.deepEqual(result, [expectedFile]);
       assert.equal(calls[0]?.url, 'http://app-service:3000/api/operatives/op-01/intel');
-    },
+    }
   );
 });
 
@@ -295,7 +305,7 @@ test('operatives.files.add sends one POST per path with sourceId on the wire', a
       assert.equal(body0.sourceId, '/docs/knowledge-base');
       const body1 = JSON.parse(String(calls[1]?.init?.body));
       assert.equal(body1.sourceId, '/docs/readme');
-    },
+    }
   );
 });
 
@@ -310,7 +320,7 @@ test('operatives.files.remove sends DELETE', async () => {
 
       assert.equal(calls[0]?.url, 'http://app-service:3000/api/operatives/op-01/intel/file-01');
       assert.equal(calls[0]?.init?.method, 'DELETE');
-    },
+    }
   );
 });
 
@@ -322,13 +332,17 @@ test('operatives.skills.list filters to skill type only', async () => {
   const url = 'http://app-service:3000';
 
   await withFetchMock(
-    () => new Response(JSON.stringify({
-      registryStatus: 'ok',
-      items: [wireSkill, wireTool],
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    }),
+    () =>
+      new Response(
+        JSON.stringify({
+          registryStatus: 'ok',
+          items: [wireSkill, wireTool],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      ),
     async (calls) => {
       const client = diskd.platform.operatives({ auth: makeAuth(), url });
       const result = await client.skills.list('op-01');
@@ -336,7 +350,7 @@ test('operatives.skills.list filters to skill type only', async () => {
       assert.equal(result.length, 1);
       assert.deepEqual(result[0], expectedSkill);
       assert.equal(calls[0]?.url, 'http://app-service:3000/api/operatives/op-01/equipment');
-    },
+    }
   );
 });
 
@@ -344,10 +358,11 @@ test('operatives.skills.add sends equipmentType: skill on the wire', async () =>
   const url = 'http://app-service:3000';
 
   await withFetchMock(
-    () => new Response(JSON.stringify(wireSkill), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
-    }),
+    () =>
+      new Response(JSON.stringify(wireSkill), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
     async (calls) => {
       const client = diskd.platform.operatives({ auth: makeAuth(), url });
       const result = await client.skills.add('op-01', { refIds: ['web-search'] });
@@ -357,7 +372,7 @@ test('operatives.skills.add sends equipmentType: skill on the wire', async () =>
       const body = JSON.parse(String(calls[0]?.init?.body));
       assert.equal(body.equipmentType, 'skill');
       assert.equal(body.refId, 'web-search');
-    },
+    }
   );
 });
 
@@ -371,7 +386,7 @@ test('operatives.skills.remove sends DELETE to equipment endpoint', async () => 
       await client.skills.remove('op-01', 'eq-01');
 
       assert.equal(calls[0]?.url, 'http://app-service:3000/api/operatives/op-01/equipment/eq-01');
-    },
+    }
   );
 });
 
@@ -383,13 +398,17 @@ test('operatives.tools.list filters to mcp_tool type only', async () => {
   const url = 'http://app-service:3000';
 
   await withFetchMock(
-    () => new Response(JSON.stringify({
-      registryStatus: 'ok',
-      items: [wireSkill, wireTool],
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    }),
+    () =>
+      new Response(
+        JSON.stringify({
+          registryStatus: 'ok',
+          items: [wireSkill, wireTool],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      ),
     async (calls) => {
       const client = diskd.platform.operatives({ auth: makeAuth(), url });
       const result = await client.tools.list('op-01');
@@ -397,7 +416,7 @@ test('operatives.tools.list filters to mcp_tool type only', async () => {
       assert.equal(result.length, 1);
       assert.deepEqual(result[0], expectedTool);
       assert.equal(calls[0]?.url, 'http://app-service:3000/api/operatives/op-01/equipment');
-    },
+    }
   );
 });
 
@@ -405,10 +424,11 @@ test('operatives.tools.add sends equipmentType: mcp_tool on the wire', async () 
   const url = 'http://app-service:3000';
 
   await withFetchMock(
-    () => new Response(JSON.stringify(wireTool), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
-    }),
+    () =>
+      new Response(JSON.stringify(wireTool), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
     async (calls) => {
       const client = diskd.platform.operatives({ auth: makeAuth(), url });
       const result = await client.tools.add('op-01', { selectors: ['github/search_repos'] });
@@ -418,7 +438,7 @@ test('operatives.tools.add sends equipmentType: mcp_tool on the wire', async () 
       const body = JSON.parse(String(calls[0]?.init?.body));
       assert.equal(body.equipmentType, 'mcp_tool');
       assert.equal(body.selector, 'github/search_repos');
-    },
+    }
   );
 });
 
@@ -432,7 +452,7 @@ test('operatives.tools.remove sends DELETE to equipment endpoint', async () => {
       await client.tools.remove('op-01', 'eq-02');
 
       assert.equal(calls[0]?.url, 'http://app-service:3000/api/operatives/op-01/equipment/eq-02');
-    },
+    }
   );
 });
 
@@ -444,10 +464,11 @@ test('operatives client throws on HTTP error with parsed message', async () => {
   const url = 'http://app-service:3000';
 
   await withFetchMock(
-    () => new Response(JSON.stringify({ message: 'Not Found' }), {
-      status: 404,
-      headers: { 'Content-Type': 'application/json' },
-    }),
+    () =>
+      new Response(JSON.stringify({ message: 'Not Found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      }),
     async () => {
       const client = diskd.platform.operatives({ auth: makeAuth(), url });
       await assert.rejects(
@@ -456,9 +477,9 @@ test('operatives client throws on HTTP error with parsed message', async () => {
           assert.ok(err.message.includes('404'));
           assert.ok(err.message.includes('Not Found'));
           return true;
-        },
+        }
       );
-    },
+    }
   );
 });
 
@@ -470,16 +491,20 @@ test('operatives client uses gateway URL when no url override provided', async (
   process.env.DISKD_BASE_URL = 'https://apis.example';
 
   await withFetchMock(
-    () => new Response(JSON.stringify([wireOperative]), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    }),
+    () =>
+      new Response(JSON.stringify([wireOperative]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
     async (calls) => {
       const client = diskd.platform.operatives({ auth: makeAuth() });
       await client.list({ projectId: 'proj-1' });
 
-      assert.equal(calls[0]?.url, 'https://apis.example/platform/app/api/operatives?projectId=proj-1');
-    },
+      assert.equal(
+        calls[0]?.url,
+        'https://apis.example/platform/app/api/operatives?projectId=proj-1'
+      );
+    }
   );
 
   delete process.env.DISKD_BASE_URL;

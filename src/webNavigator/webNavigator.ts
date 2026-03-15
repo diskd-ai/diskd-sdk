@@ -1,6 +1,6 @@
 import type { AuthModule } from '../auth/types.js';
 import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
-import { httpRequest, resolveAuthHeaders, type HttpMethod } from '../sdk/http.js';
+import { type HttpMethod, httpRequest, resolveAuthHeaders } from '../sdk/http.js';
 import type {
   JobStatusResult,
   ResolveParams,
@@ -42,16 +42,19 @@ export const createWebNavigatorClient = (params: {
     path: string,
     opts: {
       readonly body?: unknown;
-    } = {},
+    } = {}
   ): Promise<T> => {
     const authHeaders = await resolveAuthHeaders(params.auth);
-    return httpRequest<T>({
-      method,
-      url: `${baseUrl}${path}`,
-      authHeaders,
-      workspaceId: params.workspaceId,
-      body: opts.body,
-    }, 'Web Navigator');
+    return httpRequest<T>(
+      {
+        method,
+        url: `${baseUrl}${path}`,
+        authHeaders,
+        workspaceId: params.workspaceId,
+        body: opts.body,
+      },
+      'Web Navigator'
+    );
   };
 
   return {

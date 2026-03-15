@@ -29,15 +29,19 @@ type UnknownObject = { readonly [key: string]: unknown };
 
 type RpcCall = (method: string, rpcParams: unknown) => Promise<unknown>;
 
-const isObject = (value: unknown): value is UnknownObject => typeof value === 'object' && value !== null;
+const isObject = (value: unknown): value is UnknownObject =>
+  typeof value === 'object' && value !== null;
 
-const hasOwn = (obj: UnknownObject, key: string): boolean =>
-  Object.prototype.hasOwnProperty.call(obj, key);
+const hasOwn = (obj: UnknownObject, key: string): boolean => Object.hasOwn(obj, key);
 
 const readField = (obj: UnknownObject, snakeKey: string, camelKey: string): unknown =>
   hasOwn(obj, snakeKey) ? obj[snakeKey] : obj[camelKey];
 
-const readRequiredNonEmptyString = (obj: UnknownObject, snakeKey: string, camelKey: string): string => {
+const readRequiredNonEmptyString = (
+  obj: UnknownObject,
+  snakeKey: string,
+  camelKey: string
+): string => {
   const value = readField(obj, snakeKey, camelKey);
   if (typeof value !== 'string' || value.length === 0) {
     throw new Error(`Invalid Drive Session payload: '${snakeKey}' must be a non-empty string`);
@@ -53,7 +57,11 @@ const readRequiredString = (obj: UnknownObject, snakeKey: string, camelKey: stri
   return value;
 };
 
-const readNullableString = (obj: UnknownObject, snakeKey: string, camelKey: string): string | null => {
+const readNullableString = (
+  obj: UnknownObject,
+  snakeKey: string,
+  camelKey: string
+): string | null => {
   const value = readField(obj, snakeKey, camelKey);
   if (value === undefined || value === null) return null;
   if (typeof value !== 'string') {
@@ -62,7 +70,11 @@ const readNullableString = (obj: UnknownObject, snakeKey: string, camelKey: stri
   return value;
 };
 
-const readNullableNumber = (obj: UnknownObject, snakeKey: string, camelKey: string): number | null => {
+const readNullableNumber = (
+  obj: UnknownObject,
+  snakeKey: string,
+  camelKey: string
+): number | null => {
   const value = readField(obj, snakeKey, camelKey);
   if (value === undefined || value === null) return null;
   if (typeof value !== 'number') {
@@ -80,7 +92,11 @@ const readRequiredBoolean = (obj: UnknownObject, snakeKey: string, camelKey: str
   throw new Error(`Invalid Drive Session payload: '${snakeKey}' must be a boolean`);
 };
 
-const readRequiredArray = (obj: UnknownObject, snakeKey: string, camelKey: string): readonly unknown[] => {
+const readRequiredArray = (
+  obj: UnknownObject,
+  snakeKey: string,
+  camelKey: string
+): readonly unknown[] => {
   const value = readField(obj, snakeKey, camelKey);
   if (!Array.isArray(value)) {
     throw new Error(`Invalid Drive Session payload: '${snakeKey}' must be an array`);
@@ -88,23 +104,33 @@ const readRequiredArray = (obj: UnknownObject, snakeKey: string, camelKey: strin
   return value;
 };
 
-const readOptionalArray = (obj: UnknownObject, snakeKey: string, camelKey: string): readonly unknown[] | undefined => {
+const readOptionalArray = (
+  obj: UnknownObject,
+  snakeKey: string,
+  camelKey: string
+): readonly unknown[] | undefined => {
   if (hasOwn(obj, snakeKey)) {
     const value = obj[snakeKey];
     if (value === undefined || value === null) return undefined;
-    if (!Array.isArray(value)) throw new Error(`Invalid Drive Session payload: '${snakeKey}' must be an array`);
+    if (!Array.isArray(value))
+      throw new Error(`Invalid Drive Session payload: '${snakeKey}' must be an array`);
     return value;
   }
   if (hasOwn(obj, camelKey)) {
     const value = obj[camelKey];
     if (value === undefined || value === null) return undefined;
-    if (!Array.isArray(value)) throw new Error(`Invalid Drive Session payload: '${camelKey}' must be an array`);
+    if (!Array.isArray(value))
+      throw new Error(`Invalid Drive Session payload: '${camelKey}' must be an array`);
     return value;
   }
   return undefined;
 };
 
-const readRequiredJsonObject = (obj: UnknownObject, snakeKey: string, camelKey: string): JsonObject => {
+const readRequiredJsonObject = (
+  obj: UnknownObject,
+  snakeKey: string,
+  camelKey: string
+): JsonObject => {
   const value = readField(obj, snakeKey, camelKey);
   if (!isObject(value) || Array.isArray(value)) {
     throw new Error(`Invalid Drive Session payload: '${snakeKey}' must be an object`);
@@ -112,7 +138,11 @@ const readRequiredJsonObject = (obj: UnknownObject, snakeKey: string, camelKey: 
   return value as JsonObject;
 };
 
-const readNullableJsonObject = (obj: UnknownObject, snakeKey: string, camelKey: string): JsonObject | null => {
+const readNullableJsonObject = (
+  obj: UnknownObject,
+  snakeKey: string,
+  camelKey: string
+): JsonObject | null => {
   const value = readField(obj, snakeKey, camelKey);
   if (value === undefined || value === null) return null;
   if (!isObject(value) || Array.isArray(value)) {
@@ -121,7 +151,11 @@ const readNullableJsonObject = (obj: UnknownObject, snakeKey: string, camelKey: 
   return value as JsonObject;
 };
 
-const readNullableJsonObjectArray = (obj: UnknownObject, snakeKey: string, camelKey: string): readonly JsonObject[] | null => {
+const readNullableJsonObjectArray = (
+  obj: UnknownObject,
+  snakeKey: string,
+  camelKey: string
+): readonly JsonObject[] | null => {
   const value = readField(obj, snakeKey, camelKey);
   if (value === undefined || value === null) return null;
   if (!Array.isArray(value)) {
@@ -135,14 +169,19 @@ const readNullableJsonObjectArray = (obj: UnknownObject, snakeKey: string, camel
   });
 };
 
-const readNullableStringArray = (obj: UnknownObject, snakeKey: string, camelKey: string): readonly string[] | null => {
+const readNullableStringArray = (
+  obj: UnknownObject,
+  snakeKey: string,
+  camelKey: string
+): readonly string[] | null => {
   const value = readField(obj, snakeKey, camelKey);
   if (value === undefined || value === null) return null;
   if (!Array.isArray(value)) {
     throw new Error(`Invalid Drive Session payload: '${snakeKey}' must be an array or null`);
   }
   return value.map((item) => {
-    if (typeof item !== 'string') throw new Error(`Invalid Drive Session payload: '${snakeKey}' must be an array of strings`);
+    if (typeof item !== 'string')
+      throw new Error(`Invalid Drive Session payload: '${snakeKey}' must be an array of strings`);
     return item;
   });
 };
@@ -316,7 +355,8 @@ const decodeSaveResult = (raw: unknown): DriveSessionSaveResult => {
     sessionId: readRequiredNonEmptyString(raw, 'session_id', 'sessionId'),
     messageCount: (() => {
       const v = readField(raw, 'message_count', 'messageCount');
-      if (typeof v !== 'number') throw new Error("Invalid drive/session/save result: 'message_count' must be a number");
+      if (typeof v !== 'number')
+        throw new Error("Invalid drive/session/save result: 'message_count' must be a number");
       return v;
     })(),
     updatedAt: readRequiredNonEmptyString(raw, 'updated_at', 'updatedAt'),
@@ -324,12 +364,16 @@ const decodeSaveResult = (raw: unknown): DriveSessionSaveResult => {
 };
 
 const decodeAppendResult = (raw: unknown): DriveSessionAppendMessagesResult => {
-  if (!isObject(raw) || Array.isArray(raw)) throw new Error('Invalid drive/session/append-messages result');
+  if (!isObject(raw) || Array.isArray(raw))
+    throw new Error('Invalid drive/session/append-messages result');
   return {
     sessionId: readRequiredNonEmptyString(raw, 'session_id', 'sessionId'),
     messageCount: (() => {
       const v = readField(raw, 'message_count', 'messageCount');
-      if (typeof v !== 'number') throw new Error("Invalid drive/session/append-messages result: 'message_count' must be a number");
+      if (typeof v !== 'number')
+        throw new Error(
+          "Invalid drive/session/append-messages result: 'message_count' must be a number"
+        );
       return v;
     })(),
     updatedAt: readRequiredNonEmptyString(raw, 'updated_at', 'updatedAt'),
@@ -337,12 +381,16 @@ const decodeAppendResult = (raw: unknown): DriveSessionAppendMessagesResult => {
 };
 
 const decodeDeleteMessagesResult = (raw: unknown): DriveSessionDeleteMessagesResult => {
-  if (!isObject(raw) || Array.isArray(raw)) throw new Error('Invalid drive/session/delete-messages result');
+  if (!isObject(raw) || Array.isArray(raw))
+    throw new Error('Invalid drive/session/delete-messages result');
   return {
     sessionId: readRequiredNonEmptyString(raw, 'session_id', 'sessionId'),
     messageCount: (() => {
       const v = readField(raw, 'message_count', 'messageCount');
-      if (typeof v !== 'number') throw new Error("Invalid drive/session/delete-messages result: 'message_count' must be a number");
+      if (typeof v !== 'number')
+        throw new Error(
+          "Invalid drive/session/delete-messages result: 'message_count' must be a number"
+        );
       return v;
     })(),
     updatedAt: readRequiredNonEmptyString(raw, 'updated_at', 'updatedAt'),
@@ -356,7 +404,8 @@ const decodeGetResult = (raw: unknown): DriveSessionGetResult => {
 };
 
 const decodeGetPreviewResult = (raw: unknown): DriveSessionGetPreviewResult => {
-  if (!isObject(raw) || Array.isArray(raw)) throw new Error('Invalid drive/session/get-preview result');
+  if (!isObject(raw) || Array.isArray(raw))
+    throw new Error('Invalid drive/session/get-preview result');
   const sessionRaw = readField(raw, 'session', 'session');
   const messagesRaw = readRequiredArray(raw, 'messages', 'messages');
   const messageCountRaw = readField(raw, 'message_count', 'messageCount');
@@ -371,29 +420,35 @@ const decodeGetPreviewResult = (raw: unknown): DriveSessionGetPreviewResult => {
 };
 
 const decodeGetMessageRangeResult = (raw: unknown): DriveSessionGetMessageRangeResult => {
-  if (!isObject(raw) || Array.isArray(raw)) throw new Error('Invalid drive/session/get-message-range result');
+  if (!isObject(raw) || Array.isArray(raw))
+    throw new Error('Invalid drive/session/get-message-range result');
   const messagesRaw = readRequiredArray(raw, 'messages', 'messages');
   const hasMoreRaw = readField(raw, 'has_more', 'hasMore');
-  if (typeof hasMoreRaw !== 'boolean') throw new Error("Invalid drive/session/get-message-range result: 'has_more' must be a boolean");
+  if (typeof hasMoreRaw !== 'boolean')
+    throw new Error("Invalid drive/session/get-message-range result: 'has_more' must be a boolean");
   return { messages: messagesRaw.map(decodeSessionMessage), hasMore: hasMoreRaw };
 };
 
 const decodeListResult = (raw: unknown): DriveSessionListResult => {
   if (!isObject(raw) || Array.isArray(raw)) throw new Error('Invalid drive/session/list result');
   const itemsRaw = readRequiredArray(raw, 'items', 'items');
-  return { items: itemsRaw.map((itemRaw): DriveSessionListItem => {
-    if (!isObject(itemRaw) || Array.isArray(itemRaw)) throw new Error('Invalid drive/session/list result: item must be object');
-    const messageCountRaw = readField(itemRaw, 'message_count', 'messageCount');
-    if (typeof messageCountRaw !== 'number') throw new Error("Invalid drive/session/list item: 'message_count' must be a number");
-    return {
-      sessionId: readRequiredNonEmptyString(itemRaw, 'session_id', 'sessionId'),
-      title: readNullableString(itemRaw, 'title', 'title'),
-      messageCount: messageCountRaw,
-      updatedAt: readRequiredNonEmptyString(itemRaw, 'updated_at', 'updatedAt'),
-      provider: readNullableString(itemRaw, 'provider', 'provider'),
-      model: readNullableString(itemRaw, 'model', 'model'),
-    };
-  }) };
+  return {
+    items: itemsRaw.map((itemRaw): DriveSessionListItem => {
+      if (!isObject(itemRaw) || Array.isArray(itemRaw))
+        throw new Error('Invalid drive/session/list result: item must be object');
+      const messageCountRaw = readField(itemRaw, 'message_count', 'messageCount');
+      if (typeof messageCountRaw !== 'number')
+        throw new Error("Invalid drive/session/list item: 'message_count' must be a number");
+      return {
+        sessionId: readRequiredNonEmptyString(itemRaw, 'session_id', 'sessionId'),
+        title: readNullableString(itemRaw, 'title', 'title'),
+        messageCount: messageCountRaw,
+        updatedAt: readRequiredNonEmptyString(itemRaw, 'updated_at', 'updatedAt'),
+        provider: readNullableString(itemRaw, 'provider', 'provider'),
+        model: readNullableString(itemRaw, 'model', 'model'),
+      };
+    }),
+  };
 };
 
 const decodeDeleteResult = (raw: unknown): DriveSessionDeleteResult => {
@@ -404,7 +459,9 @@ const decodeDeleteResult = (raw: unknown): DriveSessionDeleteResult => {
   };
 };
 
-export const createDriveSessionClient = (params: { readonly call: RpcCall }): DriveSessionClient => {
+export const createDriveSessionClient = (params: {
+  readonly call: RpcCall;
+}): DriveSessionClient => {
   return {
     save: async (p: DriveSessionSaveParams): Promise<DriveSessionSaveResult> => {
       const result = await params.call('drive/session/save', {
@@ -432,7 +489,9 @@ export const createDriveSessionClient = (params: { readonly call: RpcCall }): Dr
       return decodeGetPreviewResult(result);
     },
 
-    getMessageRange: async (p: DriveSessionGetMessageRangeParams): Promise<DriveSessionGetMessageRangeResult> => {
+    getMessageRange: async (
+      p: DriveSessionGetMessageRangeParams
+    ): Promise<DriveSessionGetMessageRangeResult> => {
       const result = await params.call('drive/session/get-message-range', {
         project_id: p.projectId,
         session_id: p.sessionId,
@@ -447,7 +506,9 @@ export const createDriveSessionClient = (params: { readonly call: RpcCall }): Dr
       return decodeListResult(result);
     },
 
-    appendMessages: async (p: DriveSessionAppendMessagesParams): Promise<DriveSessionAppendMessagesResult> => {
+    appendMessages: async (
+      p: DriveSessionAppendMessagesParams
+    ): Promise<DriveSessionAppendMessagesResult> => {
       const result = await params.call('drive/session/append-messages', {
         project_id: p.projectId,
         session_id: p.sessionId,
@@ -456,28 +517,35 @@ export const createDriveSessionClient = (params: { readonly call: RpcCall }): Dr
       return decodeAppendResult(result);
     },
 
-    deleteMessages: async (p: DriveSessionDeleteMessagesParams): Promise<DriveSessionDeleteMessagesResult> => {
-      const result = await params.call('drive/session/delete-messages', (() => {
-        if ('messageIds' in p) {
+    deleteMessages: async (
+      p: DriveSessionDeleteMessagesParams
+    ): Promise<DriveSessionDeleteMessagesResult> => {
+      const result = await params.call(
+        'drive/session/delete-messages',
+        (() => {
+          if ('messageIds' in p) {
+            return {
+              project_id: p.projectId,
+              session_id: p.sessionId,
+              message_ids: p.messageIds,
+            };
+          }
           return {
             project_id: p.projectId,
             session_id: p.sessionId,
-            message_ids: p.messageIds,
+            rollback_after_message_id: p.rollbackAfterMessageId,
           };
-        }
-        return {
-          project_id: p.projectId,
-          session_id: p.sessionId,
-          rollback_after_message_id: p.rollbackAfterMessageId,
-        };
-      })());
+        })()
+      );
       return decodeDeleteMessagesResult(result);
     },
 
     delete: async (p: DriveSessionDeleteParams): Promise<DriveSessionDeleteResult> => {
-      const result = await params.call('drive/session/delete', { project_id: p.projectId, session_id: p.sessionId });
+      const result = await params.call('drive/session/delete', {
+        project_id: p.projectId,
+        session_id: p.sessionId,
+      });
       return decodeDeleteResult(result);
     },
   };
 };
-

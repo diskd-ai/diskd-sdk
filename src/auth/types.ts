@@ -32,4 +32,3 @@ export type AuthModule = {
    *  When absent, falls back to Bearer token from getAccessToken(). */
   readonly getRequestHeaders?: () => Promise<Readonly<Record<string, string>>>;
 };
-

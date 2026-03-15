@@ -1,9 +1,8 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
-
-import type { DriveSessionClient } from '../drive/sessionTypes.js';
-import { createDriveSessionManager } from '../drive/sessionObject.js';
+import test from 'node:test';
 import { buildMessage } from '../drive/sessionBuilder.js';
+import { createDriveSessionManager } from '../drive/sessionObject.js';
+import type { DriveSessionClient } from '../drive/sessionTypes.js';
 
 const makeMessage = (id: string, role: string, content: string) =>
   buildMessage({ id, role, content });
@@ -33,13 +32,19 @@ const makeSessionDocument = (overrides: Record<string, unknown> = {}) => ({
 
 type RpcLog = { readonly method: string; readonly args: unknown };
 
-const makeMockRpc = (overrides: Partial<DriveSessionClient> = {}): { rpc: DriveSessionClient; log: RpcLog[] } => {
+const makeMockRpc = (
+  overrides: Partial<DriveSessionClient> = {}
+): { rpc: DriveSessionClient; log: RpcLog[] } => {
   const log: RpcLog[] = [];
 
   const rpc: DriveSessionClient = {
     save: async (p) => {
       log.push({ method: 'save', args: p });
-      return { sessionId: p.session.id, messageCount: p.session.messages.length, updatedAt: '2026-03-12T10:00:00Z' };
+      return {
+        sessionId: p.session.id,
+        messageCount: p.session.messages.length,
+        updatedAt: '2026-03-12T10:00:00Z',
+      };
     },
     get: async (p) => {
       log.push({ method: 'get', args: p });
@@ -63,14 +68,16 @@ const makeMockRpc = (overrides: Partial<DriveSessionClient> = {}): { rpc: DriveS
     list: async (p) => {
       log.push({ method: 'list', args: p });
       return {
-        items: [{
-          sessionId: 'sess-1',
-          title: 'Test Session',
-          messageCount: 5,
-          updatedAt: '2026-03-12T10:00:00Z',
-          provider: null,
-          model: null,
-        }],
+        items: [
+          {
+            sessionId: 'sess-1',
+            title: 'Test Session',
+            messageCount: 5,
+            updatedAt: '2026-03-12T10:00:00Z',
+            provider: null,
+            model: null,
+          },
+        ],
       };
     },
     appendMessages: async (p) => {
@@ -259,10 +266,9 @@ test('session.fork throws if fork point not found', async () => {
   const manager = createDriveSessionManager({ rpc });
   const session = await manager.open({ projectId: 'proj-1', sessionId: 'sess-1' });
 
-  await assert.rejects(
-    () => session.fork({ atMessageId: 'nonexistent' }),
-    { message: "Fork point message 'nonexistent' not found in session" },
-  );
+  await assert.rejects(() => session.fork({ atMessageId: 'nonexistent' }), {
+    message: "Fork point message 'nonexistent' not found in session",
+  });
 
   session.dispose();
 });
@@ -289,12 +295,17 @@ test('session.refresh replaces local state from backend', async () => {
     get: async () => {
       callCount += 1;
       if (callCount === 1) {
-        return { session: makeSessionDocument({ messages: [makeMessage('m-1', 'user', 'First')] }) };
+        return {
+          session: makeSessionDocument({ messages: [makeMessage('m-1', 'user', 'First')] }),
+        };
       }
       return {
         session: makeSessionDocument({
           title: 'Updated Title',
-          messages: [makeMessage('m-1', 'user', 'First'), makeMessage('m-2', 'assistant', 'Second')],
+          messages: [
+            makeMessage('m-1', 'user', 'First'),
+            makeMessage('m-2', 'assistant', 'Second'),
+          ],
         }),
       };
     },
@@ -323,9 +334,13 @@ test('session methods throw after dispose', async () => {
   await assert.rejects(() => session.append([msg]), { message: 'DriveSession is disposed' });
   await assert.rejects(() => session.rollback('m-1'), { message: 'DriveSession is disposed' });
   await assert.rejects(() => session.remove(['m-1']), { message: 'DriveSession is disposed' });
-  await assert.rejects(() => session.fork({ atMessageId: 'm-1' }), { message: 'DriveSession is disposed' });
+  await assert.rejects(() => session.fork({ atMessageId: 'm-1' }), {
+    message: 'DriveSession is disposed',
+  });
   await assert.rejects(() => session.refresh(), { message: 'DriveSession is disposed' });
-  await assert.rejects(() => session.loadMore({ limit: 10 }), { message: 'DriveSession is disposed' });
+  await assert.rejects(() => session.loadMore({ limit: 10 }), {
+    message: 'DriveSession is disposed',
+  });
 });
 
 test('manager.message builds a message (pure, no RPC)', () => {

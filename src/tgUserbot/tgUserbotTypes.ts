@@ -138,7 +138,10 @@ export type TgUserbotClient = {
     /** GET /api/v1/channels/{channelId}/status -- get current status and last task. */
     readonly getStatus: (channelId: number) => Promise<TgChannelStatusResult>;
     /** GET /api/v1/channels/{channelId}/messages -- fetch messages with optional filters. */
-    readonly getMessages: (channelId: number, params?: TgMessagesParams) => Promise<TgMessagesResult>;
+    readonly getMessages: (
+      channelId: number,
+      params?: TgMessagesParams
+    ) => Promise<TgMessagesResult>;
     /** GET /api/v1/channels/{channelId}/stats -- get aggregate stats. */
     readonly getStats: (channelId: number) => Promise<TgChannelStatsResult>;
     /** DELETE /api/v1/channels/{channelId} -- delete a channel and all its data. */

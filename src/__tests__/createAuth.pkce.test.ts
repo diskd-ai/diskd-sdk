@@ -1,5 +1,5 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import test from 'node:test';
 
 import { createAuth } from '../auth/createAuth.js';
 
@@ -40,7 +40,7 @@ test('createAuth (pkce) builds authorization URL and stores verifier/state', asy
           authorization_endpoint: 'https://issuer.example/oauth2/auth',
           token_endpoint: 'https://issuer.example/oauth2/token',
         }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
     return new Response(JSON.stringify({ error: 'unexpected' }), {
@@ -68,4 +68,3 @@ test('createAuth (pkce) builds authorization URL and stores verifier/state', asy
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
   }
 });
-

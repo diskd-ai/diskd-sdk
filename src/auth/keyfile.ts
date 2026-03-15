@@ -30,4 +30,3 @@ export const readKeyfileFromPath = async (keyfilePath: string): Promise<KeyfileJ
     audience: readRequiredString(data, 'audience'),
   };
 };
-

@@ -31,7 +31,7 @@ export type HttpRequestOptions = {
 
 export const httpRequest = async <T>(
   options: HttpRequestOptions,
-  errorLabel: string,
+  errorLabel: string
 ): Promise<T> => {
   const headers: Record<string, string> = { ...options.authHeaders };
 
@@ -54,7 +54,7 @@ export const httpRequest = async <T>(
     try {
       const body = (await response.json()) as unknown;
       if (isObject(body)) {
-        const s = body['status'];
+        const s = body.status;
         if (typeof s === 'string') jobStatus = s;
       }
     } catch {
@@ -68,11 +68,11 @@ export const httpRequest = async <T>(
     try {
       const errorData = (await response.json()) as unknown;
       if (isObject(errorData)) {
-        const err = errorData['error'];
-        if (isObject(err) && typeof err['message'] === 'string') {
-          message = err['message'];
-        } else if (typeof errorData['message'] === 'string') {
-          message = errorData['message'];
+        const err = errorData.error;
+        if (isObject(err) && typeof err.message === 'string') {
+          message = err.message;
+        } else if (typeof errorData.message === 'string') {
+          message = errorData.message;
         }
       }
     } catch {

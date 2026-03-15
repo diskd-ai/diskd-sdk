@@ -1,6 +1,6 @@
-import fs from 'node:fs';
-import dns from 'node:dns';
 import type { LookupAddress, LookupAllOptions, LookupOneOptions } from 'node:dns';
+import dns from 'node:dns';
+import fs from 'node:fs';
 import type { TcpSocketConnectOpts } from 'node:net';
 
 import { Agent, setGlobalDispatcher } from 'undici';
@@ -35,8 +35,15 @@ const readHostsMap = (): Map<string, string> => {
   return parseHostsFile(content);
 };
 
-type LookupOneCallback = (err: NodeJS.ErrnoException | null, address: string, family: number) => void;
-type LookupAllCallback = (err: NodeJS.ErrnoException | null, addresses: readonly LookupAddress[]) => void;
+type LookupOneCallback = (
+  err: NodeJS.ErrnoException | null,
+  address: string,
+  family: number
+) => void;
+type LookupAllCallback = (
+  err: NodeJS.ErrnoException | null,
+  addresses: readonly LookupAddress[]
+) => void;
 
 const hasAll = (options: unknown): options is LookupAllOptions =>
   typeof options === 'object' &&
@@ -50,11 +57,7 @@ const readFamily = (options: unknown): number | undefined => {
   return typeof family === 'number' ? family : undefined;
 };
 
-const callFallbackLookup = (
-  hostname: string,
-  options: unknown,
-  callback: unknown,
-): void => {
+const callFallbackLookup = (hostname: string, options: unknown, callback: unknown): void => {
   if (typeof options === 'function') {
     dns.lookup(hostname, options as LookupOneCallback);
     return;

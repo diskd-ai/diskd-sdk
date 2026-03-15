@@ -121,7 +121,11 @@ export type RoutinesClient = {
   /** POST /api/routines -- create a new routine. */
   readonly create: (params: RoutineCreateParams) => Promise<Routine>;
   /** PATCH /api/routines/:slug -- update an existing routine. */
-  readonly update: (slug: string, params: RoutineUpdateParams, scope?: RoutineScopeRef) => Promise<Routine>;
+  readonly update: (
+    slug: string,
+    params: RoutineUpdateParams,
+    scope?: RoutineScopeRef
+  ) => Promise<Routine>;
   /** DELETE /api/routines/:slug -- soft-delete a routine. */
   readonly delete: (params: RoutineDeleteParams) => Promise<void>;
 };

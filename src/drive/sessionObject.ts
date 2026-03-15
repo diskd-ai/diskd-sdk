@@ -1,9 +1,11 @@
+import type { MessageParams } from './sessionBuilder.js';
+import { buildMessage, buildMinimalDocument, generateUlid } from './sessionBuilder.js';
 import type {
-  DriveSessionClient,
   DriveScopedSessionDeleteParams,
   DriveScopedSessionOpenParams,
   DriveScopedSessionSaveParams,
   DriveScopedSessionStartParams,
+  DriveSessionClient,
   DriveSessionDeleteResult,
   DriveSessionDocument,
   DriveSessionGetMessageRangeResult,
@@ -12,8 +14,6 @@ import type {
   DriveSessionSaveParams,
   DriveSessionSaveResult,
 } from './sessionTypes.js';
-import type { MessageParams } from './sessionBuilder.js';
-import { buildMessage, buildMinimalDocument, generateUlid } from './sessionBuilder.js';
 
 export type DriveSession = {
   readonly projectId: string;
@@ -28,17 +28,30 @@ export type DriveSession = {
   readonly fork: (params: { readonly atMessageId: string }) => Promise<DriveSession>;
 
   readonly refresh: () => Promise<void>;
-  readonly loadMore: (params: { readonly limit: number }) => Promise<DriveSessionGetMessageRangeResult>;
+  readonly loadMore: (params: {
+    readonly limit: number;
+  }) => Promise<DriveSessionGetMessageRangeResult>;
 
   readonly dispose: () => void;
 };
 
 export type DriveSessionManager = {
-  readonly start: (params: { readonly projectId: string; readonly title?: string; readonly workspaceId?: string }) => Promise<DriveSession>;
-  readonly open: (params: { readonly projectId: string; readonly sessionId: string; readonly limit?: number }) => Promise<DriveSession>;
+  readonly start: (params: {
+    readonly projectId: string;
+    readonly title?: string;
+    readonly workspaceId?: string;
+  }) => Promise<DriveSession>;
+  readonly open: (params: {
+    readonly projectId: string;
+    readonly sessionId: string;
+    readonly limit?: number;
+  }) => Promise<DriveSession>;
   readonly save: (params: DriveSessionSaveParams) => Promise<DriveSessionSaveResult>;
   readonly list: (params: { readonly projectId: string }) => Promise<DriveSessionListResult>;
-  readonly delete: (params: { readonly projectId: string; readonly sessionId: string }) => Promise<DriveSessionDeleteResult>;
+  readonly delete: (params: {
+    readonly projectId: string;
+    readonly sessionId: string;
+  }) => Promise<DriveSessionDeleteResult>;
   readonly message: (params: MessageParams) => DriveSessionMessage;
 };
 
@@ -82,11 +95,21 @@ const createDriveSession = (params: {
   const { rpc, projectId, sessionId } = params;
 
   const session: DriveSession = {
-    get projectId() { return projectId; },
-    get sessionId() { return sessionId; },
-    get document() { return state.document; },
-    get messages() { return state.messages; },
-    get messageCount() { return state.messageCount; },
+    get projectId() {
+      return projectId;
+    },
+    get sessionId() {
+      return sessionId;
+    },
+    get document() {
+      return state.document;
+    },
+    get messages() {
+      return state.messages;
+    },
+    get messageCount() {
+      return state.messageCount;
+    },
 
     append: async (messages: readonly DriveSessionMessage[]): Promise<void> => {
       assertNotDisposed(state);
@@ -97,7 +120,11 @@ const createDriveSession = (params: {
 
     rollback: async (afterMessageId: string): Promise<void> => {
       assertNotDisposed(state);
-      const result = await rpc.deleteMessages({ projectId, sessionId, rollbackAfterMessageId: afterMessageId });
+      const result = await rpc.deleteMessages({
+        projectId,
+        sessionId,
+        rollbackAfterMessageId: afterMessageId,
+      });
       state.messageCount = result.messageCount;
       const idx = state.messages.findIndex((m) => m.id === afterMessageId);
       if (idx >= 0) {
@@ -150,9 +177,11 @@ const createDriveSession = (params: {
       state.messageCount = result.session.messages.length;
     },
 
-    loadMore: async (loadParams: { readonly limit: number }): Promise<DriveSessionGetMessageRangeResult> => {
+    loadMore: async (loadParams: {
+      readonly limit: number;
+    }): Promise<DriveSessionGetMessageRangeResult> => {
       assertNotDisposed(state);
-      const oldestId = state.messages.length > 0 ? state.messages[0]!.id : undefined;
+      const oldestId = state.messages.length > 0 ? state.messages[0]?.id : undefined;
       const result = await rpc.getMessageRange({
         projectId,
         sessionId,

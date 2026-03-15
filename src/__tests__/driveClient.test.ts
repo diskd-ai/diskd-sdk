@@ -1,8 +1,7 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
-
-import { diskd } from '../sdk/diskd.js';
+import test from 'node:test';
 import type { AuthModule } from '../auth/types.js';
+import { diskd } from '../sdk/diskd.js';
 
 type FetchCall = { readonly url: string; readonly init?: RequestInit };
 
@@ -53,18 +52,21 @@ test('drive.crontab.getStatus uses the drive JSON-RPC endpoint', async () => {
   const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = typeof input === 'string' ? input : input.toString();
     calls.push({ url, init });
-    return new Response(JSON.stringify({
-      jsonrpc: '2.0',
-      result: {
-        job_count: 0,
-        next_run_at: null,
-        updated_at: '2026-03-13T10:00:00Z',
-      },
-      id: 1,
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        result: {
+          job_count: 0,
+          next_run_at: null,
+          updated_at: '2026-03-13T10:00:00Z',
+        },
+        id: 1,
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   };
   (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
 
@@ -106,18 +108,21 @@ test('diskd.platform.crontab binds scope + timezone in the constructor', async (
   const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = typeof input === 'string' ? input : input.toString();
     calls.push({ url, init });
-    return new Response(JSON.stringify({
-      jsonrpc: '2.0',
-      result: {
-        job_count: 0,
-        next_run_at: null,
-        updated_at: '2026-03-13T10:00:00Z',
-      },
-      id: 1,
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        result: {
+          job_count: 0,
+          next_run_at: null,
+          updated_at: '2026-03-13T10:00:00Z',
+        },
+        id: 1,
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   };
   (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
 
@@ -166,18 +171,21 @@ test('diskd.platform.crontab defaults timezone from the caller runtime', async (
   const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = typeof input === 'string' ? input : input.toString();
     calls.push({ url, init });
-    return new Response(JSON.stringify({
-      jsonrpc: '2.0',
-      result: {
-        job_count: 0,
-        next_run_at: null,
-        updated_at: '2026-03-13T10:00:00Z',
-      },
-      id: 1,
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        result: {
+          job_count: 0,
+          next_run_at: null,
+          updated_at: '2026-03-13T10:00:00Z',
+        },
+        id: 1,
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   };
   (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
 
@@ -221,23 +229,28 @@ test('diskd.platform.sessions.list uses the drive JSON-RPC endpoint', async () =
   const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = typeof input === 'string' ? input : input.toString();
     calls.push({ url, init });
-    return new Response(JSON.stringify({
-      jsonrpc: '2.0',
-      result: {
-        items: [{
-          session_id: 'sess-1',
-          title: 'Deployment help',
-          message_count: 2,
-          updated_at: '2026-03-13T10:00:00Z',
-          provider: 'openai',
-          model: 'gpt-5',
-        }],
-      },
-      id: 1,
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        result: {
+          items: [
+            {
+              session_id: 'sess-1',
+              title: 'Deployment help',
+              message_count: 2,
+              updated_at: '2026-03-13T10:00:00Z',
+              provider: 'openai',
+              model: 'gpt-5',
+            },
+          ],
+        },
+        id: 1,
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   };
   (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
 
@@ -260,14 +273,16 @@ test('diskd.platform.sessions.list uses the drive JSON-RPC endpoint', async () =
     const result = await sessions.list();
 
     assert.deepEqual(result, {
-      items: [{
-        sessionId: 'sess-1',
-        title: 'Deployment help',
-        messageCount: 2,
-        updatedAt: '2026-03-13T10:00:00Z',
-        provider: 'openai',
-        model: 'gpt-5',
-      }],
+      items: [
+        {
+          sessionId: 'sess-1',
+          title: 'Deployment help',
+          messageCount: 2,
+          updatedAt: '2026-03-13T10:00:00Z',
+          provider: 'openai',
+          model: 'gpt-5',
+        },
+      ],
     });
     assert.equal(calls[0]?.url, 'https://apis.example/os/drive/api/v1');
     assert.ok(String(calls[0]?.init?.body).includes('"method":"drive/session/list"'));
@@ -314,16 +329,19 @@ test('resource clients derive gateway paths from SDK namespaces', async () => {
     calls.push({ url, init });
 
     if (url === 'https://apis.example/os/llm/api/v1/invoke') {
-      return new Response(JSON.stringify({
-        jsonrpc: '2.0',
-        result: {
-          models: [],
-        },
-        id: 1,
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          jsonrpc: '2.0',
+          result: {
+            models: [],
+          },
+          id: 1,
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     if (url === 'https://apis.example/os/agents/supported-agents') {
@@ -334,16 +352,19 @@ test('resource clients derive gateway paths from SDK namespaces', async () => {
     }
 
     if (url === 'https://apis.example/os/mcp/api/catalog') {
-      return new Response(JSON.stringify({
-        items: [],
-        total: 0,
-        page: 1,
-        pageSize: 20,
-        totalPages: 0,
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          items: [],
+          total: 0,
+          page: 1,
+          pageSize: 20,
+          totalPages: 0,
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     if (url === 'https://apis.example/utils/tg-userbot/api/v1/channels') {
@@ -354,15 +375,18 @@ test('resource clients derive gateway paths from SDK namespaces', async () => {
     }
 
     if (url === 'https://apis.example/utils/web-navigator/api/v1/resolve') {
-      return new Response(JSON.stringify({
-        title: null,
-        description: null,
-        favicon: null,
-        dbname: 'web.sqlite',
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          title: null,
+          description: null,
+          favicon: null,
+          dbname: 'web.sqlite',
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     return new Response('not found', { status: 404 });
@@ -394,7 +418,7 @@ test('resource clients derive gateway paths from SDK namespaces', async () => {
         'https://apis.example/os/mcp/api/catalog',
         'https://apis.example/utils/tg-userbot/api/v1/channels',
         'https://apis.example/utils/web-navigator/api/v1/resolve',
-      ],
+      ]
     );
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;

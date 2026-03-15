@@ -50,7 +50,7 @@ Installation
 3. Install:
 
    ```bash
-   npm install @diskd/sdk
+   bun add @diskd/sdk
    ```
 
 Install / build (repo)
@@ -58,8 +58,8 @@ Install / build (repo)
 
 ```bash
 cd mono/platform-api
-npm install
-npm run build
+bun install
+bun run build
 ```
 
 Authentication

@@ -2,18 +2,17 @@ import { createRequire } from 'node:module';
 import { createAgentHubClient } from '../agentHub/agentHub.js';
 import { createApiKeyAuth } from '../auth/createApiKeyAuth.js';
 import { createAuth } from '../auth/createAuth.js';
-import { createDriveClient } from '../drive/drive.js';
-import { createDriveDatabase } from '../drive/DriveRepository.js';
 import type { DriveScopedCrontabClient } from '../drive/crontabTypes.js';
+import { createDriveDatabase } from '../drive/DriveRepository.js';
+import { createDriveClient } from '../drive/drive.js';
 import { createScopedDriveSessionManager } from '../drive/sessionObject.js';
+import type { DriveDataSource, DriveDataSourceParams } from '../drive/typeorm/datasourceTypes.js';
 import { createLlmRouterClient } from '../llmRouter/llmRouter.js';
 import { createMcpHubClient } from '../mcpHub/mcpHub.js';
 import { createOperativesClient } from '../operatives/operatives.js';
-import { createTgUserbotClient } from '../tgUserbot/tgUserbot.js';
 import { createRoutinesClient } from '../routines/routines.js';
+import { createTgUserbotClient } from '../tgUserbot/tgUserbot.js';
 import { createWebNavigatorClient } from '../webNavigator/webNavigator.js';
-import type { DriveDataSource } from '../drive/typeorm/datasourceTypes.js';
-import type { DriveDataSourceParams } from '../drive/typeorm/datasourceTypes.js';
 import type { DiskD } from './types.js';
 
 const require = createRequire(import.meta.url);
@@ -127,6 +126,7 @@ export const diskd: DiskD = {
   utils: {
     tgUserBot: ({ auth, workspaceId, url }) => createTgUserbotClient({ auth, workspaceId, url }),
 
-    webNavigator: ({ auth, workspaceId, url }) => createWebNavigatorClient({ auth, workspaceId, url }),
+    webNavigator: ({ auth, workspaceId, url }) =>
+      createWebNavigatorClient({ auth, workspaceId, url }),
   },
 };

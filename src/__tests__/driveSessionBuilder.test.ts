@@ -1,5 +1,5 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import test from 'node:test';
 
 import { buildMessage, buildMinimalDocument, generateUlid } from '../drive/sessionBuilder.js';
 
@@ -108,6 +108,10 @@ test('buildMinimalDocument defaults title to null', () => {
 });
 
 test('buildMinimalDocument accepts workspaceId', () => {
-  const doc = buildMinimalDocument({ sessionId: 'sess-1', projectId: 'proj-1', workspaceId: 'ws-1' });
+  const doc = buildMinimalDocument({
+    sessionId: 'sess-1',
+    projectId: 'proj-1',
+    workspaceId: 'ws-1',
+  });
   assert.equal(doc.workspaceId, 'ws-1');
 });

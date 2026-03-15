@@ -5,8 +5,8 @@ import type {
   TgChannelAddParams,
   TgChannelAddResult,
   TgChannelResolveResult,
-  TgChannelStatusResult,
   TgChannelStatsResult,
+  TgChannelStatusResult,
   TgChannelSyncParams,
   TgMessage,
   TgMessagesParams,
@@ -40,7 +40,9 @@ const bool = (obj: RawObject, key: string): boolean | undefined => {
   return typeof v === 'boolean' ? v : undefined;
 };
 
-const buildQueryString = (params: Readonly<Record<string, string | number | undefined>>): string => {
+const buildQueryString = (
+  params: Readonly<Record<string, string | number | undefined>>
+): string => {
   const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== '');
   if (entries.length === 0) return '';
   const searchParams = new URLSearchParams();
@@ -85,7 +87,8 @@ const decodeChannel = (o: unknown): TgChannel => {
 };
 
 const decodeChannelResolveResult = (o: unknown): TgChannelResolveResult => {
-  if (!isObject(o)) throw new Error('Invalid TG Userbot response: resolve result must be an object');
+  if (!isObject(o))
+    throw new Error('Invalid TG Userbot response: resolve result must be an object');
   return {
     telegramId: num(o, 'telegram_id') ?? 0,
     title: str(o, 'title') ?? '',
@@ -96,22 +99,25 @@ const decodeChannelResolveResult = (o: unknown): TgChannelResolveResult => {
 };
 
 const decodeChannelAddResult = (o: unknown): TgChannelAddResult => {
-  if (!isObject(o)) throw new Error('Invalid TG Userbot response: channel add result must be an object');
-  const rawTask = o['task'];
+  if (!isObject(o))
+    throw new Error('Invalid TG Userbot response: channel add result must be an object');
+  const rawTask = o.task;
   return {
     message: str(o, 'message') ?? '',
     action: (str(o, 'action') as TgChannelAddResult['action']) ?? 'created',
-    channel: decodeChannel(o['channel']),
+    channel: decodeChannel(o.channel),
     task: rawTask !== undefined && rawTask !== null ? decodeTask(rawTask) : undefined,
   };
 };
 
 const decodeChannelStatusResult = (o: unknown): TgChannelStatusResult => {
-  if (!isObject(o)) throw new Error('Invalid TG Userbot response: channel status must be an object');
-  const rawLastTask = o['last_task'];
+  if (!isObject(o))
+    throw new Error('Invalid TG Userbot response: channel status must be an object');
+  const rawLastTask = o.last_task;
   return {
     channelStatus: str(o, 'channel_status') ?? '',
-    lastTask: rawLastTask !== undefined && rawLastTask !== null ? decodeTask(rawLastTask) : undefined,
+    lastTask:
+      rawLastTask !== undefined && rawLastTask !== null ? decodeTask(rawLastTask) : undefined,
   };
 };
 
@@ -132,8 +138,9 @@ const decodeMessage = (o: unknown): TgMessage => {
 };
 
 const decodeMessagesResult = (o: unknown): TgMessagesResult => {
-  if (!isObject(o)) throw new Error('Invalid TG Userbot response: messages result must be an object');
-  const rawMessages = o['messages'];
+  if (!isObject(o))
+    throw new Error('Invalid TG Userbot response: messages result must be an object');
+  const rawMessages = o.messages;
   const messages = Array.isArray(rawMessages) ? rawMessages.map(decodeMessage) : [];
   return {
     totalMessagesInDb: num(o, 'total_messages_in_db') ?? 0,
@@ -143,7 +150,7 @@ const decodeMessagesResult = (o: unknown): TgMessagesResult => {
 
 const decodeChannelStatsResult = (o: unknown): TgChannelStatsResult => {
   if (!isObject(o)) throw new Error('Invalid TG Userbot response: stats result must be an object');
-  const rawDateRange = o['date_range'];
+  const rawDateRange = o.date_range;
   let dateRange: TgChannelStatsResult['dateRange'];
   if (isObject(rawDateRange)) {
     dateRange = {
@@ -158,8 +165,9 @@ const decodeChannelStatsResult = (o: unknown): TgChannelStatsResult => {
 };
 
 const decodeTaskListResult = (o: unknown): TgTaskListResult => {
-  if (!isObject(o)) throw new Error('Invalid TG Userbot response: task list result must be an object');
-  const rawRunning = o['running_tasks'];
+  if (!isObject(o))
+    throw new Error('Invalid TG Userbot response: task list result must be an object');
+  const rawRunning = o.running_tasks;
   const runningTasks: Record<string, TgTask> = {};
   if (isObject(rawRunning)) {
     for (const [uuid, rawTask] of Object.entries(rawRunning)) {
@@ -241,13 +249,13 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
     try {
       const errorData = (await response.json()) as unknown;
       if (isObject(errorData)) {
-        const err = errorData['error'];
-        if (isObject(err) && typeof err['message'] === 'string') {
-          message = err['message'];
-        } else if (typeof errorData['message'] === 'string') {
-          message = errorData['message'];
-        } else if (typeof errorData['detail'] === 'string') {
-          message = errorData['detail'];
+        const err = errorData.error;
+        if (isObject(err) && typeof err.message === 'string') {
+          message = err.message;
+        } else if (typeof errorData.message === 'string') {
+          message = errorData.message;
+        } else if (typeof errorData.detail === 'string') {
+          message = errorData.detail;
         }
       }
     } catch {
@@ -304,7 +312,7 @@ export const createTgUserbotClient = (params: {
       readonly withWorkspace?: boolean;
       readonly body?: unknown;
       readonly query?: Readonly<Record<string, string | number | undefined>>;
-    } = {},
+    } = {}
   ): Promise<T> => {
     const authHeaders = await getAuthHeaders();
     const qs = opts.query ? buildQueryString(opts.query) : '';
@@ -320,7 +328,7 @@ export const createTgUserbotClient = (params: {
   /** Public request -- no auth headers, no workspace id. */
   const publicRequest = async <T>(
     path: string,
-    query?: Readonly<Record<string, string | number | undefined>>,
+    query?: Readonly<Record<string, string | number | undefined>>
   ): Promise<T> => {
     const qs = query ? buildQueryString(query) : '';
     return httpRequest<T>({
@@ -354,7 +362,7 @@ export const createTgUserbotClient = (params: {
           {
             withWorkspace: true,
             body: encodeChannelSyncParams(syncParams),
-          },
+          }
         );
         return decodeChannelAddResult(raw);
       },
@@ -367,41 +375,32 @@ export const createTgUserbotClient = (params: {
       },
 
       getStatus: async (channelId: number): Promise<TgChannelStatusResult> => {
-        const raw = await request<unknown>(
-          'GET',
-          `/api/v1/channels/${channelId}/status`,
-          { withWorkspace: true },
-        );
+        const raw = await request<unknown>('GET', `/api/v1/channels/${channelId}/status`, {
+          withWorkspace: true,
+        });
         return decodeChannelStatusResult(raw);
       },
 
-      getMessages: async (channelId: number, msgParams?: TgMessagesParams): Promise<TgMessagesResult> => {
-        const raw = await request<unknown>(
-          'GET',
-          `/api/v1/channels/${channelId}/messages`,
-          {
-            withWorkspace: true,
-            query: msgParams ? encodeMessagesParams(msgParams) : undefined,
-          },
-        );
+      getMessages: async (
+        channelId: number,
+        msgParams?: TgMessagesParams
+      ): Promise<TgMessagesResult> => {
+        const raw = await request<unknown>('GET', `/api/v1/channels/${channelId}/messages`, {
+          withWorkspace: true,
+          query: msgParams ? encodeMessagesParams(msgParams) : undefined,
+        });
         return decodeMessagesResult(raw);
       },
 
       getStats: async (channelId: number): Promise<TgChannelStatsResult> => {
-        const raw = await request<unknown>(
-          'GET',
-          `/api/v1/channels/${channelId}/stats`,
-          { withWorkspace: true },
-        );
+        const raw = await request<unknown>('GET', `/api/v1/channels/${channelId}/stats`, {
+          withWorkspace: true,
+        });
         return decodeChannelStatsResult(raw);
       },
 
       delete: async (channelId: number): Promise<void> => {
-        await request<void>(
-          'DELETE',
-          `/api/v1/channels/${channelId}`,
-          { withWorkspace: true },
-        );
+        await request<void>('DELETE', `/api/v1/channels/${channelId}`, { withWorkspace: true });
       },
     },
 
@@ -414,11 +413,9 @@ export const createTgUserbotClient = (params: {
       },
 
       cancel: async (taskUuid: string): Promise<void> => {
-        await request<void>(
-          'DELETE',
-          `/api/v1/tasks/${encodeURIComponent(taskUuid)}`,
-          { withWorkspace: true },
-        );
+        await request<void>('DELETE', `/api/v1/tasks/${encodeURIComponent(taskUuid)}`, {
+          withWorkspace: true,
+        });
       },
     },
   };

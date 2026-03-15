@@ -170,6 +170,10 @@ export type DriveDbClient = {
   readonly metadata: (params: DriveDbMetadataParams) => Promise<DriveDbMetadataResult>;
   readonly drop: (params: DriveDbDropParams) => Promise<DriveDbDropResult>;
   readonly setStatus: (params: DriveDbSetStatusParams) => Promise<DriveDbSetStatusResult>;
-  readonly resolveByInode: (params: DriveDbResolveByInodeParams) => Promise<DriveDbResolveByInodeResult>;
-  readonly resolveWithSettings: (params: DriveDbResolveWithSettingsParams) => Promise<DriveDbResolveWithSettingsResult>;
+  readonly resolveByInode: (
+    params: DriveDbResolveByInodeParams
+  ) => Promise<DriveDbResolveByInodeResult>;
+  readonly resolveWithSettings: (
+    params: DriveDbResolveWithSettingsParams
+  ) => Promise<DriveDbResolveWithSettingsResult>;
 };

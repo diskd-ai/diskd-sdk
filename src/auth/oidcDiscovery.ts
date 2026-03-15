@@ -18,7 +18,7 @@ const readRequiredString = (obj: { readonly [key: string]: unknown }, key: strin
 
 const readOptionalString = (
   obj: { readonly [key: string]: unknown },
-  key: string,
+  key: string
 ): string | undefined => {
   const value = obj[key];
   return typeof value === 'string' && value.length > 0 ? value : undefined;
@@ -38,4 +38,3 @@ export const fetchOidcDiscovery = async (issuer: string): Promise<OidcDiscoveryD
     userinfo_endpoint: readOptionalString(data, 'userinfo_endpoint'),
   };
 };
-

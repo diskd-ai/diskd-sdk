@@ -61,7 +61,9 @@ console.log(`     Model: ${completion.model}`);
 console.log(`     Finish reason: ${firstChoice?.finishReason ?? 'unknown'}`);
 console.log(`     Reply: ${replyContent}`);
 if (completion.usage) {
-  console.log(`     Tokens: ${completion.usage.promptTokens} prompt, ${completion.usage.completionTokens} completion`);
+  console.log(
+    `     Tokens: ${completion.usage.promptTokens} prompt, ${completion.usage.completionTokens} completion`
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -73,9 +75,7 @@ console.log('\n=== 2. Streaming chat completion ===');
 const streamParams = {
   provider: 'openai',
   model: 'gpt-4o-mini',
-  messages: [
-    { role: 'user' as const, content: 'Count from 1 to 5, one number per line.' },
-  ],
+  messages: [{ role: 'user' as const, content: 'Count from 1 to 5, one number per line.' }],
   maxTokens: 64,
   temperature: 0,
 };
@@ -140,7 +140,9 @@ console.log(`[ok] Embedding model: ${embeddingResult.model}`);
 console.log(`     Vectors: ${embeddingResult.data.length}`);
 for (const item of embeddingResult.data) {
   const norm = Math.sqrt(item.embedding.reduce((s, v) => s + v * v, 0));
-  console.log(`     [${item.index}] dimensions=${item.embedding.length}, L2-norm=${norm.toFixed(4)}`);
+  console.log(
+    `     [${item.index}] dimensions=${item.embedding.length}, L2-norm=${norm.toFixed(4)}`
+  );
 }
 console.log(`     Tokens used: ${embeddingResult.usage.totalTokens}`);
 

@@ -32,7 +32,11 @@ const auth = diskd.auth.apiKey({
   workspaceId: WORKSPACE_ID,
 });
 
-const webNav = diskd.utils.webNavigator({ auth, workspaceId: WORKSPACE_ID, url: WEB_NAVIGATOR_URL });
+const webNav = diskd.utils.webNavigator({
+  auth,
+  workspaceId: WORKSPACE_ID,
+  url: WEB_NAVIGATOR_URL,
+});
 
 console.log(`Connecting to Web Navigator at ${WEB_NAVIGATOR_URL}`);
 console.log(`Workspace: ${WORKSPACE_ID}\n`);
@@ -88,7 +92,9 @@ try {
   console.log(`     Status  : ${jobStatus.status}`);
   console.log(`     Attempts: ${jobStatus.attempts}/${jobStatus.maxRetries}`);
   if (jobStatus.progress) {
-    console.log(`     Progress: ${jobStatus.progress.scrapedPages}/${jobStatus.progress.totalDiscovered} pages`);
+    console.log(
+      `     Progress: ${jobStatus.progress.scrapedPages}/${jobStatus.progress.totalDiscovered} pages`
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -105,7 +111,9 @@ try {
   console.log(`     URL      : ${job.request.url}`);
 
   if (job.status === 'completed' && job.result) {
-    console.log(`     Pages    : ${job.result.summary.totalPages} (${job.result.summary.successfulPages} ok, ${job.result.summary.failedPages} failed)`);
+    console.log(
+      `     Pages    : ${job.result.summary.totalPages} (${job.result.summary.successfulPages} ok, ${job.result.summary.failedPages} failed)`
+    );
     console.log(`     Duration : ${job.result.summary.duration}ms`);
     for (const page of job.result.pages.slice(0, 3)) {
       console.log(`       - ${page.url} [${page.statusCode}] "${page.title ?? '(no title)'}"`);
@@ -122,7 +130,9 @@ try {
     console.log(`[ok] Cancelled job ${cancelled.id} (status=${cancelled.status})`);
   }
 } catch (err) {
-  console.log(`[error] Scrape operation failed: ${err instanceof Error ? err.message : String(err)}`);
+  console.log(
+    `[error] Scrape operation failed: ${err instanceof Error ? err.message : String(err)}`
+  );
 }
 
 console.log('\n[done] All Web Navigator operations completed successfully');

@@ -1,6 +1,6 @@
 import type { AuthModule } from '../auth/types.js';
 import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
-import { buildQuery, httpRequest, resolveAuthHeaders, type HttpMethod } from '../sdk/http.js';
+import { buildQuery, type HttpMethod, httpRequest, resolveAuthHeaders } from '../sdk/http.js';
 import type {
   Routine,
   RoutineCreateParams,
@@ -8,8 +8,8 @@ import type {
   RoutineGetParams,
   RoutineListParams,
   RoutineScopeRef,
-  RoutineUpdateParams,
   RoutinesClient,
+  RoutineUpdateParams,
 } from './routinesTypes.js';
 
 // ---------------------------------------------------------------------------
@@ -55,28 +55,37 @@ export const createRoutinesClient = (params: {
   const request = async <T>(
     method: HttpMethod,
     path: string,
-    opts: { readonly body?: unknown } = {},
+    opts: { readonly body?: unknown } = {}
   ): Promise<T> => {
     const authHeaders = await resolveAuthHeaders(params.auth);
-    return httpRequest<T>({
-      method,
-      url: `${baseUrl}${path}`,
-      authHeaders,
-      body: opts.body,
-    }, 'Routines');
+    return httpRequest<T>(
+      {
+        method,
+        url: `${baseUrl}${path}`,
+        authHeaders,
+        body: opts.body,
+      },
+      'Routines'
+    );
   };
 
   return {
     list: async (listParams?: RoutineListParams): Promise<readonly Routine[]> => {
       const query = buildScopeQuery(listParams?.scope, listParams?.projectName);
-      const result = await request<{ readonly items: readonly Routine[] }>('GET', `/api/routines${query}`);
+      const result = await request<{ readonly items: readonly Routine[] }>(
+        'GET',
+        `/api/routines${query}`
+      );
       return result.items;
     },
 
     get: async (getParams: RoutineGetParams): Promise<Routine> => {
       const query = buildScopeQuery(getParams.scope, getParams.projectName);
       const slug = encodeURIComponent(getParams.slug);
-      const result = await request<{ readonly routine: Routine }>('GET', `/api/routines/${slug}${query}`);
+      const result = await request<{ readonly routine: Routine }>(
+        'GET',
+        `/api/routines/${slug}${query}`
+      );
       return result.routine;
     },
 
@@ -87,12 +96,20 @@ export const createRoutinesClient = (params: {
       return result.routine;
     },
 
-    update: async (slug: string, updateParams: RoutineUpdateParams, scope?: RoutineScopeRef): Promise<Routine> => {
+    update: async (
+      slug: string,
+      updateParams: RoutineUpdateParams,
+      scope?: RoutineScopeRef
+    ): Promise<Routine> => {
       const query = scopeRefToQuery(scope);
       const encodedSlug = encodeURIComponent(slug);
-      const result = await request<{ readonly routine: Routine }>('PATCH', `/api/routines/${encodedSlug}${query}`, {
-        body: updateParams,
-      });
+      const result = await request<{ readonly routine: Routine }>(
+        'PATCH',
+        `/api/routines/${encodedSlug}${query}`,
+        {
+          body: updateParams,
+        }
+      );
       return result.routine;
     },
 
