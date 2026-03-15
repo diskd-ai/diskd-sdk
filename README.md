@@ -25,6 +25,8 @@ const ds         = diskd.os.datasource({ auth, dbName: '...', entities: [...] })
 const llm        = diskd.os.llm({ auth });
 const agents     = diskd.os.agents({ auth, workspaceId: '...' });
 const mcp        = diskd.os.mcp({ auth, workspaceId: '...' });
+const routines   = diskd.platform.routines({ auth });
+const operatives = diskd.platform.operatives({ auth });
 const tg         = diskd.utils.tgUserBot({ auth, workspaceId: '...' });
 const webNav     = diskd.utils.webNavigator({ auth, workspaceId: '...' });
 ```
@@ -123,6 +125,7 @@ Derived default paths:
 - `/os/llm`
 - `/os/agents`
 - `/os/mcp`
+- `/platform/app` (routines, operatives)
 - `/utils/tg-userbot`
 - `/utils/web-navigator`
 
@@ -259,6 +262,117 @@ const status = await crontab.getStatus();
 ```
 
 See `examples/node/drive-upload-download.ts`, `examples/node/drive-session-external.ts`, and `examples/node/drive-crontab.ts`.
+
+Routines API
+------------
+
+REST client for managing routines (automated workflows) scoped to profile or project:
+
+```ts
+const routines = diskd.platform.routines({ auth });
+
+// List routines in a scope
+const all = await routines.list({ scope: 'profile' });
+const projectRoutines = await routines.list({ scope: 'project', projectName: 'my-project' });
+
+// Get by slug
+const routine = await routines.get({ slug: 'daily-summary', scope: 'profile' });
+
+// Create
+const created = await routines.create({
+  name: 'Daily Summary',
+  scope: 'profile',
+  operativeSlug: 'research-agent',
+  triggerType: 'rhythm',
+  trigger: { cron: '0 9 * * *' },
+  steps: [{ id: 'step-1', name: 'Summarize', action: 'summarize', order: 0 }],
+});
+
+// Update
+const updated = await routines.update(
+  'daily-summary',
+  { status: 'paused' },
+  { scopeType: 'profile' },
+);
+
+// Delete
+await routines.delete({ slug: 'daily-summary', scope: 'profile' });
+```
+
+Operatives API
+--------------
+
+REST client for managing operatives (AI agents) with attached files, skills, and MCP tools:
+
+```ts
+const ops = diskd.platform.operatives({ auth });
+
+// List operatives in a project
+const list = await ops.list({ projectId: 'proj-1' });
+
+// Get by id or slug
+const operative = await ops.get('op-01');
+const bySlug = await ops.getBySlug({ projectId: 'proj-1', slug: 'research-agent' });
+
+// Create
+const created = await ops.create({
+  projectId: 'proj-1',
+  name: 'Research Agent',
+  engine: 'deep',
+  engineProvider: 'anthropic',
+  engineModel: 'claude-4',
+});
+
+// Update
+await ops.update('op-01', {
+  orders: 'You are a research assistant focused on academic papers.',
+  fileAccess: 'selected',
+});
+
+// Delete
+await ops.delete('op-01');
+```
+
+### Operative files (Drive knowledge sources)
+
+Attach Drive files from the operative's project chroot as knowledge sources:
+
+```ts
+// Attach files (paths relative to project chroot)
+await ops.files.add('op-01', { paths: ['/docs/knowledge-base', '/docs/readme.md'] });
+
+// List attached files
+const files = await ops.files.list('op-01');
+
+// Detach a file
+await ops.files.remove('op-01', files[0].id);
+```
+
+### Operative skills
+
+```ts
+// Attach skills
+await ops.skills.add('op-01', { refIds: ['web-search', 'code-review'] });
+
+// List attached skills
+const skills = await ops.skills.list('op-01');
+
+// Detach a skill
+await ops.skills.remove('op-01', skills[0].id);
+```
+
+### Operative MCP tools
+
+```ts
+// Attach MCP tools
+await ops.tools.add('op-01', { selectors: ['github/search_repos', 'slack/send_message'] });
+
+// List attached tools
+const tools = await ops.tools.list('op-01');
+
+// Detach a tool
+await ops.tools.remove('op-01', tools[0].id);
+```
 
 Drive Database API
 ------------------
