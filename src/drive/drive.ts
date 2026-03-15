@@ -11,6 +11,8 @@ import type {
   DrivePathEntry,
   DrivePathMutationResult,
   DrivePathType,
+  DriveReadFilePart,
+  DriveReadFileResult,
   DriveToolsResult,
   DriveUploadCommitResult,
   DriveUploadFileResult,
@@ -206,6 +208,25 @@ const decodeToolsResult = (o: unknown): DriveToolsResult => {
   }
   // Some tools return results at the top level
   return { items: [r] };
+};
+
+const decodeReadFilePart = (o: unknown): DriveReadFilePart => {
+  const r = raw(o);
+  const t = strRequired(r, 'type');
+  return {
+    type: t as DriveReadFilePart['type'],
+    content: strRequired(r, 'content'),
+    title: str(r, 'title') ?? undefined,
+    pageNumber: num(r, 'page_number') ?? num(r, 'pageNumber') ?? undefined,
+    confidence: num(r, 'confidence') ?? undefined,
+  };
+};
+
+const decodeReadFileResult = (o: unknown): DriveReadFileResult => {
+  const r = raw(o);
+  const arr = r.parts;
+  if (!Array.isArray(arr)) throw new Error('Invalid Drive response: parts must be array');
+  return { parts: arr.map(decodeReadFilePart) };
 };
 
 // ---------------------------------------------------------------------------
@@ -545,6 +566,29 @@ export const createDriveClient = (params: {
           ...optional('path', p.path),
         });
         return decodeToolsResult(result);
+      },
+
+      readFile: async (p) => {
+        const result = await call('paths/tools/read', {
+          path: p.path,
+          ...optional('parts_limit', p.partsLimit),
+          ...optional('parts_offset', p.partsOffset),
+        });
+        return decodeReadFileResult(result);
+      },
+
+      writeFile: async (p) => {
+        await call('paths/tools/write', {
+          path: p.path,
+          content: p.content,
+        });
+      },
+
+      applyPatch: async (p) => {
+        await call('paths/tools/apply-patch', {
+          path: p.path,
+          patch: p.patch,
+        });
       },
     },
 

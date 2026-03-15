@@ -182,6 +182,36 @@ export type DriveToolsVsearchParams = {
   readonly path?: string;
 };
 
+// -- Tools: file read / write / patch --
+
+export type DriveToolsReadFileParams = {
+  readonly path: string;
+  readonly partsLimit?: number;
+  readonly partsOffset?: number;
+};
+
+export type DriveReadFilePart = {
+  readonly type: 'text' | 'image' | 'table' | 'diagram' | 'json' | 'code' | 'form';
+  readonly content: string;
+  readonly title?: string;
+  readonly pageNumber?: number;
+  readonly confidence?: number;
+};
+
+export type DriveReadFileResult = {
+  readonly parts: readonly DriveReadFilePart[];
+};
+
+export type DriveToolsWriteFileParams = {
+  readonly path: string;
+  readonly content: string;
+};
+
+export type DriveToolsApplyPatchParams = {
+  readonly path: string;
+  readonly patch: string;
+};
+
 // -- Upload file (convenience) --
 
 export type DriveUploadFileBaseParams = {

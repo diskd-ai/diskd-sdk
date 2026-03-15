@@ -14,13 +14,17 @@ import type {
   DriveFileMetadataParams,
   DrivePathEntry,
   DrivePathMutationResult,
+  DriveReadFileResult,
   DriveRenameParams,
   DriveResolveParams,
+  DriveToolsApplyPatchParams,
   DriveToolsGlobParams,
   DriveToolsGrepParams,
   DriveToolsLsParams,
+  DriveToolsReadFileParams,
   DriveToolsResult,
   DriveToolsVsearchParams,
+  DriveToolsWriteFileParams,
   DriveUpdateAttributesParams,
   DriveUpdateMetadataParams,
   DriveUploadCommitParams,
@@ -75,12 +79,15 @@ export type DriveClient = {
   // Disk usage
   readonly diskUsage: () => Promise<DriveDiskUsageResult>;
 
-  // Tools (path-based query operations)
+  // Tools (path-based query and file operations)
   readonly tools: {
     readonly ls: (params?: DriveToolsLsParams) => Promise<DriveToolsResult>;
     readonly glob: (params: DriveToolsGlobParams) => Promise<DriveToolsResult>;
     readonly grep: (params: DriveToolsGrepParams) => Promise<DriveToolsResult>;
     readonly vsearch: (params: DriveToolsVsearchParams) => Promise<DriveToolsResult>;
+    readonly readFile: (params: DriveToolsReadFileParams) => Promise<DriveReadFileResult>;
+    readonly writeFile: (params: DriveToolsWriteFileParams) => Promise<void>;
+    readonly applyPatch: (params: DriveToolsApplyPatchParams) => Promise<void>;
   };
 
   // Database operations (Drive DB -- SQLite via JSON-RPC)

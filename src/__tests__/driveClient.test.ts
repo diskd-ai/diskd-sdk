@@ -425,3 +425,151 @@ test('resource clients derive gateway paths from SDK namespaces', async () => {
     delete process.env.DISKD_BASE_URL;
   }
 });
+
+test('drive.tools.readFile sends paths/tools/read and decodes parts', async () => {
+  process.env.DISKD_BASE_URL = 'https://apis.example';
+
+  const calls: FetchCall[] = [];
+  const originalFetch = globalThis.fetch;
+  const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const url = typeof input === 'string' ? input : input.toString();
+    calls.push({ url, init });
+    return new Response(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        result: {
+          parts: [
+            {
+              type: 'text',
+              content: '# Hello World',
+              title: 'Main heading',
+              page_number: 1,
+              confidence: 0.95,
+            },
+          ],
+        },
+        id: 1,
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  };
+  (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
+
+  const auth: AuthModule = {
+    signIn: async () => {},
+    signOut: () => {},
+    handleRedirectCallback: async () => {},
+    getAccessToken: async () => 'token-123',
+    getToken: () => ({ accessToken: 'token-123' }),
+  };
+
+  try {
+    const drive = diskd.os.drive({ version: 'v1', auth });
+    const result = await drive.tools.readFile({
+      path: '/docs/readme.md',
+      partsLimit: 5,
+      partsOffset: 0,
+    });
+
+    assert.equal(result.parts.length, 1);
+    assert.equal(result.parts[0]?.type, 'text');
+    assert.equal(result.parts[0]?.content, '# Hello World');
+    assert.equal(result.parts[0]?.title, 'Main heading');
+    assert.equal(result.parts[0]?.pageNumber, 1);
+    assert.equal(result.parts[0]?.confidence, 0.95);
+
+    const body = JSON.parse(String(calls[0]?.init?.body));
+    assert.ok(body.method === 'paths/tools/read');
+    assert.equal(body.params.path, '/docs/readme.md');
+    assert.equal(body.params.parts_limit, 5);
+    assert.equal(body.params.parts_offset, 0);
+  } finally {
+    (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
+    delete process.env.DISKD_BASE_URL;
+  }
+});
+
+test('drive.tools.writeFile sends paths/tools/write with path and content', async () => {
+  process.env.DISKD_BASE_URL = 'https://apis.example';
+
+  const calls: FetchCall[] = [];
+  const originalFetch = globalThis.fetch;
+  const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const url = typeof input === 'string' ? input : input.toString();
+    calls.push({ url, init });
+    return new Response(JSON.stringify({ jsonrpc: '2.0', result: { success: true }, id: 1 }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+  (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
+
+  const auth: AuthModule = {
+    signIn: async () => {},
+    signOut: () => {},
+    handleRedirectCallback: async () => {},
+    getAccessToken: async () => 'token-123',
+    getToken: () => ({ accessToken: 'token-123' }),
+  };
+
+  try {
+    const drive = diskd.os.drive({ version: 'v1', auth });
+    await drive.tools.writeFile({
+      path: '/docs/readme.md',
+      content: '# Hello World',
+    });
+
+    const body = JSON.parse(String(calls[0]?.init?.body));
+    assert.equal(body.method, 'paths/tools/write');
+    assert.equal(body.params.path, '/docs/readme.md');
+    assert.equal(body.params.content, '# Hello World');
+  } finally {
+    (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
+    delete process.env.DISKD_BASE_URL;
+  }
+});
+
+test('drive.tools.applyPatch sends paths/tools/apply-patch with path and patch', async () => {
+  process.env.DISKD_BASE_URL = 'https://apis.example';
+
+  const calls: FetchCall[] = [];
+  const originalFetch = globalThis.fetch;
+  const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const url = typeof input === 'string' ? input : input.toString();
+    calls.push({ url, init });
+    return new Response(JSON.stringify({ jsonrpc: '2.0', result: { success: true }, id: 1 }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+  (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
+
+  const auth: AuthModule = {
+    signIn: async () => {},
+    signOut: () => {},
+    handleRedirectCallback: async () => {},
+    getAccessToken: async () => 'token-123',
+    getToken: () => ({ accessToken: 'token-123' }),
+  };
+
+  const patchContent = '--- a/readme.md\n+++ b/readme.md\n@@ -1 +1 @@\n-old\n+new';
+
+  try {
+    const drive = diskd.os.drive({ version: 'v1', auth });
+    await drive.tools.applyPatch({
+      path: '/docs/readme.md',
+      patch: patchContent,
+    });
+
+    const body = JSON.parse(String(calls[0]?.init?.body));
+    assert.equal(body.method, 'paths/tools/apply-patch');
+    assert.equal(body.params.path, '/docs/readme.md');
+    assert.equal(body.params.patch, patchContent);
+  } finally {
+    (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
+    delete process.env.DISKD_BASE_URL;
+  }
+});
