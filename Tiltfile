@@ -1,23 +1,9 @@
-# Tiltfile - @diskd/sdk (platform-api)
-# SDK test and example runners. No K8s deployments -- all resources are local.
-# Requires the 'drive' service group for integration tests and examples.
-#
-# Usage (standalone):
-#   tilt up
-#
-# Usage (from platform-infra):
-#   tilt up -- --only drive,platform-api
+load('../platform-infra/dev/lib.star', 'include_if_exists', 'load_service_root')
 
-_included_from_parent = os.getenv('SERVICE_GROUP', '') != ''
+ctx = load_service_root(
+    service_name='platform-api',
+    service_base_port=9300,
+    example_files=[],
+)
 
-if not _included_from_parent:
-    allow_k8s_contexts(['orbstack', 'docker-desktop', 'minikube', 'kind-kind', 'rancher-desktop'])
-
-namespace = os.getenv('SERVICE_NAMESPACE', 'platform-api')
-os.putenv('SERVICE_NAMESPACE', namespace)
-
-settings = read_yaml('tilt_config.yaml')
-is_local = os.getenv('TILT_ENV', 'local') == 'local'
-
-# Load test and example runners
-load_dynamic('./dev/Tiltfile.tests')
+include_if_exists('./dev/Tiltfile.tests')

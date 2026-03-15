@@ -1,61 +1,59 @@
 # Tiltfile.tests - @diskd/sdk test and example runners
 # All resources are manual-trigger only (no auto-init, no file watch).
 
-is_local = os.getenv('TILT_ENV', 'local') == 'local'
 namespace = os.getenv('SERVICE_NAMESPACE', 'platform-api')
 _ns = namespace + '__'
 _label_base = namespace
 
-if is_local:
-    # -------------------------------------------------------------------------
-    # Unit tests (no external dependencies)
-    # -------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+# Unit tests (no external dependencies)
+# -------------------------------------------------------------------------
 
-    local_resource(
-        _ns + 'test',
-        dir='..',
-        cmd='npm run test',
-        labels=[_label_base + '.tests'],
-        auto_init=False,
-        trigger_mode=TRIGGER_MODE_MANUAL,
-    )
+local_resource(
+    _ns + 'test',
+    dir='..',
+    cmd='npm run test',
+    labels=[_label_base + '.tests'],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL,
+)
 
-    # -------------------------------------------------------------------------
-    # Integration examples (require Drive service running)
-    # -------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+# Integration examples (require Drive service running)
+# -------------------------------------------------------------------------
 
-    local_resource(
-        _ns + 'example-session-internal',
-        dir='..',
-        cmd='npm run examples:session-internal',
-        labels=[_label_base + '.examples'],
-        auto_init=False,
-        trigger_mode=TRIGGER_MODE_MANUAL,
-    )
+local_resource(
+    _ns + 'example-session-internal',
+    dir='..',
+    cmd='npm run examples:session-internal',
+    labels=[_label_base + '.examples'],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL,
+)
 
-    local_resource(
-        _ns + 'example-session-external',
-        dir='..',
-        cmd='npm run examples:session-external',
-        labels=[_label_base + '.examples'],
-        auto_init=False,
-        trigger_mode=TRIGGER_MODE_MANUAL,
-    )
+local_resource(
+    _ns + 'example-session-external',
+    dir='..',
+    cmd='npm run examples:session-external',
+    labels=[_label_base + '.examples'],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL,
+)
 
-    local_resource(
-        _ns + 'example-drive-tree',
-        dir='..',
-        cmd='npm run examples:tree',
-        labels=[_label_base + '.examples'],
-        auto_init=False,
-        trigger_mode=TRIGGER_MODE_MANUAL,
-    )
+local_resource(
+    _ns + 'example-drive-tree',
+    dir='..',
+    cmd='npm run examples:tree',
+    labels=[_label_base + '.examples'],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL,
+)
 
-    local_resource(
-        _ns + 'example-smoke',
-        dir='..',
-        cmd='npm run examples:smoke',
-        labels=[_label_base + '.examples'],
-        auto_init=False,
-        trigger_mode=TRIGGER_MODE_MANUAL,
-    )
+local_resource(
+    _ns + 'example-smoke',
+    dir='..',
+    cmd='npm run examples:smoke',
+    labels=[_label_base + '.examples'],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL,
+)
