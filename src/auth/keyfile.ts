@@ -3,6 +3,7 @@ type KeyfileJson = {
   readonly clientId: string;
   readonly clientSecret: string;
   readonly audience: string;
+  readonly apisUrl?: string;
 };
 
 const isObject = (value: unknown): value is { readonly [key: string]: unknown } =>
@@ -14,6 +15,11 @@ const readRequiredString = (obj: { readonly [key: string]: unknown }, key: strin
     throw new Error(`Invalid credentials.json: '${key}' must be a non-empty string`);
   }
   return value;
+};
+
+const readOptionalString = (obj: { readonly [key: string]: unknown }, key: string): string | undefined => {
+  const value = obj[key];
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
 };
 
 export const readKeyfileFromPath = async (keyfilePath: string): Promise<KeyfileJson> => {
@@ -28,5 +34,6 @@ export const readKeyfileFromPath = async (keyfilePath: string): Promise<KeyfileJ
     clientId: readRequiredString(data, 'clientId'),
     clientSecret: readRequiredString(data, 'clientSecret'),
     audience: readRequiredString(data, 'audience'),
+    apisUrl: readOptionalString(data, 'apisUrl'),
   };
 };

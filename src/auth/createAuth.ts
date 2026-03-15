@@ -39,6 +39,11 @@ export const createAuth = async (params: SdkCreateParams): Promise<AuthModule> =
   if (hasKeyfilePath(params)) {
     const keyfile = await readKeyfileFromPath(params.keyfilePath);
 
+    // Set DISKD_BASE_URL from credentials if not already set
+    if (keyfile.apisUrl && !process.env.DISKD_BASE_URL) {
+      process.env.DISKD_BASE_URL = keyfile.apisUrl;
+    }
+
     const getAccessToken = async (): Promise<string> => {
       if (token) return token.accessToken;
       const disc = await ensureDiscovery(keyfile.issuer);
