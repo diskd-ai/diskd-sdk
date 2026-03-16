@@ -513,7 +513,7 @@ test('drive.tools.writeFile sends paths/tools/write with path and content', asyn
         result: { success: true, inode: 'inode-abc', path: '/docs/readme.md' },
         id: 1,
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   };
   (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
@@ -560,7 +560,7 @@ test('drive.tools.applyPatch sends paths/tools/apply-patch with path and patch',
         result: { success: true, inode: 'inode-xyz', path: '/docs/readme.md' },
         id: 1,
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   };
   (globalThis as { fetch: typeof fetch }).fetch = fetchMock;

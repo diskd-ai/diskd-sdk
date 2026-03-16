@@ -146,8 +146,7 @@ export const createAgentHubClient = (params: {
 }): AgentHubClient => {
   const baseUrl = (params.url ?? resolveDiskdGatewayUrl('os/agents')).replace(/\/+$/, '');
 
-  const resolveWorkspaceId = async (): Promise<string> =>
-    await params.auth.getWorkspaceId();
+  const resolveWorkspaceId = async (): Promise<string> => await params.auth.getWorkspaceId();
 
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
     if (params.auth.getRequestHeaders) {

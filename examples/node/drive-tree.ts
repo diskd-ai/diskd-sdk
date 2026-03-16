@@ -145,9 +145,7 @@ type TreeNode = {
 // Recursive fetcher (effectful - isolated at edge)
 // ---------------------------------------------------------------------------
 
-type DriveList = (params?: {
-  readonly path?: string;
-}) => Promise<readonly DrivePathEntry[]>;
+type DriveList = (params?: { readonly path?: string }) => Promise<readonly DrivePathEntry[]>;
 
 const fetchTree = async (
   list: DriveList,
@@ -163,9 +161,7 @@ const fetchTree = async (
   for (const entry of entries) {
     const childPath = parentPath === '/' ? `/${entry.name}` : `${parentPath}/${entry.name}`;
     const children =
-      entry.type === 'dir'
-        ? await fetchTree(list, childPath, depth + 1, currentMaxDepth)
-        : [];
+      entry.type === 'dir' ? await fetchTree(list, childPath, depth + 1, currentMaxDepth) : [];
     nodes.push({ entry, children });
   }
   return nodes;

@@ -10,8 +10,11 @@ import type { DriveDataSource, DriveDataSourceParams } from '../drive/typeorm/da
 import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import { createLlmRouterClient } from '../llmRouter/llmRouter.js';
 import { createMcpHubClient } from '../mcpHub/mcpHub.js';
+import { createMcpToolsClient } from '../mcpTools/mcpTools.js';
 import { createOperativesClient } from '../operatives/operatives.js';
 import { createPlatformEventsClient } from '../platformEvents/platformEvents.js';
+import { createProjectsClient } from '../projects/projects.js';
+import { createRoutineRunsClient } from '../routineRuns/routineRuns.js';
 import { createRoutinesClient } from '../routines/routines.js';
 import { createTgUserbotClient } from '../tgUserbot/tgUserbot.js';
 import { createWebNavigatorClient } from '../webNavigator/webNavigator.js';
@@ -59,6 +62,8 @@ export const diskd: DiskD = {
     llm: ({ auth, url }) => createLlmRouterClient({ auth, url }),
 
     mcp: ({ auth, url }) => createMcpHubClient({ auth, url }),
+
+    mcpTools: ({ auth, url, profileId }) => createMcpToolsClient({ auth, url, profileId }),
 
     agents: ({ auth, url }) => createAgentHubClient({ auth, url }),
   },
@@ -123,9 +128,13 @@ export const diskd: DiskD = {
       return scopedClient;
     },
 
+    routineRuns: ({ auth, url }) => createRoutineRunsClient({ auth, url }),
+
     routines: ({ auth, url }) => createRoutinesClient({ auth, url }),
 
     operatives: ({ auth, url }) => createOperativesClient({ auth, url }),
+
+    projects: ({ auth, url }) => createProjectsClient({ auth, url }),
 
     events: ({ auth, url }) => {
       const eventsUrl = url ?? resolveDiskdGatewayUrl('platform/events');

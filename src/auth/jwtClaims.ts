@@ -10,9 +10,10 @@ export const extractWorkspaceId = (accessToken: string): string => {
   const claims: Record<string, unknown> = JSON.parse(decoded);
 
   // ext.workspace_id (Hydra token hook) > workspace_id (top-level) > sub (client_id = workspace_id)
-  const ext = typeof claims.ext === 'object' && claims.ext !== null
-    ? (claims.ext as Record<string, unknown>)
-    : {};
+  const ext =
+    typeof claims.ext === 'object' && claims.ext !== null
+      ? (claims.ext as Record<string, unknown>)
+      : {};
   const workspaceId =
     (typeof ext.workspace_id === 'string' && ext.workspace_id) ||
     (typeof claims.workspace_id === 'string' && claims.workspace_id) ||

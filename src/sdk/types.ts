@@ -8,8 +8,11 @@ import type { DriveDataSource, DriveDataSourceParams } from '../drive/typeorm/da
 import type { DriveClient } from '../drive/types.js';
 import type { LlmRouterClient } from '../llmRouter/llmRouterTypes.js';
 import type { McpHubClient } from '../mcpHub/mcpHubTypes.js';
+import type { McpToolsClient } from '../mcpTools/mcpToolsTypes.js';
 import type { OperativesClient } from '../operatives/operativesTypes.js';
 import type { PlatformEventsClient } from '../platformEvents/platformEventsTypes.js';
+import type { ProjectsClient } from '../projects/projectsTypes.js';
+import type { RoutineRunsClient } from '../routineRuns/routineRunsTypes.js';
 import type { RoutinesClient } from '../routines/routinesTypes.js';
 import type { TgUserbotClient } from '../tgUserbot/tgUserbotTypes.js';
 import type { WebNavigatorClient } from '../webNavigator/webNavigatorTypes.js';
@@ -42,10 +45,13 @@ export type DiskD = {
 
     readonly llm: (params: { readonly auth: AuthModule; readonly url?: string }) => LlmRouterClient;
 
-    readonly mcp: (params: {
+    readonly mcp: (params: { readonly auth: AuthModule; readonly url?: string }) => McpHubClient;
+
+    readonly mcpTools: (params: {
       readonly auth: AuthModule;
       readonly url?: string;
-    }) => McpHubClient;
+      readonly profileId?: string;
+    }) => McpToolsClient;
 
     readonly agents: (params: {
       readonly auth: AuthModule;
@@ -67,6 +73,11 @@ export type DiskD = {
       readonly url?: string;
     }) => DriveScopedCrontabClient;
 
+    readonly routineRuns: (params: {
+      readonly auth: AuthModule;
+      readonly url?: string;
+    }) => RoutineRunsClient;
+
     readonly routines: (params: {
       readonly auth: AuthModule;
       readonly url?: string;
@@ -76,6 +87,11 @@ export type DiskD = {
       readonly auth: AuthModule;
       readonly url?: string;
     }) => OperativesClient;
+
+    readonly projects: (params: {
+      readonly auth: AuthModule;
+      readonly url?: string;
+    }) => ProjectsClient;
 
     readonly events: (params: {
       readonly auth: AuthModule;

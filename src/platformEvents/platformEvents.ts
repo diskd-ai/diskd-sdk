@@ -42,9 +42,7 @@ const decodePublishResult = (raw: unknown): PublishEventResult => {
 // Auth header resolution
 // ---------------------------------------------------------------------------
 
-const resolveAuthHeaders = async (
-  auth: AuthModule
-): Promise<Record<string, string>> => {
+const resolveAuthHeaders = async (auth: AuthModule): Promise<Record<string, string>> => {
   if (auth.getRequestHeaders) {
     return auth.getRequestHeaders();
   }
@@ -71,12 +69,9 @@ export type CreatePlatformEventsClientParams = {
 export const createPlatformEventsClient = (
   params: CreatePlatformEventsClientParams
 ): PlatformEventsClient => {
-  const baseUrl =
-    params.url ?? resolveDiskdGatewayUrl('platform/events');
+  const baseUrl = params.url ?? resolveDiskdGatewayUrl('platform/events');
 
-  const publish = async (
-    eventParams: PublishEventParams
-  ): Promise<PublishEventResult> => {
+  const publish = async (eventParams: PublishEventParams): Promise<PublishEventResult> => {
     const authHeaders = await resolveAuthHeaders(params.auth);
     const workspaceId = resolveWorkspaceId(params.auth);
 

@@ -17,7 +17,10 @@ const readRequiredString = (obj: { readonly [key: string]: unknown }, key: strin
   return value;
 };
 
-const readOptionalString = (obj: { readonly [key: string]: unknown }, key: string): string | undefined => {
+const readOptionalString = (
+  obj: { readonly [key: string]: unknown },
+  key: string
+): string | undefined => {
   const value = obj[key];
   return typeof value === 'string' && value.length > 0 ? value : undefined;
 };

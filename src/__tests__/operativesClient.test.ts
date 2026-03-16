@@ -103,7 +103,7 @@ const makeAuth = (): AuthModule => ({
   handleRedirectCallback: async () => {},
   getAccessToken: async () => 'token-123',
   getToken: () => ({ accessToken: 'token-123' }),
-    getWorkspaceId: async () => 'test-workspace',
+  getWorkspaceId: async () => 'test-workspace',
 });
 
 const withFetchMock = async (

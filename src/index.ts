@@ -247,6 +247,15 @@ export type {
 } from './llmRouter/llmRouterTypes.js';
 // -- MCP Hub --
 export { createMcpHubClient } from './mcpHub/mcpHub.js';
+// -- MCP Tools --
+export { createMcpToolsClient, mcpToolName } from './mcpTools/mcpTools.js';
+export type {
+  McpGatewayTool,
+  McpGatewayToolInputSchema,
+  McpToolCallContentItem,
+  McpToolCallResult,
+  McpToolsClient,
+} from './mcpTools/mcpToolsTypes.js';
 export type {
   CatalogListResult,
   CatalogQueryParams,
@@ -288,6 +297,25 @@ export type {
   OperativeTrustLevel,
   OperativeUpdateParams,
 } from './operatives/operativesTypes.js';
+// -- Projects --
+export { createProjectsClient } from './projects/projects.js';
+export type {
+  Project,
+  ProjectCreateParams,
+  ProjectDetailed,
+  ProjectsClient,
+  ProjectUpdateParams,
+} from './projects/projectsTypes.js';
+// -- Routine Runs --
+export { createRoutineRunsClient } from './routineRuns/routineRuns.js';
+export type {
+  RoutineRun,
+  RoutineRunErrorTag,
+  RoutineRunGetParams,
+  RoutineRunListParams,
+  RoutineRunsClient,
+  RoutineRunStatus,
+} from './routineRuns/routineRunsTypes.js';
 // -- Routines --
 export { createRoutinesClient } from './routines/routines.js';
 export type {

@@ -145,9 +145,7 @@ const decodeDeleteResult = (o: unknown): DriveDeleteResult => {
   const r = raw(o);
   return {
     success: bool(r, 'success', false),
-    ids: Array.isArray(r.inodes)
-      ? r.inodes.filter((x): x is string => typeof x === 'string')
-      : [],
+    ids: Array.isArray(r.inodes) ? r.inodes.filter((x): x is string => typeof x === 'string') : [],
     size: numRequired(r, 'size'),
   };
 };
