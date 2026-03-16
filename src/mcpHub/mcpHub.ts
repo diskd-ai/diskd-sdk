@@ -177,9 +177,12 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
 export const createMcpHubClient = (params: {
   readonly auth: AuthModule;
   readonly url?: string;
-  readonly workspaceId: string;
+  readonly workspaceId?: string;
 }): McpHubClient => {
   const baseUrl = (params.url ?? resolveDiskdGatewayUrl('os/mcp')).replace(/\/+$/, '');
+
+  const resolveWorkspaceId = async (): Promise<string | undefined> =>
+    params.workspaceId ?? (await params.auth.getWorkspaceId());
 
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
     if (params.auth.getRequestHeaders) {
@@ -204,7 +207,7 @@ export const createMcpHubClient = (params: {
       method,
       url: `${baseUrl}${path}${qs}`,
       authHeaders,
-      workspaceId: opts.withWorkspace !== false ? params.workspaceId : undefined,
+      workspaceId: opts.withWorkspace !== false ? await resolveWorkspaceId() : undefined,
       body: opts.body,
     });
   };

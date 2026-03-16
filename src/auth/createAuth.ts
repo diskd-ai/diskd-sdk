@@ -1,3 +1,4 @@
+import { extractWorkspaceId } from './jwtClaims.js';
 import { readKeyfileFromPath } from './keyfile.js';
 import { fetchOidcDiscovery } from './oidcDiscovery.js';
 import { createPkceChallenge, createPkceState, createPkceVerifier } from './pkce.js';
@@ -66,6 +67,7 @@ export const createAuth = async (params: SdkCreateParams): Promise<AuthModule> =
       handleRedirectCallback: async () => {},
       getAccessToken,
       getToken: () => token,
+      getWorkspaceId: async () => extractWorkspaceId(await getAccessToken()),
     };
   }
 
@@ -148,5 +150,6 @@ export const createAuth = async (params: SdkCreateParams): Promise<AuthModule> =
     handleRedirectCallback,
     getAccessToken,
     getToken: () => token,
+    getWorkspaceId: async () => extractWorkspaceId(await getAccessToken()),
   };
 };

@@ -102,7 +102,7 @@ export type ScrapeResult = {
 
 export type ScrapeJob = {
   readonly id: string;
-  readonly workspaceId: string;
+  readonly workspaceId?: string;
   readonly request: ScrapeParams;
   readonly status: JobStatus;
   readonly result?: ScrapeResult;

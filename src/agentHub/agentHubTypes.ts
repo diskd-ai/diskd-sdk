@@ -32,6 +32,8 @@ export type AgentInvokeContext = {
   readonly user?: {
     readonly id: string;
     readonly name?: string;
+    readonly email?: string;
+    readonly workspaceId?: string;
   };
   readonly chatSessionId?: string;
 };

@@ -141,9 +141,12 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
 export const createAgentHubClient = (params: {
   readonly auth: AuthModule;
   readonly url?: string;
-  readonly workspaceId: string;
+  readonly workspaceId?: string;
 }): AgentHubClient => {
   const baseUrl = (params.url ?? resolveDiskdGatewayUrl('os/agents')).replace(/\/+$/, '');
+
+  const resolveWorkspaceId = async (): Promise<string> =>
+    params.workspaceId ?? (await params.auth.getWorkspaceId());
 
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
     if (params.auth.getRequestHeaders) {
@@ -162,12 +165,13 @@ export const createAgentHubClient = (params: {
     } = {}
   ): Promise<T> => {
     const authHeaders = await getAuthHeaders();
+    const workspaceId = await resolveWorkspaceId();
     const qs = opts.query ? buildQueryString(opts.query) : '';
     return httpRequest<T>({
       method,
       url: `${baseUrl}${path}${qs}`,
       authHeaders,
-      workspaceId: params.workspaceId,
+      workspaceId,
       body: opts.body,
     });
   };
@@ -175,13 +179,27 @@ export const createAgentHubClient = (params: {
   return {
     invoke: async (invokeParams: AgentHubInvokeParams) => {
       const authHeaders = await getAuthHeaders();
+      const workspaceId = await resolveWorkspaceId();
+
+      // Auto-inject workspaceId into context.user from auth token claims
+      const user = invokeParams.context?.user;
+      const enrichedContext: AgentHubInvokeParams['context'] = {
+        ...invokeParams.context,
+        user: {
+          id: user?.id ?? workspaceId,
+          name: user?.name,
+          email: user?.email,
+          workspaceId: user?.workspaceId ?? workspaceId,
+        },
+      };
+
       return StreamProtocolFetcher.fetchStream(`${baseUrl}/invoke`, {
         method: 'POST',
         headers: {
           ...authHeaders,
-          'X-Workspace-Id': params.workspaceId,
+          'X-Workspace-Id': workspaceId,
         },
-        body: invokeParams,
+        body: { ...invokeParams, context: enrichedContext },
       });
     },
 

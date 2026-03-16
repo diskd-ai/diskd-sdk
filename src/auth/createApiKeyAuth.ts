@@ -22,6 +22,7 @@ export const createApiKeyAuth = (params: ApiKeyAuthParams): AuthModule => {
     handleRedirectCallback: async () => {},
     getAccessToken: async () => params.apiKey,
     getToken: () => ({ accessToken: params.apiKey }),
+    getWorkspaceId: async () => params.workspaceId,
     getRequestHeaders: async () => headers,
   };
 };

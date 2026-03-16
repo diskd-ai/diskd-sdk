@@ -33,9 +33,12 @@ import type {
 export const createWebNavigatorClient = (params: {
   readonly auth: AuthModule;
   readonly url?: string;
-  readonly workspaceId: string;
+  readonly workspaceId?: string;
 }): WebNavigatorClient => {
   const baseUrl = (params.url ?? resolveDiskdGatewayUrl('utils/web-navigator')).replace(/\/+$/, '');
+
+  const resolveWorkspaceId = async (): Promise<string | undefined> =>
+    params.workspaceId ?? (await params.auth.getWorkspaceId());
 
   const request = async <T>(
     method: HttpMethod,
@@ -50,7 +53,7 @@ export const createWebNavigatorClient = (params: {
         method,
         url: `${baseUrl}${path}`,
         authHeaders,
-        workspaceId: params.workspaceId,
+        workspaceId: await resolveWorkspaceId(),
         body: opts.body,
       },
       'Web Navigator'

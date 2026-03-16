@@ -26,6 +26,10 @@ export type AuthModule = {
   readonly handleRedirectCallback: () => Promise<void>;
   readonly getAccessToken: () => Promise<string>;
   readonly getToken: () => AuthToken | null;
+  /** Returns the workspace ID from the auth context.
+   *  OAuth: decoded from the JWT `ext.workspace_id` or `sub` claim.
+   *  API key: from the `workspaceId` constructor param. */
+  readonly getWorkspaceId: () => Promise<string>;
   /** Returns all auth-related headers for RPC calls.
    *  OAuth: { Authorization: 'Bearer ...' }
    *  API key: { 'X-Api-Key': '...', 'X-Workspace-Id': '...', ... }

@@ -32,7 +32,11 @@ const llm = diskd.os.llm({ auth });
 // -- models.listAll --
 try {
   const models = await llm.models.listAll();
-  h.ok('llm.models.listAll', `${models.models.length} model(s)`);
+  if (models.models.length > 0) {
+    h.ok('llm.models.listAll', `${models.models.length} model(s)`);
+  } else {
+    h.fail('llm.models.listAll', 'empty model list');
+  }
 } catch (err) {
   h.fail('llm.models.listAll', err);
 }
@@ -46,11 +50,15 @@ try {
       { role: 'system', content: 'You are a concise assistant. Reply in one sentence.' },
       { role: 'user', content: 'What is 2 + 2?' },
     ],
-    maxTokens: 64,
+    maxTokens: 1024,
     temperature: 0,
   });
   const reply = completion.choices[0]?.message?.content ?? '';
-  h.ok('llm.completions.create', `model=${completion.model}, reply="${reply.slice(0, 80)}"`);
+  if (reply.length > 0) {
+    h.ok('llm.completions.create', `model=${completion.model}, reply="${reply.slice(0, 80)}"`);
+  } else {
+    h.fail('llm.completions.create', 'empty response content');
+  }
 } catch (err) {
   h.fail('llm.completions.create', err);
 }
@@ -62,13 +70,17 @@ try {
     provider: 'upgraide',
     model: 'small',
     messages: [{ role: 'user', content: 'Say "hello" and nothing else.' }],
-    maxTokens: 16,
+    maxTokens: 1024,
     temperature: 0,
   })) {
     const delta = chunk.choices[0]?.delta?.content;
     if (delta) streamedText += delta;
   }
-  h.ok('llm.completions.stream', `streamed ${streamedText.length} chars: "${streamedText.trim()}"`);
+  if (streamedText.trim().length > 0) {
+    h.ok('llm.completions.stream', `streamed: "${streamedText.trim().slice(0, 80)}"`);
+  } else {
+    h.fail('llm.completions.stream', 'empty stream (0 chars)');
+  }
 } catch (err) {
   h.fail('llm.completions.stream', err);
 }

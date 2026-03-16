@@ -116,5 +116,12 @@ export const createAuth = async (params: SdkCreateParams): Promise<AuthModule> =
     handleRedirectCallback,
     getAccessToken,
     getToken: () => token,
+    getWorkspaceId: async () => {
+      const t = await getAccessToken();
+      const parts = t.split('.');
+      if (parts.length !== 3) throw new Error('Invalid JWT');
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      return payload?.ext?.workspace_id ?? payload?.workspace_id ?? payload?.sub ?? '';
+    },
   };
 };

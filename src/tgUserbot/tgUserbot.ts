@@ -293,9 +293,12 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
 export const createTgUserbotClient = (params: {
   readonly auth: AuthModule;
   readonly url?: string;
-  readonly workspaceId: string;
+  readonly workspaceId?: string;
 }): TgUserbotClient => {
   const baseUrl = (params.url ?? resolveDiskdGatewayUrl('utils/tg-userbot')).replace(/\/+$/, '');
+
+  const resolveWorkspaceId = async (): Promise<string | undefined> =>
+    params.workspaceId ?? (await params.auth.getWorkspaceId());
 
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
     if (params.auth.getRequestHeaders) {
@@ -320,7 +323,7 @@ export const createTgUserbotClient = (params: {
       method,
       url: `${baseUrl}${path}${qs}`,
       authHeaders,
-      workspaceId: opts.withWorkspace !== false ? params.workspaceId : undefined,
+      workspaceId: opts.withWorkspace !== false ? await resolveWorkspaceId() : undefined,
       body: opts.body,
     });
   };

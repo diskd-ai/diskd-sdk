@@ -43,13 +43,13 @@ export type DiskD = {
 
     readonly mcp: (params: {
       readonly auth: AuthModule;
-      readonly workspaceId: string;
+      readonly workspaceId?: string;
       readonly url?: string;
     }) => McpHubClient;
 
     readonly agents: (params: {
       readonly auth: AuthModule;
-      readonly workspaceId: string;
+      readonly workspaceId?: string;
       readonly url?: string;
     }) => AgentHubClient;
   };
@@ -82,13 +82,13 @@ export type DiskD = {
   readonly utils: {
     readonly tgUserBot: (params: {
       readonly auth: AuthModule;
-      readonly workspaceId: string;
+      readonly workspaceId?: string;
       readonly url?: string;
     }) => TgUserbotClient;
 
     readonly webNavigator: (params: {
       readonly auth: AuthModule;
-      readonly workspaceId: string;
+      readonly workspaceId?: string;
       readonly url?: string;
     }) => WebNavigatorClient;
   };

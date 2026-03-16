@@ -32,6 +32,7 @@ const bearerAuth: AuthModule = {
   handleRedirectCallback: async () => {},
   getAccessToken: async () => API_KEY,
   getToken: () => ({ accessToken: API_KEY }),
+  getWorkspaceId: async () => WORKSPACE_ID,
   getRequestHeaders: async () => ({
     Authorization: `Bearer ${API_KEY}`,
     'X-Workspace-Id': WORKSPACE_ID,
@@ -58,7 +59,7 @@ try {
     provider: 'upgraide',
     model: 'small',
     messages: [{ role: 'user', content: 'Hello, who are you?' }],
-    maxTokens: 128,
+    maxTokens: 1024,
   });
   const reply = completion.choices[0]?.message?.content ?? '';
   if (reply.length > 0) {
@@ -77,7 +78,7 @@ try {
     provider: 'upgraide',
     model: 'small',
     messages: [{ role: 'user', content: 'Count from 1 to 5.' }],
-    maxTokens: 64,
+    maxTokens: 1024,
   })) {
     const delta = chunk.choices[0]?.delta?.content;
     if (delta) streamedText += delta;

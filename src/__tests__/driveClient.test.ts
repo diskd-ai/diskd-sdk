@@ -26,6 +26,7 @@ test('drive.init calls JSON-RPC with Bearer token', async () => {
     handleRedirectCallback: async () => {},
     getAccessToken: async () => 'token-123',
     getToken: () => ({ accessToken: 'token-123' }),
+    getWorkspaceId: async () => 'test-workspace',
   };
 
   try {
@@ -76,6 +77,7 @@ test('drive.crontab.getStatus uses the drive JSON-RPC endpoint', async () => {
     handleRedirectCallback: async () => {},
     getAccessToken: async () => 'token-123',
     getToken: () => ({ accessToken: 'token-123' }),
+    getWorkspaceId: async () => 'test-workspace',
   };
 
   try {
@@ -132,6 +134,7 @@ test('diskd.platform.crontab binds scope + timezone in the constructor', async (
     handleRedirectCallback: async () => {},
     getAccessToken: async () => 'token-123',
     getToken: () => ({ accessToken: 'token-123' }),
+    getWorkspaceId: async () => 'test-workspace',
   };
 
   try {
@@ -195,6 +198,7 @@ test('diskd.platform.crontab defaults timezone from the caller runtime', async (
     handleRedirectCallback: async () => {},
     getAccessToken: async () => 'token-123',
     getToken: () => ({ accessToken: 'token-123' }),
+    getWorkspaceId: async () => 'test-workspace',
   };
 
   try {
@@ -260,6 +264,7 @@ test('diskd.platform.sessions.list uses the drive JSON-RPC endpoint', async () =
     handleRedirectCallback: async () => {},
     getAccessToken: async () => 'token-123',
     getToken: () => ({ accessToken: 'token-123' }),
+    getWorkspaceId: async () => 'test-workspace',
   };
 
   try {
@@ -300,6 +305,7 @@ test('diskd exposes namespaced os and utils factories for non-drive services', (
     handleRedirectCallback: async () => {},
     getAccessToken: async () => 'token-123',
     getToken: () => ({ accessToken: 'token-123' }),
+    getWorkspaceId: async () => 'test-workspace',
   };
 
   const llm = diskd.os.llm({ auth, url: 'http://llm-router:3000' });
@@ -399,6 +405,7 @@ test('resource clients derive gateway paths from SDK namespaces', async () => {
     handleRedirectCallback: async () => {},
     getAccessToken: async () => 'token-123',
     getToken: () => ({ accessToken: 'token-123' }),
+    getWorkspaceId: async () => 'test-workspace',
   };
 
   try {
@@ -464,6 +471,7 @@ test('drive.tools.readFile sends paths/tools/read and decodes parts', async () =
     handleRedirectCallback: async () => {},
     getAccessToken: async () => 'token-123',
     getToken: () => ({ accessToken: 'token-123' }),
+    getWorkspaceId: async () => 'test-workspace',
   };
 
   try {
@@ -517,6 +525,7 @@ test('drive.tools.writeFile sends paths/tools/write with path and content', asyn
     handleRedirectCallback: async () => {},
     getAccessToken: async () => 'token-123',
     getToken: () => ({ accessToken: 'token-123' }),
+    getWorkspaceId: async () => 'test-workspace',
   };
 
   try {
@@ -563,6 +572,7 @@ test('drive.tools.applyPatch sends paths/tools/apply-patch with path and patch',
     handleRedirectCallback: async () => {},
     getAccessToken: async () => 'token-123',
     getToken: () => ({ accessToken: 'token-123' }),
+    getWorkspaceId: async () => 'test-workspace',
   };
 
   const patchContent = '--- a/readme.md\n+++ b/readme.md\n@@ -1 +1 @@\n-old\n+new';

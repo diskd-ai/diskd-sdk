@@ -32,6 +32,7 @@ const bearerAuth: AuthModule = {
   handleRedirectCallback: async () => {},
   getAccessToken: async () => API_KEY,
   getToken: () => ({ accessToken: API_KEY }),
+  getWorkspaceId: async () => WORKSPACE_ID,
   getRequestHeaders: async () => ({
     Authorization: `Bearer ${API_KEY}`,
     'X-Workspace-Id': WORKSPACE_ID,
