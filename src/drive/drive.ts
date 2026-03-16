@@ -8,11 +8,6 @@ import type {
   DriveDownloadFileResult,
   DriveDownloadUrlResult,
   DriveFileMetadata,
-  DriveIndexerListResult,
-  DriveIndexerStartResult,
-  DriveIndexerStatusBatchResult,
-  DriveIndexerStatusResult,
-  DriveIndexerStopResult,
   DrivePathEntry,
   DrivePathMutationResult,
   DrivePathType,
@@ -23,8 +18,6 @@ import type {
   DriveUploadCommitResult,
   DriveUploadFileResult,
   DriveUploadStartResult,
-  DriveUploadTgEntityResult,
-  DriveUploadWebUrlResult,
 } from './driveTypes.js';
 import { jsonRpcCall } from './rpc.js';
 import { createDriveSessionClient } from './session.js';
@@ -245,58 +238,6 @@ const decodeWriteResult = (o: unknown): DriveToolsWriteResult => {
   };
 };
 
-const decodeIndexerStart = (o: unknown): DriveIndexerStartResult => {
-  const r = raw(o);
-  return {
-    success: bool(r, 'success', false),
-    jobId: strRequired(r, 'job_id'),
-  };
-};
-
-const decodeIndexerStop = (o: unknown): DriveIndexerStopResult => {
-  const r = raw(o);
-  return { success: bool(r, 'success', false) };
-};
-
-const decodeIndexerStatus = (o: unknown): DriveIndexerStatusResult => {
-  const r = raw(o);
-  return {
-    jobId: str(r, 'job_id') ?? '',
-    status: str(r, 'status') ?? 'pending',
-    message: str(r, 'message') ?? undefined,
-    error: str(r, 'error') ?? undefined,
-  };
-};
-
-const decodeIndexerStatusBatch = (o: unknown): DriveIndexerStatusBatchResult => {
-  const r = raw(o);
-  const arr = r.statuses;
-  if (!Array.isArray(arr)) return { statuses: [] };
-  return { statuses: arr.map(decodeIndexerStatus) };
-};
-
-const decodeIndexerList = (o: unknown): DriveIndexerListResult => {
-  const r = raw(o);
-  const arr = r.jobs ?? r.items;
-  if (Array.isArray(arr)) {
-    return { jobs: arr.filter(isObject) };
-  }
-  return { jobs: [] };
-};
-
-const decodeUploadResult = (
-  o: unknown
-): DriveUploadWebUrlResult | DriveUploadTgEntityResult => {
-  const r = raw(o);
-  return {
-    id: strRequired(r, 'inode'),
-    parentId: str(r, 'parent_inode') ?? '',
-    etag: str(r, 'etag') ?? '',
-    version: num(r, 'version') ?? 1,
-    committedAt: str(r, 'committed_at') ?? '',
-  };
-};
-
 // ---------------------------------------------------------------------------
 // Encode helpers (domain params -> wire snake_case)
 // ---------------------------------------------------------------------------
@@ -512,28 +453,6 @@ export const createDriveClient = (params: {
         });
         return decodeUploadCommit(result);
       },
-
-      webUrl: async (p) => {
-        const result = await call('drive/upload/web-url', {
-          url: p.url,
-          ...optional('parent_path', p.parentPath),
-          ...optional('name', p.name),
-          ...optional('scrape_depth', p.scrapeDepth),
-          ...optional('scrape_timeout', p.scrapeTimeout),
-          ...optional('scrape_delay', p.scrapeDelay),
-          ...optional('scrape_retries', p.scrapeRetries),
-        });
-        return decodeUploadResult(result);
-      },
-
-      tgEntity: async (p) => {
-        const result = await call('drive/upload/tg-entity', {
-          entity_id: p.entityId,
-          ...optional('parent_path', p.parentPath),
-          ...optional('name', p.name),
-        });
-        return decodeUploadResult(result);
-      },
     },
 
     // -- Download --
@@ -677,81 +596,6 @@ export const createDriveClient = (params: {
           patch: p.patch,
         });
         return decodeWriteResult(result);
-      },
-
-      biQuery: async (p) => {
-        const result = await call('paths/tools/bi-query', {
-          query: p.query,
-          paths: [...p.paths],
-        });
-        return decodeToolsResult(result);
-      },
-
-      inodesQuery: async (p) => {
-        const result = await call('paths/tools/inodes-query', {
-          query: p.query,
-          paths: [...p.paths],
-          ...optional('date_start', p.dateStart),
-          ...optional('date_end', p.dateEnd),
-          ...optional('order_by', p.orderBy),
-          ...optional('limit', p.limit),
-          ...optional('offset', p.offset),
-        });
-        return decodeToolsResult(result);
-      },
-
-      tgSearch: async (p) => {
-        const result = await call('paths/tools/tg-search', {
-          database_path: p.databasePath,
-          ...optional('query', p.query),
-          ...optional('limit', p.limit),
-          ...optional('offset', p.offset),
-          ...optional('date_start', p.dateStart),
-          ...optional('date_end', p.dateEnd),
-          ...optional('order_by', p.orderBy),
-        });
-        return decodeToolsResult(result);
-      },
-
-      inodeLs: async (p) => {
-        const result = await call('paths/tools/inode-ls', {
-          ...optional('path', p.path),
-          ...optional('parent_inode', p.parentInode),
-        });
-        return decodeToolsResult(result);
-      },
-    },
-
-    // -- Indexer --
-    indexer: {
-      start: async (p) => {
-        const result = await call('drive/indexer/start', { path: p.path });
-        return decodeIndexerStart(result);
-      },
-
-      stop: async (p) => {
-        const result = await call('drive/indexer/stop', { job_id: p.jobId });
-        return decodeIndexerStop(result);
-      },
-
-      status: async (p) => {
-        const result = await call('drive/indexer/status', { job_id: p.jobId });
-        return decodeIndexerStatus(result);
-      },
-
-      statusBatch: async (p) => {
-        const result = await call('drive/indexer/status-batch', {
-          job_ids: [...p.jobIds],
-        });
-        return decodeIndexerStatusBatch(result);
-      },
-
-      list: async (p) => {
-        const result = await call('drive/indexer/list', {
-          ...optional('status', p?.status),
-          ...optional('limit', p?.limit),
-        });
-        return decodeIndexerList(result);
       },
     },
 
