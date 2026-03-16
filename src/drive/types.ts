@@ -12,17 +12,31 @@ import type {
   DriveFileMetadata,
   DriveFileMetadataBatchParams,
   DriveFileMetadataParams,
+  DriveIndexerListParams,
+  DriveIndexerListResult,
+  DriveIndexerStartParams,
+  DriveIndexerStartResult,
+  DriveIndexerStatusBatchParams,
+  DriveIndexerStatusBatchResult,
+  DriveIndexerStatusParams,
+  DriveIndexerStatusResult,
+  DriveIndexerStopParams,
+  DriveIndexerStopResult,
   DrivePathEntry,
   DrivePathMutationResult,
   DriveReadFileResult,
   DriveRenameParams,
   DriveResolveParams,
   DriveToolsApplyPatchParams,
+  DriveToolsBiQueryParams,
   DriveToolsGlobParams,
   DriveToolsGrepParams,
+  DriveToolsInodeLsParams,
+  DriveToolsInodesQueryParams,
   DriveToolsLsParams,
   DriveToolsReadFileParams,
   DriveToolsResult,
+  DriveToolsTgSearchParams,
   DriveToolsVsearchParams,
   DriveToolsWriteFileParams,
   DriveToolsWriteResult,
@@ -34,6 +48,10 @@ import type {
   DriveUploadFileResult,
   DriveUploadStartParams,
   DriveUploadStartResult,
+  DriveUploadTgEntityParams,
+  DriveUploadTgEntityResult,
+  DriveUploadWebUrlParams,
+  DriveUploadWebUrlResult,
 } from './driveTypes.js';
 import type { DriveSessionManager } from './sessionObject.js';
 
@@ -60,6 +78,8 @@ export type DriveClient = {
     readonly file: (params: DriveUploadFileParams) => Promise<DriveUploadFileResult>;
     readonly start: (params: DriveUploadStartParams) => Promise<DriveUploadStartResult>;
     readonly commit: (params: DriveUploadCommitParams) => Promise<DriveUploadCommitResult>;
+    readonly webUrl: (params: DriveUploadWebUrlParams) => Promise<DriveUploadWebUrlResult>;
+    readonly tgEntity: (params: DriveUploadTgEntityParams) => Promise<DriveUploadTgEntityResult>;
   };
 
   // Download operations
@@ -88,6 +108,21 @@ export type DriveClient = {
     readonly readFile: (params: DriveToolsReadFileParams) => Promise<DriveReadFileResult>;
     readonly writeFile: (params: DriveToolsWriteFileParams) => Promise<DriveToolsWriteResult>;
     readonly applyPatch: (params: DriveToolsApplyPatchParams) => Promise<DriveToolsWriteResult>;
+    readonly biQuery: (params: DriveToolsBiQueryParams) => Promise<DriveToolsResult>;
+    readonly inodesQuery: (params: DriveToolsInodesQueryParams) => Promise<DriveToolsResult>;
+    readonly tgSearch: (params: DriveToolsTgSearchParams) => Promise<DriveToolsResult>;
+    readonly inodeLs: (params: DriveToolsInodeLsParams) => Promise<DriveToolsResult>;
+  };
+
+  // Indexer operations
+  readonly indexer: {
+    readonly start: (params: DriveIndexerStartParams) => Promise<DriveIndexerStartResult>;
+    readonly stop: (params: DriveIndexerStopParams) => Promise<DriveIndexerStopResult>;
+    readonly status: (params: DriveIndexerStatusParams) => Promise<DriveIndexerStatusResult>;
+    readonly statusBatch: (
+      params: DriveIndexerStatusBatchParams
+    ) => Promise<DriveIndexerStatusBatchResult>;
+    readonly list: (params?: DriveIndexerListParams) => Promise<DriveIndexerListResult>;
   };
 
   // Database operations (Drive DB -- SQLite via JSON-RPC)
