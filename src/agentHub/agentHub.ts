@@ -181,25 +181,13 @@ export const createAgentHubClient = (params: {
       const authHeaders = await getAuthHeaders();
       const workspaceId = await resolveWorkspaceId();
 
-      // Auto-inject workspaceId into context.user from auth token claims
-      const user = invokeParams.context?.user;
-      const enrichedContext: AgentHubInvokeParams['context'] = {
-        ...invokeParams.context,
-        user: {
-          id: user?.id ?? workspaceId,
-          name: user?.name,
-          email: user?.email,
-          workspaceId: user?.workspaceId ?? workspaceId,
-        },
-      };
-
       return StreamProtocolFetcher.fetchStream(`${baseUrl}/invoke`, {
         method: 'POST',
         headers: {
           ...authHeaders,
           'X-Workspace-Id': workspaceId,
         },
-        body: { ...invokeParams, context: enrichedContext },
+        body: invokeParams,
       });
     },
 
