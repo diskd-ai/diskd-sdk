@@ -57,9 +57,9 @@ export const diskd: DiskD = {
 
     llm: ({ auth, url }) => createLlmRouterClient({ auth, url }),
 
-    mcp: ({ auth, workspaceId, url }) => createMcpHubClient({ auth, workspaceId, url }),
+    mcp: ({ auth, url }) => createMcpHubClient({ auth, url }),
 
-    agents: ({ auth, workspaceId, url }) => createAgentHubClient({ auth, workspaceId, url }),
+    agents: ({ auth, url }) => createAgentHubClient({ auth, url }),
   },
 
   platform: {
@@ -128,9 +128,8 @@ export const diskd: DiskD = {
   },
 
   utils: {
-    tgUserBot: ({ auth, workspaceId, url }) => createTgUserbotClient({ auth, workspaceId, url }),
+    tgUserBot: ({ auth, url }) => createTgUserbotClient({ auth, url }),
 
-    webNavigator: ({ auth, workspaceId, url }) =>
-      createWebNavigatorClient({ auth, workspaceId, url }),
+    webNavigator: ({ auth, url }) => createWebNavigatorClient({ auth, url }),
   },
 };

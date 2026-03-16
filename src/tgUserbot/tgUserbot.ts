@@ -281,24 +281,24 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
  * The URL defaults to the centralized `DISKD_BASE_URL` gateway with the
  * `/utils/tg-userbot` path prefix.
  *
- * The `workspaceId` is forwarded as `X-Workspace-Id` on all authenticated
- * endpoints. The `channels.resolve` endpoint is public and does not require it.
+ * The workspace is derived from `auth.getWorkspaceId()` and forwarded as
+ * `X-Workspace-Id` on all authenticated endpoints. The `channels.resolve`
+ * endpoint is public and does not require it.
  *
  * Example:
  * ```ts
- * const tg = createTgUserbotClient({ auth, workspaceId: 'ws_01...' });
+ * const tg = createTgUserbotClient({ auth });
  * const channels = await tg.channels.list();
  * ```
  */
 export const createTgUserbotClient = (params: {
   readonly auth: AuthModule;
   readonly url?: string;
-  readonly workspaceId?: string;
 }): TgUserbotClient => {
   const baseUrl = (params.url ?? resolveDiskdGatewayUrl('utils/tg-userbot')).replace(/\/+$/, '');
 
   const resolveWorkspaceId = async (): Promise<string | undefined> =>
-    params.workspaceId ?? (await params.auth.getWorkspaceId());
+    await params.auth.getWorkspaceId();
 
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
     if (params.auth.getRequestHeaders) {

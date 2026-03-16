@@ -123,11 +123,13 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
  * The URL defaults to the centralized `DISKD_BASE_URL` gateway with the
  * `/os/agents` path prefix.
  *
+ * The workspace is derived from `auth.getWorkspaceId()` on each request.
+ *
  * The `invoke` method returns a `StreamProtocolStream` for fluent event handling
  * via `StreamProtocolHandler`:
  *
  * ```ts
- * const hub = createAgentHubClient({ auth, workspaceId: 'ws_01...' });
+ * const hub = createAgentHubClient({ auth });
  * const handler = new StreamProtocolHandler()
  *   .on('response.output_text.delta', (e) => process.stdout.write(e.delta))
  *   .on('response.completed', () => console.log('done'));
@@ -141,12 +143,11 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
 export const createAgentHubClient = (params: {
   readonly auth: AuthModule;
   readonly url?: string;
-  readonly workspaceId?: string;
 }): AgentHubClient => {
   const baseUrl = (params.url ?? resolveDiskdGatewayUrl('os/agents')).replace(/\/+$/, '');
 
   const resolveWorkspaceId = async (): Promise<string> =>
-    params.workspaceId ?? (await params.auth.getWorkspaceId());
+    await params.auth.getWorkspaceId();
 
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
     if (params.auth.getRequestHeaders) {

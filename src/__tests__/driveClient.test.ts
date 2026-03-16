@@ -309,12 +309,11 @@ test('diskd exposes namespaced os and utils factories for non-drive services', (
   };
 
   const llm = diskd.os.llm({ auth, url: 'http://llm-router:3000' });
-  const agents = diskd.os.agents({ auth, workspaceId: 'ws-1', url: 'http://agent-hub:8081' });
-  const mcp = diskd.os.mcp({ auth, workspaceId: 'ws-1', url: 'http://mcp-hub:8300' });
-  const tg = diskd.utils.tgUserBot({ auth, workspaceId: 'ws-1', url: 'http://tg-userbot:8000' });
+  const agents = diskd.os.agents({ auth, url: 'http://agent-hub:8081' });
+  const mcp = diskd.os.mcp({ auth, url: 'http://mcp-hub:8300' });
+  const tg = diskd.utils.tgUserBot({ auth, url: 'http://tg-userbot:8000' });
   const webNavigator = diskd.utils.webNavigator({
     auth,
-    workspaceId: 'ws-1',
     url: 'http://web-navigator:8080',
   });
 
@@ -410,10 +409,10 @@ test('resource clients derive gateway paths from SDK namespaces', async () => {
 
   try {
     await diskd.os.llm({ auth }).models.listAll();
-    await diskd.os.agents({ auth, workspaceId: 'ws-1' }).agents.list();
-    await diskd.os.mcp({ auth, workspaceId: 'ws-1' }).catalog.list();
-    await diskd.utils.tgUserBot({ auth, workspaceId: 'ws-1' }).channels.list();
-    await diskd.utils.webNavigator({ auth, workspaceId: 'ws-1' }).resolve({
+    await diskd.os.agents({ auth }).agents.list();
+    await diskd.os.mcp({ auth }).catalog.list();
+    await diskd.utils.tgUserBot({ auth }).channels.list();
+    await diskd.utils.webNavigator({ auth }).resolve({
       url: 'https://example.com',
     });
 

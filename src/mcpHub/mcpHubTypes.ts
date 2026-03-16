@@ -238,7 +238,7 @@ export type RequestIntegrationResult = {
 /**
  * MCP Hub REST client organized by namespace.
  *
- * Obtain via `createMcpHubClient`. The `workspaceId` is bound at creation time
+ * Obtain via `createMcpHubClient`. The workspace is derived from `auth.getWorkspaceId()`
  * and is forwarded as `X-Workspace-Id` on all registry and integration calls.
  */
 export type McpHubClient = {

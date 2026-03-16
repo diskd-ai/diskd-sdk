@@ -42,7 +42,7 @@ const bearerAuth: AuthModule = {
 h.ok('auth', 'bearer configured');
 
 const agentHubUrl = `${BASE_URL}/os/agents`;
-const agentHub = diskd.os.agents({ auth: bearerAuth, workspaceId: WORKSPACE_ID, url: agentHubUrl });
+const agentHub = diskd.os.agents({ auth: bearerAuth, url: agentHubUrl });
 
 // -- agents.list --
 let targetAgentId = '';

@@ -121,7 +121,7 @@ export type TgTaskListResult = {
 /**
  * TG Userbot REST client organized by namespace.
  *
- * Obtain via `createTgUserbotClient`. The `workspaceId` is bound at creation
+ * Obtain via `createTgUserbotClient`. The workspace is derived from `auth.getWorkspaceId()`
  * time and is forwarded as `X-Workspace-Id` on all authenticated endpoints.
  * The `channels.resolve` endpoint is public and does not require auth.
  */

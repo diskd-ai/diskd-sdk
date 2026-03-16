@@ -33,7 +33,6 @@ export type AgentInvokeContext = {
     readonly id: string;
     readonly name?: string;
     readonly email?: string;
-    readonly workspaceId?: string;
   };
   readonly chatSessionId?: string;
 };
@@ -102,14 +101,14 @@ export type BillingAliasesResult = {
 /**
  * Agent Hub client organized by namespace.
  *
- * Obtain via `createAgentHubClient`. The `workspaceId` is bound at creation
- * time and forwarded as `X-Workspace-Id` on all requests.
+ * Obtain via `createAgentHubClient`. The workspace is derived from
+ * `auth.getWorkspaceId()` and forwarded as `X-Workspace-Id` on all requests.
  *
  * The `invoke` method returns a `StreamProtocolStream` for fluent event
  * processing via `StreamProtocolHandler`:
  *
  * ```ts
- * const hub = createAgentHubClient({ auth, workspaceId: 'ws_01...' });
+ * const hub = createAgentHubClient({ auth });
  * const handler = new StreamProtocolHandler()
  *   .on('response.output_text.delta', (e) => process.stdout.write(e.delta))
  *   .on('response.completed', () => console.log('done'))

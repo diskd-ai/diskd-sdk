@@ -165,24 +165,24 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
  * The URL defaults to the centralized `DISKD_BASE_URL` gateway with the
  * `/os/mcp` path prefix.
  *
- * The `workspaceId` is forwarded as `X-Workspace-Id` on all registry and
- * integration endpoints. Catalog endpoints are public and do not require it.
+ * The workspace is derived from `auth.getWorkspaceId()` and forwarded as
+ * `X-Workspace-Id` on all registry and integration endpoints. Catalog
+ * endpoints are public and do not require it.
  *
  * Example:
  * ```ts
- * const mcp = createMcpHubClient({ auth, workspaceId: 'ws_01...' });
+ * const mcp = createMcpHubClient({ auth });
  * const { items } = await mcp.registry.list();
  * ```
  */
 export const createMcpHubClient = (params: {
   readonly auth: AuthModule;
   readonly url?: string;
-  readonly workspaceId?: string;
 }): McpHubClient => {
   const baseUrl = (params.url ?? resolveDiskdGatewayUrl('os/mcp')).replace(/\/+$/, '');
 
   const resolveWorkspaceId = async (): Promise<string | undefined> =>
-    params.workspaceId ?? (await params.auth.getWorkspaceId());
+    await params.auth.getWorkspaceId();
 
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
     if (params.auth.getRequestHeaders) {

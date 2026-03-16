@@ -22,23 +22,23 @@ import type {
  * The URL defaults to the centralized `DISKD_BASE_URL` gateway with the
  * `/utils/web-navigator` path prefix.
  *
- * The `workspaceId` is forwarded as `X-Workspace-Id` on all requests.
+ * The workspace is derived from `auth.getWorkspaceId()` and forwarded as
+ * `X-Workspace-Id` on all requests.
  *
  * Example:
  * ```ts
- * const nav = createWebNavigatorClient({ auth, workspaceId: 'ws_01...' });
+ * const nav = createWebNavigatorClient({ auth });
  * const job = await nav.scrape.submit({ url: 'https://example.com', depth: 1 });
  * ```
  */
 export const createWebNavigatorClient = (params: {
   readonly auth: AuthModule;
   readonly url?: string;
-  readonly workspaceId?: string;
 }): WebNavigatorClient => {
   const baseUrl = (params.url ?? resolveDiskdGatewayUrl('utils/web-navigator')).replace(/\/+$/, '');
 
   const resolveWorkspaceId = async (): Promise<string | undefined> =>
-    params.workspaceId ?? (await params.auth.getWorkspaceId());
+    await params.auth.getWorkspaceId();
 
   const request = async <T>(
     method: HttpMethod,
