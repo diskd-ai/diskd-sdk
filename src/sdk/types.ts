@@ -9,6 +9,7 @@ import type { DriveClient } from '../drive/types.js';
 import type { LlmRouterClient } from '../llmRouter/llmRouterTypes.js';
 import type { McpHubClient } from '../mcpHub/mcpHubTypes.js';
 import type { OperativesClient } from '../operatives/operativesTypes.js';
+import type { PlatformEventsClient } from '../platformEvents/platformEventsTypes.js';
 import type { RoutinesClient } from '../routines/routinesTypes.js';
 import type { TgUserbotClient } from '../tgUserbot/tgUserbotTypes.js';
 import type { WebNavigatorClient } from '../webNavigator/webNavigatorTypes.js';
@@ -75,6 +76,11 @@ export type DiskD = {
       readonly auth: AuthModule;
       readonly url?: string;
     }) => OperativesClient;
+
+    readonly events: (params: {
+      readonly auth: AuthModule;
+      readonly url?: string;
+    }) => PlatformEventsClient;
   };
 
   readonly utils: {

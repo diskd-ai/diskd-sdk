@@ -248,10 +248,16 @@ const decodeJob = (raw: unknown): DriveCrontabJob => {
     throw new Error('Invalid Drive crontab job: expected object');
   }
 
+  const scheduleRaw = readField(raw, 'schedule', 'schedule');
+  const signalSubject = readNullableString(raw, 'signal_subject', 'signalSubject');
+
   return {
     jobId: readRequiredNonEmptyString(raw, 'job_id', 'jobId'),
     enabled: readRequiredBoolean(raw, 'enabled', 'enabled'),
-    schedule: decodeSchedule(readField(raw, 'schedule', 'schedule')),
+    ...(scheduleRaw !== undefined && scheduleRaw !== null
+      ? { schedule: decodeSchedule(scheduleRaw) }
+      : {}),
+    ...(signalSubject !== null ? { signalSubject } : {}),
     request: decodeRequest(readField(raw, 'request', 'request')),
   };
 };
@@ -259,7 +265,8 @@ const decodeJob = (raw: unknown): DriveCrontabJob => {
 const encodeJob = (job: DriveCrontabJob): unknown => ({
   job_id: job.jobId,
   enabled: job.enabled,
-  schedule: encodeSchedule(job.schedule),
+  ...(job.schedule !== undefined ? { schedule: encodeSchedule(job.schedule) } : {}),
+  ...(job.signalSubject !== undefined ? { signal_subject: job.signalSubject } : {}),
   request: encodeRequest(job.request),
 });
 
@@ -342,14 +349,21 @@ const decodeListJobItem = (raw: unknown): DriveCrontabJobListItem => {
     throw new Error('Invalid drive/crontab/list-jobs item');
   }
 
+  const scheduleRaw = readField(raw, 'schedule', 'schedule');
+  const signalSubject = readNullableString(raw, 'signal_subject', 'signalSubject');
+  const nextRunAt = readNullableString(raw, 'next_run_at', 'nextRunAt');
+
   return {
     jobId: readRequiredNonEmptyString(raw, 'job_id', 'jobId'),
     enabled: readRequiredBoolean(raw, 'enabled', 'enabled'),
-    schedule: decodeSchedule(readField(raw, 'schedule', 'schedule')),
+    ...(scheduleRaw !== undefined && scheduleRaw !== null
+      ? { schedule: decodeSchedule(scheduleRaw) }
+      : {}),
+    ...(signalSubject !== null ? { signalSubject } : {}),
     method: readRequiredHttpMethod(raw, 'method', 'method'),
     url: readRequiredNonEmptyString(raw, 'url', 'url'),
     payloadSource: readRequiredPayloadKind(raw, 'payload_source', 'payloadSource'),
-    nextRunAt: readRequiredNonEmptyString(raw, 'next_run_at', 'nextRunAt'),
+    ...(nextRunAt !== null ? { nextRunAt } : {}),
     lastRunAt: readNullableString(raw, 'last_run_at', 'lastRunAt'),
     lastHttpStatus: readNullableNumber(raw, 'last_http_status', 'lastHttpStatus'),
     lastErrorSummary: readNullableString(raw, 'last_error_summary', 'lastErrorSummary'),

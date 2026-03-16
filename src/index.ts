@@ -260,6 +260,14 @@ export type {
   McpServerStatus,
   McpTool,
 } from './mcpHub/mcpHubTypes.js';
+// -- Platform Events --
+export { createPlatformEventsClient } from './platformEvents/platformEvents.js';
+export type {
+  PlatformEventsClient,
+  PublishEventError,
+  PublishEventParams,
+  PublishEventResult,
+} from './platformEvents/platformEventsTypes.js';
 // -- Operatives --
 export { createOperativesClient } from './operatives/operatives.js';
 export type {

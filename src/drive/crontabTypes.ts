@@ -52,7 +52,8 @@ export type DriveCrontabRequest = {
 export type DriveCrontabJob = {
   readonly jobId: string;
   readonly enabled: boolean;
-  readonly schedule: DriveCrontabSchedule;
+  readonly schedule?: DriveCrontabSchedule;
+  readonly signalSubject?: string;
   readonly request: DriveCrontabRequest;
 };
 
@@ -120,11 +121,12 @@ export type DriveCrontabListJobsParams = {
 export type DriveCrontabJobListItem = {
   readonly jobId: string;
   readonly enabled: boolean;
-  readonly schedule: DriveCrontabSchedule;
+  readonly schedule?: DriveCrontabSchedule;
+  readonly signalSubject?: string;
   readonly method: DriveCrontabHttpMethod;
   readonly url: string;
   readonly payloadSource: DriveCrontabPayloadKind;
-  readonly nextRunAt: string;
+  readonly nextRunAt?: string;
   readonly lastRunAt: string | null;
   readonly lastHttpStatus: number | null;
   readonly lastErrorSummary: string | null;

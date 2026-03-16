@@ -11,6 +11,7 @@ import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import { createLlmRouterClient } from '../llmRouter/llmRouter.js';
 import { createMcpHubClient } from '../mcpHub/mcpHub.js';
 import { createOperativesClient } from '../operatives/operatives.js';
+import { createPlatformEventsClient } from '../platformEvents/platformEvents.js';
 import { createRoutinesClient } from '../routines/routines.js';
 import { createTgUserbotClient } from '../tgUserbot/tgUserbot.js';
 import { createWebNavigatorClient } from '../webNavigator/webNavigator.js';
@@ -125,6 +126,11 @@ export const diskd: DiskD = {
     routines: ({ auth, url }) => createRoutinesClient({ auth, url }),
 
     operatives: ({ auth, url }) => createOperativesClient({ auth, url }),
+
+    events: ({ auth, url }) => {
+      const eventsUrl = url ?? resolveDiskdGatewayUrl('platform/events');
+      return createPlatformEventsClient({ auth, url: eventsUrl });
+    },
   },
 
   utils: {
