@@ -2,50 +2,35 @@
  * Drive validation -- external auth (OAuth2 credentials.json)
  *
  * Validates Drive SDK methods using ONLY path-based operations.
- * Covers: init, diskUsage, list, create, tools.ls, tools.writeFile, tools.readFile,
- *         tools.applyPatch, tools.grep
- *
- * Operations requiring path-based backend API (not yet implemented):
- *   upload.file, download.file, rename, delete -- see missing-api.md
+ * workspaceId is auto-derived from the JWT token claims.
  *
  * Environment:
- *   DISKD_BASE_URL         - Gateway URL (default: https://apis.upgraide.dev)
  *   DISKD_CREDENTIALS_PATH - Path to credentials.json (default: ./credentials.json)
- *   DISKD_WORKSPACE_ID     - Workspace ID (default: dev-user-id)
  *
  * Run:
  *   bun run scripts:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-scripts/scripts/validate-drive-external.js
  */
 
-import type { AuthModule } from '../src/auth/types.js';
 import { diskd } from '../src/sdk/diskd.js';
 import { createHarness } from './_harness.js';
 
 const CREDENTIALS_PATH = process.env.DISKD_CREDENTIALS_PATH ?? './credentials.json';
-const WORKSPACE_ID = process.env.DISKD_WORKSPACE_ID ?? 'dev-user-id';
 const h = createHarness('Drive (external)');
 
 const TEST_DIR = '/sdk-validation-test';
 const TOOLS_FILE = `${TEST_DIR}/tools-written.txt`;
 
 console.log('=== Drive validation (external / OAuth2) ===\n');
-console.log(`Gateway: ${process.env.DISKD_BASE_URL ?? 'https://apis.upgraide.dev'}`);
-console.log(`Credentials: ${CREDENTIALS_PATH}`);
-console.log(`Workspace: ${WORKSPACE_ID}\n`);
+console.log(`Credentials: ${CREDENTIALS_PATH}\n`);
 
-const baseAuth = await diskd.auth.credentials({
+const auth = await diskd.auth.credentials({
   scopes: ['openid'],
   keyfilePath: CREDENTIALS_PATH,
 });
-
-const auth: AuthModule = {
-  ...baseAuth,
-  getRequestHeaders: async () => ({
-    Authorization: `Bearer ${await baseAuth.getAccessToken()}`,
-    'X-Workspace-Id': WORKSPACE_ID,
-  }),
-};
 h.ok('auth.credentials', 'OAuth2 token acquired');
+
+const workspaceId = await auth.getWorkspaceId();
+console.log(`Workspace (from token): ${workspaceId}\n`);
 
 const drive = diskd.os.drive({ version: 'v1', auth });
 
@@ -65,7 +50,7 @@ try {
   h.fail('drive.diskUsage', err);
 }
 
-// -- create dir (root-level, no parent needed) --
+// -- create dir --
 try {
   await drive.create({ dirName: 'sdk-validation-test' });
   h.ok('drive.create (mkdir)', `path=${TEST_DIR}`);
@@ -73,7 +58,7 @@ try {
   h.ok('drive.create (mkdir)', 'directory exists or created');
 }
 
-// -- list root by path --
+// -- list root --
 try {
   const entries = await drive.list({ path: '/' });
   h.ok('drive.list (/)', `${entries.length} entries at root`);
@@ -127,7 +112,7 @@ try {
   h.fail('drive.tools.applyPatch', err);
 }
 
-// -- verify patch via tools.readFile --
+// -- verify patch --
 try {
   const result = await drive.tools.readFile({ path: TOOLS_FILE });
   const text = result.parts.map((p) => p.content).join('');
@@ -156,7 +141,7 @@ try {
   h.fail('drive.tools.grep', err);
 }
 
-// -- list subdir by path --
+// -- list subdir --
 try {
   const entries = await drive.list({ path: TEST_DIR });
   h.ok('drive.list (subdir)', `${entries.length} entries`);
@@ -164,7 +149,7 @@ try {
   h.fail('drive.list (subdir)', err);
 }
 
-// -- delete by path --
+// -- delete --
 try {
   await drive.delete({ paths: [TEST_DIR], recursive: true });
   h.ok('drive.delete (recursive)', `${TEST_DIR} deleted`);

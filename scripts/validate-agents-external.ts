@@ -6,8 +6,6 @@
  * Environment:
  *   DISKD_BASE_URL         - Gateway URL (default: https://apis.upgraide.dev)
  *   DISKD_CREDENTIALS_PATH - Path to credentials.json (default: ./credentials.json)
- *   DISKD_WORKSPACE_ID     - Workspace ID (default: dev-user-id)
- *
  * Run:
  *   bun run scripts:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-scripts/scripts/validate-agents-external.js
  */
@@ -16,13 +14,10 @@ import { diskd } from '../src/sdk/diskd.js';
 import { createHarness } from './_harness.js';
 
 const CREDENTIALS_PATH = process.env.DISKD_CREDENTIALS_PATH ?? './credentials.json';
-const WORKSPACE_ID = process.env.DISKD_WORKSPACE_ID ?? 'dev-user-id';
 const h = createHarness('Agent Hub (external)');
 
 console.log('=== Agent Hub validation (external / OAuth2) ===\n');
-console.log(`Gateway: ${process.env.DISKD_BASE_URL ?? 'https://apis.upgraide.dev'}`);
-console.log(`Credentials: ${CREDENTIALS_PATH}`);
-console.log(`Workspace: ${WORKSPACE_ID}\n`);
+console.log(`Credentials: ${CREDENTIALS_PATH}\n`);
 
 const auth = await diskd.auth.credentials({
   scopes: ['openid'],
@@ -30,7 +25,10 @@ const auth = await diskd.auth.credentials({
 });
 h.ok('auth.credentials', 'OAuth2 token acquired');
 
-const agentHub = diskd.os.agents({ auth, workspaceId: WORKSPACE_ID });
+const workspaceId = await auth.getWorkspaceId();
+console.log(`Workspace (from token): ${workspaceId}\n`);
+
+const agentHub = diskd.os.agents({ auth });
 
 // -- agents.list --
 let targetAgentId = '';
@@ -82,7 +80,7 @@ if (targetAgentId) {
     const stream = await agentHub.invoke({
       agentName: targetAgentId,
       query: 'What is the capital of Japan? Reply in one sentence.',
-      context: { user: { id: WORKSPACE_ID, name: 'validation-script' } },
+      context: { user: { id: workspaceId, name: 'validation-script' } },
       agentOptions: { provider: 'upgraide', model: 'small', maxTokens: 1024 },
     });
 
