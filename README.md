@@ -272,16 +272,16 @@ REST client for managing routines (automated workflows) scoped to profile or pro
 const routines = diskd.platform.routines({ auth });
 
 // List routines in a scope
-const all = await routines.list({ scope: 'profile' });
+const all = await routines.list({ scope: 'workspace' });
 const projectRoutines = await routines.list({ scope: 'project', projectName: 'my-project' });
 
 // Get by slug
-const routine = await routines.get({ slug: 'daily-summary', scope: 'profile' });
+const routine = await routines.get({ slug: 'daily-summary', scope: 'workspace' });
 
 // Create
 const created = await routines.create({
   name: 'Daily Summary',
-  scope: 'profile',
+  scope: 'workspace',
   operativeSlug: 'research-agent',
   triggerType: 'rhythm',
   trigger: { cron: '0 9 * * *' },
@@ -292,11 +292,11 @@ const created = await routines.create({
 const updated = await routines.update(
   'daily-summary',
   { status: 'paused' },
-  { scopeType: 'profile' },
+  { scopeType: 'workspace' },
 );
 
 // Delete
-await routines.delete({ slug: 'daily-summary', scope: 'profile' });
+await routines.delete({ slug: 'daily-summary', scope: 'workspace' });
 ```
 
 Operatives API

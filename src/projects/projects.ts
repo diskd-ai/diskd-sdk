@@ -23,7 +23,6 @@ import type {
  * ```ts
  * const projects = createProjectsClient({ auth });
  * const all = await projects.list();
- * const system = await projects.getSystem();
  * ```
  */
 export const createProjectsClient = (params: {
@@ -58,10 +57,6 @@ export const createProjectsClient = (params: {
 
     get: async (projectId: string): Promise<ProjectDetailed> => {
       return request<ProjectDetailed>('GET', `/api/projects/${encId(projectId)}`);
-    },
-
-    getSystem: async (): Promise<ProjectDetailed> => {
-      return request<ProjectDetailed>('GET', '/api/projects/system');
     },
 
     create: async (createParams: ProjectCreateParams): Promise<Project> => {

@@ -43,7 +43,7 @@ const scopeRefToQuery = (scope?: RoutineScopeRef): string => {
  * Example:
  * ```ts
  * const routines = createRoutinesClient({ auth });
- * const all = await routines.list({ scope: 'profile' });
+ * const all = await routines.list({ scope: 'workspace' });
  * ```
  */
 export const createRoutinesClient = (params: {

@@ -4,8 +4,8 @@ export type DriveCrontabHttpMethod = 'DELETE' | 'GET' | 'POST' | 'PUT';
 export type DriveCrontabPayloadKind = 'json' | 'path' | 'uri';
 export type DriveCrontabJsonContainer = JsonObject | readonly JsonValue[];
 
-export type DriveCrontabProfileScopeRef = {
-  readonly scopeType: 'profile';
+export type DriveCrontabWorkspaceScopeRef = {
+  readonly scopeType: 'workspace';
 };
 
 export type DriveCrontabProjectScopeRef = {
@@ -13,7 +13,7 @@ export type DriveCrontabProjectScopeRef = {
   readonly projectId: string;
 };
 
-export type DriveCrontabScopeRef = DriveCrontabProfileScopeRef | DriveCrontabProjectScopeRef;
+export type DriveCrontabScopeRef = DriveCrontabWorkspaceScopeRef | DriveCrontabProjectScopeRef;
 
 export type DriveCrontabSchedule = {
   readonly minute: string;
@@ -105,7 +105,7 @@ export type DriveCrontabCreateProjectJobParams = {
   readonly timezone?: string | null;
 };
 
-export type DriveCrontabCreateProfileJobParams = {
+export type DriveCrontabCreateWorkspaceJobParams = {
   readonly job: DriveCrontabJob;
   readonly timezone?: string | null;
 };
@@ -154,8 +154,8 @@ export type DriveCrontabClient = {
   readonly createProjectJob: (
     params: DriveCrontabCreateProjectJobParams
   ) => Promise<DriveCrontabSaveResult>;
-  readonly createProfileJob: (
-    params: DriveCrontabCreateProfileJobParams
+  readonly createWorkspaceJob: (
+    params: DriveCrontabCreateWorkspaceJobParams
   ) => Promise<DriveCrontabSaveResult>;
   readonly listJobs: (params: DriveCrontabListJobsParams) => Promise<DriveCrontabListJobsResult>;
   readonly runJob: (params: DriveCrontabRunJobParams) => Promise<DriveCrontabRunJobResult>;

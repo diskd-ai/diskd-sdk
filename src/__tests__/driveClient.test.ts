@@ -84,7 +84,7 @@ test('drive.crontab.getStatus uses the drive JSON-RPC endpoint', async () => {
     const drive = diskd.os.drive({ version: 'v1', auth });
     const result = await drive.crontab.getStatus({
       scope: {
-        scopeType: 'profile',
+        scopeType: 'workspace',
       },
     });
 
@@ -95,7 +95,7 @@ test('drive.crontab.getStatus uses the drive JSON-RPC endpoint', async () => {
     });
     assert.equal(calls[0]?.url, 'https://apis.example/os/drive/api/v1');
     assert.ok(String(calls[0]?.init?.body).includes('"method":"drive/crontab/get-status"'));
-    assert.ok(String(calls[0]?.init?.body).includes('"scope_type":"profile"'));
+    assert.ok(String(calls[0]?.init?.body).includes('"scope_type":"workspace"'));
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
     delete process.env.DISKD_BASE_URL;

@@ -1,6 +1,6 @@
 // MCP Tools gateway client -- JSON-RPC transport with automatic session management.
 //
-// Communicates with MCP Hub's JSON-RPC gateway at POST /v1/mcp[/:profileId].
+// Communicates with MCP Hub's JSON-RPC gateway at POST /v1/mcp.
 // Session lifecycle (initialize handshake, mcp-session-id reuse) is handled
 // internally so consumers only see list/find/call.
 
@@ -47,13 +47,10 @@ export const mcpToolName = (instanceNamespace: string, toolName: string): string
 // Gateway URL derivation
 // ---------------------------------------------------------------------------
 
-const deriveGatewayUrl = (baseUrlOrUndefined: string | undefined, profileId?: string): string => {
+const deriveGatewayUrl = (baseUrlOrUndefined: string | undefined): string => {
   const base = baseUrlOrUndefined ?? resolveDiskdGatewayUrl('os/mcp');
-  // The REST base is {host}/os/mcp (or {host}/api/...). The gateway lives at
-  // {host}/v1/mcp on the same origin. Extract the origin and build the path.
   const url = new URL(base);
-  const gatewayPath = profileId ? `/v1/mcp/${encodeURIComponent(profileId)}` : '/v1/mcp';
-  return `${url.origin}${gatewayPath}`;
+  return `${url.origin}/v1/mcp`;
 };
 
 // ---------------------------------------------------------------------------
@@ -77,9 +74,8 @@ const deriveGatewayUrl = (baseUrlOrUndefined: string | undefined, profileId?: st
 export const createMcpToolsClient = (params: {
   readonly auth: AuthModule;
   readonly url?: string;
-  readonly profileId?: string;
 }): McpToolsClient => {
-  const gatewayUrl = deriveGatewayUrl(params.url, params.profileId);
+  const gatewayUrl = deriveGatewayUrl(params.url);
 
   // Mutable session state (closure-scoped, not shared)
   let sessionId: string | undefined;

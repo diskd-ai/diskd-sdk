@@ -63,7 +63,7 @@ export const diskd: DiskD = {
 
     mcp: ({ auth, url }) => createMcpHubClient({ auth, url }),
 
-    mcpTools: ({ auth, url, profileId }) => createMcpToolsClient({ auth, url, profileId }),
+    mcpTools: ({ auth, url }) => createMcpToolsClient({ auth, url }),
 
     agents: ({ auth, url }) => createAgentHubClient({ auth, url }),
   },
@@ -110,7 +110,7 @@ export const diskd: DiskD = {
               timezone: effectiveTimezone,
             });
           }
-          return client.createProfileJob({
+          return client.createWorkspaceJob({
             job,
             timezone: effectiveTimezone,
           });

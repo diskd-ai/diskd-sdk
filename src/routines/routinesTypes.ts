@@ -5,10 +5,10 @@
 
 export type RoutineStatus = 'active' | 'paused' | 'draft';
 export type RoutineTriggerType = 'rhythm' | 'signal';
-export type RoutineScope = 'profile' | 'project';
+export type RoutineScope = 'workspace' | 'project';
 
 export type RoutineScopeRef =
-  | { readonly scopeType: 'profile' }
+  | { readonly scopeType: 'workspace' }
   | { readonly scopeType: 'project'; readonly projectName: string };
 
 // -- Rhythms (discriminated union) --

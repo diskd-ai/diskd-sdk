@@ -9,11 +9,14 @@ export type OperativeFileAccess = 'all' | 'selected';
 export type OperativeStatus = 'active' | 'standby';
 export type OperativeTrustLevel = 0 | 1 | 2 | 3;
 
+// -- Scope discriminant --
+
+export type OperativeScope = 'project' | 'workspace';
+
 // -- Domain models --
 
-export type Operative = {
+type OperativeBase = {
   readonly id: string;
-  readonly projectId: string;
   readonly workspaceId: string;
   readonly name: string;
   readonly slug: string;
@@ -32,6 +35,23 @@ export type Operative = {
   readonly createdAt: string;
   readonly updatedAt: string;
 };
+
+export type ProjectScopedOperative = OperativeBase & {
+  readonly scope: 'project';
+  readonly projectId: string;
+};
+
+export type WorkspaceScopedOperative = OperativeBase & {
+  readonly scope: 'workspace';
+};
+
+export type Operative = ProjectScopedOperative | WorkspaceScopedOperative;
+
+export const isProjectScoped = (op: Operative): op is ProjectScopedOperative =>
+  op.scope === 'project';
+
+export const isWorkspaceScoped = (op: Operative): op is WorkspaceScopedOperative =>
+  op.scope === 'workspace';
 
 export type OperativeFile = {
   readonly id: string;
@@ -120,6 +140,8 @@ export type OperativeAddToolsParams = {
 export type OperativesClient = {
   /** GET /api/operatives?projectId=... -- list operatives in a project. */
   readonly list: (params: OperativeListParams) => Promise<readonly Operative[]>;
+  /** GET /api/workspace-operatives -- list workspace-scoped operatives. */
+  readonly listWorkspace: () => Promise<readonly Operative[]>;
   /** GET /api/operatives/:operativeId -- get a single operative by id. */
   readonly get: (operativeId: string) => Promise<Operative>;
   /** GET /api/operatives/by-slug?projectId=...&slug=... -- get by slug within a project. */

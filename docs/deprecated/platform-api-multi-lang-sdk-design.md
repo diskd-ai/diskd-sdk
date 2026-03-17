@@ -179,7 +179,7 @@ This contract is defined in full in `docs/routine-execution-design.md`, section 
 // -- Request --
 
 type ChrootContext = {
-  readonly scopeType: 'project' | 'profile';
+  readonly scopeType: 'project' | 'workspace';
   readonly scopeInode: string;
   readonly workingDirectoryInode: string;
   readonly allowedRootInode: string;
@@ -242,7 +242,7 @@ type ExecuteRoutineResponse =
 ```python
 @dataclass(frozen=True)
 class ChrootContext:
-    scope_type: Literal['project', 'profile']
+    scope_type: Literal['project', 'workspace']
     scope_inode: str
     working_directory_inode: str
     allowed_root_inode: str

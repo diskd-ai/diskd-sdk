@@ -139,7 +139,7 @@ test('crontab client get decodes document response', async () => {
   const client = createDriveCrontabClient({ call });
   const result = await client.get({
     scope: {
-      scopeType: 'profile',
+      scopeType: 'workspace',
     },
   });
 
@@ -207,7 +207,7 @@ test('crontab client listJobs and runJob decode scheduler metadata', async () =>
 
   const listResult = await listClient.listJobs({
     scope: {
-      scopeType: 'profile',
+      scopeType: 'workspace',
     },
   });
   const runResult = await runClient.runJob({
@@ -316,7 +316,7 @@ test('crontab client createProjectJob creates a new document when none exists', 
   });
 });
 
-test('crontab client createProfileJob upserts into the existing document', async () => {
+test('crontab client createWorkspaceJob upserts into the existing document', async () => {
   const { calls, call } = makeRpcSequenceMock([
     {
       document: {
@@ -352,7 +352,7 @@ test('crontab client createProfileJob upserts into the existing document', async
   ]);
 
   const client = createDriveCrontabClient({ call });
-  await client.createProfileJob({
+  await client.createWorkspaceJob({
     job: {
       jobId: '01JABCD2FGH3JK4MNP5QRST6W2',
       enabled: false,
@@ -378,7 +378,7 @@ test('crontab client createProfileJob upserts into the existing document', async
   assert.equal(calls[1]?.method, 'drive/crontab/save');
   assert.deepEqual(calls[1]?.params, {
     scope: {
-      scope_type: 'profile',
+      scope_type: 'workspace',
     },
     document: {
       version: 1,

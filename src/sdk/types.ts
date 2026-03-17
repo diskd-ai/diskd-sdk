@@ -50,7 +50,6 @@ export type DiskD = {
     readonly mcpTools: (params: {
       readonly auth: AuthModule;
       readonly url?: string;
-      readonly profileId?: string;
     }) => McpToolsClient;
 
     readonly agents: (params: {

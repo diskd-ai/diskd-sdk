@@ -10,7 +10,6 @@ export type Project = {
   readonly icon?: string;
   readonly iconColor?: string;
   readonly driveFolderInode: string | null;
-  readonly isSystem: boolean;
   readonly updatedAt: string;
 };
 
@@ -21,7 +20,6 @@ export type ProjectDetailed = {
   readonly icon?: string;
   readonly iconColor?: string;
   readonly driveFolderInode: string | null;
-  readonly isSystem: boolean;
   readonly updatedAt: string;
 };
 
@@ -54,8 +52,6 @@ export type ProjectsClient = {
   readonly list: () => Promise<readonly Project[]>;
   /** GET /api/projects/:projectId -- get a single project by id. */
   readonly get: (projectId: string) => Promise<ProjectDetailed>;
-  /** GET /api/projects/system -- get the system project. */
-  readonly getSystem: () => Promise<ProjectDetailed>;
   /** POST /api/projects -- create a new project. */
   readonly create: (params: ProjectCreateParams) => Promise<Project>;
   /** PUT /api/projects/:projectId -- update an existing project. */

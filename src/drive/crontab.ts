@@ -1,6 +1,6 @@
 import type {
   DriveCrontabClient,
-  DriveCrontabCreateProfileJobParams,
+  DriveCrontabCreateWorkspaceJobParams,
   DriveCrontabCreateProjectJobParams,
   DriveCrontabDocument,
   DriveCrontabGetParams,
@@ -294,8 +294,8 @@ const encodeDocument = (document: DriveCrontabDocument): unknown => ({
 });
 
 const encodeScope = (scope: DriveCrontabScopeRef): unknown => {
-  if (scope.scopeType === 'profile') {
-    return { scope_type: 'profile' };
+  if (scope.scopeType === 'workspace') {
+    return { scope_type: 'workspace' };
   }
 
   return {
@@ -464,12 +464,12 @@ export const createDriveCrontabClient = (params: {
       });
     },
 
-    createProfileJob: async (
-      clientParams: DriveCrontabCreateProfileJobParams
+    createWorkspaceJob: async (
+      clientParams: DriveCrontabCreateWorkspaceJobParams
     ): Promise<DriveCrontabSaveResult> => {
       return saveSingleJob({
         scope: {
-          scopeType: 'profile',
+          scopeType: 'workspace',
         },
         job: clientParams.job,
         timezone: clientParams.timezone,

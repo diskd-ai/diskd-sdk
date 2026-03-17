@@ -20,11 +20,27 @@ import type {
 // Wire types (app-service uses intelAccess / sourceId / equipmentType)
 // ---------------------------------------------------------------------------
 
-type WireOperative = Omit<Operative, 'fileAccess' | 'engineProvider' | 'engineModel' | 'engine'> & {
+type WireOperative = {
+  readonly id: string;
+  readonly scope: 'project' | 'workspace';
+  readonly projectId: string | null;
+  readonly workspaceId: string;
+  readonly name: string;
+  readonly slug: string;
+  readonly avatarUrl?: string;
   readonly intelAccess: 'all' | 'selected';
   readonly brainProvider?: string;
   readonly brainModel?: string;
   readonly brainMode: 'quick' | 'deep';
+  readonly orders: string;
+  readonly ordersUpdatedAt?: string;
+  readonly trustLevel: 0 | 1 | 2 | 3;
+  readonly isPrimary: boolean;
+  readonly status: 'active' | 'standby';
+  readonly sealGradient?: readonly [string, string];
+  readonly createdBy?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 };
 
 type WireIntel = {
@@ -55,14 +71,32 @@ type WireEquipmentList = {
 // ---------------------------------------------------------------------------
 
 const decodeOperative = (wire: WireOperative): Operative => {
-  const { intelAccess, brainProvider, brainModel, brainMode, ...rest } = wire;
-  return {
-    ...rest,
-    fileAccess: intelAccess,
-    engineProvider: brainProvider,
-    engineModel: brainModel,
-    engine: brainMode,
+  const base = {
+    id: wire.id,
+    workspaceId: wire.workspaceId,
+    name: wire.name,
+    slug: wire.slug,
+    avatarUrl: wire.avatarUrl,
+    fileAccess: wire.intelAccess,
+    engineProvider: wire.brainProvider,
+    engineModel: wire.brainModel,
+    engine: wire.brainMode,
+    orders: wire.orders,
+    ordersUpdatedAt: wire.ordersUpdatedAt,
+    trustLevel: wire.trustLevel,
+    isPrimary: wire.isPrimary,
+    status: wire.status,
+    sealGradient: wire.sealGradient,
+    createdBy: wire.createdBy,
+    createdAt: wire.createdAt,
+    updatedAt: wire.updatedAt,
   };
+
+  if (wire.scope === 'workspace' || wire.projectId === null) {
+    return { ...base, scope: 'workspace' };
+  }
+
+  return { ...base, scope: 'project', projectId: wire.projectId };
 };
 
 const decodeFile = (wire: WireIntel): OperativeFile => ({
@@ -173,6 +207,14 @@ export const createOperativesClient = (params: {
       const query = buildQuery([['projectId', listParams.projectId]]);
       const items = await request<readonly WireOperative[]>('GET', `/api/operatives${query}`);
       return items.map(decodeOperative);
+    },
+
+    listWorkspace: async (): Promise<readonly Operative[]> => {
+      const response = await request<{ readonly items: readonly WireOperative[] }>(
+        'GET',
+        '/api/workspace-operatives'
+      );
+      return response.items.map(decodeOperative);
     },
 
     get: async (operativeId: string): Promise<Operative> => {

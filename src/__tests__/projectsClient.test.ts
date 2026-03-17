@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { AuthModule } from '../auth/types.js';
-import type { Project, ProjectDetailed } from '../projects/projectsTypes.js';
+import type { Project } from '../projects/projectsTypes.js';
 import { diskd } from '../sdk/diskd.js';
 
 type FetchCall = { readonly url: string; readonly init?: RequestInit };
@@ -13,16 +13,7 @@ const stubProject: Project = {
   icon: 'folder',
   iconColor: '#3B82F6',
   driveFolderInode: 'inode-abc-123',
-  isSystem: false,
   updatedAt: '2026-03-16T10:00:00Z',
-};
-
-const stubSystemProject: ProjectDetailed = {
-  id: '01JD0000000000000000000000',
-  name: 'System',
-  driveFolderInode: 'inode-system-001',
-  isSystem: true,
-  updatedAt: '2026-03-16T08:00:00Z',
 };
 
 const makeAuth = (): AuthModule => ({
@@ -93,26 +84,6 @@ test('projects.get sends GET with projectId path param', async () => {
         calls[0]?.url,
         'http://app-service:3000/api/projects/01JD1234567890ABCDEFGHIJKL'
       );
-      assert.equal(calls[0]?.init?.method, 'GET');
-    }
-  );
-});
-
-test('projects.getSystem sends GET to /api/projects/system', async () => {
-  const url = 'http://app-service:3000';
-
-  await withFetchMock(
-    () =>
-      new Response(JSON.stringify(stubSystemProject), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    async (calls) => {
-      const client = diskd.platform.projects({ auth: makeAuth(), url });
-      const result = await client.getSystem();
-
-      assert.deepEqual(result, stubSystemProject);
-      assert.equal(calls[0]?.url, 'http://app-service:3000/api/projects/system');
       assert.equal(calls[0]?.init?.method, 'GET');
     }
   );
@@ -249,7 +220,6 @@ test('diskd.platform.projects factory returns a client with all methods', () => 
 
   assert.equal(typeof client.list, 'function');
   assert.equal(typeof client.get, 'function');
-  assert.equal(typeof client.getSystem, 'function');
   assert.equal(typeof client.create, 'function');
   assert.equal(typeof client.update, 'function');
   assert.equal(typeof client.delete, 'function');

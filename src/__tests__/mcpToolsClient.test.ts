@@ -333,30 +333,6 @@ test('throws on HTTP error with status', async () => {
   );
 });
 
-test('profileId is included in gateway URL', async () => {
-  const url = 'http://mcp-hub:3000/os/mcp';
-
-  let callIndex = 0;
-  await withFetchMock(
-    () => {
-      callIndex++;
-      if (callIndex === 1) {
-        return jsonRpcResponse(
-          { protocolVersion: '2024-11-05', capabilities: {}, serverInfo: { name: 'mcp-hub' } },
-          'session-abc'
-        );
-      }
-      return jsonRpcResponse({ tools: [] }, 'session-abc');
-    },
-    async (calls) => {
-      const client = diskd.os.mcpTools({ auth: makeAuth(), url, profileId: 'agent-1' });
-      await client.list();
-
-      assert.equal(calls[0]?.url, 'http://mcp-hub:3000/v1/mcp/agent-1');
-    }
-  );
-});
-
 test('gateway URL derivation uses env var when no url override', async () => {
   process.env.DISKD_BASE_URL = 'https://apis.example';
 

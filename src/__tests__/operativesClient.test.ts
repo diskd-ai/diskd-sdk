@@ -15,6 +15,7 @@ type FetchCall = { readonly url: string; readonly init?: RequestInit };
 // SDK exposes engine/engineProvider/engineModel/fileAccess
 const wireOperative = {
   id: 'op-01',
+  scope: 'project',
   projectId: 'proj-1',
   workspaceId: 'ws-1',
   name: 'Research Agent',
@@ -33,6 +34,7 @@ const wireOperative = {
 
 const expectedOperative: Operative = {
   id: 'op-01',
+  scope: 'project',
   projectId: 'proj-1',
   workspaceId: 'ws-1',
   name: 'Research Agent',
@@ -522,6 +524,7 @@ test('diskd.platform.operatives factory returns a client with all methods', () =
   });
 
   assert.equal(typeof client.list, 'function');
+  assert.equal(typeof client.listWorkspace, 'function');
   assert.equal(typeof client.get, 'function');
   assert.equal(typeof client.getBySlug, 'function');
   assert.equal(typeof client.create, 'function');

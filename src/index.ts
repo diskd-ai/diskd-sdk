@@ -47,7 +47,7 @@ export type { ApiKeyAuthParams, AuthModule, SdkCreateParams } from './auth/types
 export { createDriveCrontabClient } from './drive/crontab.js';
 export type {
   DriveCrontabClient,
-  DriveCrontabCreateProfileJobParams,
+  DriveCrontabCreateWorkspaceJobParams,
   DriveCrontabCreateProjectJobParams,
   DriveCrontabDocument,
   DriveCrontabGetParams,
@@ -64,7 +64,7 @@ export type {
   DriveCrontabPathPayload,
   DriveCrontabPayload,
   DriveCrontabPayloadKind,
-  DriveCrontabProfileScopeRef,
+  DriveCrontabWorkspaceScopeRef,
   DriveCrontabProjectScopeRef,
   DriveCrontabRequest,
   DriveCrontabRunJobParams,
@@ -290,13 +290,17 @@ export type {
   OperativeFileAccess,
   OperativeGetBySlugParams,
   OperativeListParams,
+  OperativeScope,
   OperativeSkill,
   OperativeStatus,
   OperativesClient,
   OperativeTool,
   OperativeTrustLevel,
   OperativeUpdateParams,
+  ProjectScopedOperative,
+  WorkspaceScopedOperative,
 } from './operatives/operativesTypes.js';
+export { isProjectScoped, isWorkspaceScoped } from './operatives/operativesTypes.js';
 // -- Projects --
 export { createProjectsClient } from './projects/projects.js';
 export type {

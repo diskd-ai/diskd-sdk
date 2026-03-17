@@ -17,7 +17,7 @@ const stubRoutine: Routine = {
   steps: [{ id: 'step-1', name: 'Summarize', action: 'summarize', order: 0 }],
   operativeSlug: 'analyst',
   rhythms: [],
-  scope: 'profile',
+  scope: 'workspace',
   createdAt: '2026-03-15T10:00:00Z',
   updatedAt: '2026-03-15T10:00:00Z',
 };
@@ -61,7 +61,7 @@ test('routines.list sends GET with scope query params and unwraps items', async 
       }),
     async (calls) => {
       const client = diskd.platform.routines({ auth: makeAuth(), url });
-      const result = await client.list({ scope: 'profile' });
+      const result = await client.list({ scope: 'workspace' });
 
       assert.deepEqual(result, [stubRoutine]);
       assert.equal(calls[0]?.url, 'http://app-service:3000/api/routines?scope=profile');
@@ -123,7 +123,7 @@ test('routines.get sends GET with slug and scope and unwraps routine', async () 
       }),
     async (calls) => {
       const client = diskd.platform.routines({ auth: makeAuth(), url });
-      const result = await client.get({ slug: 'daily-summary', scope: 'profile' });
+      const result = await client.get({ slug: 'daily-summary', scope: 'workspace' });
 
       assert.deepEqual(result, stubRoutine);
       assert.equal(
@@ -149,7 +149,7 @@ test('routines.create sends POST with body and unwraps routine', async () => {
       const result = await client.create({
         name: 'Daily Summary',
         operativeSlug: 'analyst',
-        scope: 'profile',
+        scope: 'workspace',
       });
 
       assert.deepEqual(result, stubRoutine);
@@ -157,7 +157,7 @@ test('routines.create sends POST with body and unwraps routine', async () => {
       assert.equal(calls[0]?.init?.method, 'POST');
       const body = JSON.parse(String(calls[0]?.init?.body));
       assert.equal(body.name, 'Daily Summary');
-      assert.equal(body.scope, 'profile');
+      assert.equal(body.scope, 'workspace');
       const contentType = (calls[0]?.init?.headers as Record<string, string>)?.['Content-Type'];
       assert.equal(contentType, 'application/json');
     }
@@ -179,7 +179,7 @@ test('routines.update sends PATCH with slug, body, and scope query', async () =>
       const result = await client.update(
         'daily-summary',
         { name: 'Updated Summary' },
-        { scopeType: 'profile' }
+        { scopeType: 'workspace' }
       );
 
       assert.deepEqual(result, updatedRoutine);
@@ -230,7 +230,7 @@ test('routines.delete sends DELETE with slug and scope', async () => {
       }),
     async (calls) => {
       const client = diskd.platform.routines({ auth: makeAuth(), url });
-      await client.delete({ slug: 'daily-summary', scope: 'profile' });
+      await client.delete({ slug: 'daily-summary', scope: 'workspace' });
 
       assert.equal(
         calls[0]?.url,

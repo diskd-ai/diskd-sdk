@@ -36,7 +36,7 @@ export type RoutineRun = {
 
 export type RoutineRunListParams = {
   readonly routineSlug: string;
-  readonly scope?: 'profile' | 'project';
+  readonly scope?: 'workspace' | 'project';
   readonly projectName?: string;
 };
 
