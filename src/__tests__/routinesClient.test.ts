@@ -64,7 +64,7 @@ test('routines.list sends GET with scope query params and unwraps items', async 
       const result = await client.list({ scope: 'workspace' });
 
       assert.deepEqual(result, [stubRoutine]);
-      assert.equal(calls[0]?.url, 'http://app-service:3000/api/routines?scope=profile');
+      assert.equal(calls[0]?.url, 'http://app-service:3000/api/routines?scope=workspace');
       assert.equal(calls[0]?.init?.method, 'GET');
       const authHeader = (calls[0]?.init?.headers as Record<string, string>)?.Authorization;
       assert.equal(authHeader, 'Bearer token-123');
@@ -128,7 +128,7 @@ test('routines.get sends GET with slug and scope and unwraps routine', async () 
       assert.deepEqual(result, stubRoutine);
       assert.equal(
         calls[0]?.url,
-        'http://app-service:3000/api/routines/daily-summary?scope=profile'
+        'http://app-service:3000/api/routines/daily-summary?scope=workspace'
       );
       assert.equal(calls[0]?.init?.method, 'GET');
     }
@@ -185,7 +185,7 @@ test('routines.update sends PATCH with slug, body, and scope query', async () =>
       assert.deepEqual(result, updatedRoutine);
       assert.equal(
         calls[0]?.url,
-        'http://app-service:3000/api/routines/daily-summary?scope=profile'
+        'http://app-service:3000/api/routines/daily-summary?scope=workspace'
       );
       assert.equal(calls[0]?.init?.method, 'PATCH');
       const body = JSON.parse(String(calls[0]?.init?.body));
@@ -234,7 +234,7 @@ test('routines.delete sends DELETE with slug and scope', async () => {
 
       assert.equal(
         calls[0]?.url,
-        'http://app-service:3000/api/routines/daily-summary?scope=profile'
+        'http://app-service:3000/api/routines/daily-summary?scope=workspace'
       );
       assert.equal(calls[0]?.init?.method, 'DELETE');
     }
