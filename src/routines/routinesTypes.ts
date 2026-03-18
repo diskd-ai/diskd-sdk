@@ -8,8 +8,8 @@ export type RoutineTriggerType = 'rhythm' | 'signal';
 export type RoutineScope = 'workspace' | 'project';
 
 export type RoutineScopeRef =
-  | { readonly scopeType: 'workspace' }
-  | { readonly scopeType: 'project'; readonly projectName: string };
+  | { readonly scope: 'workspace' }
+  | { readonly scope: 'project'; readonly projectName: string };
 
 // -- Rhythms (discriminated union) --
 

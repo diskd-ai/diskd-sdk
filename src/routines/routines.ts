@@ -24,10 +24,10 @@ const buildScopeQuery = (scope?: string, projectName?: string): string =>
 
 const scopeRefToQuery = (scope?: RoutineScopeRef): string => {
   if (!scope) return '';
-  if (scope.scopeType === 'project') {
-    return buildScopeQuery(scope.scopeType, scope.projectName);
+  if (scope.scope === 'project') {
+    return buildScopeQuery(scope.scope, scope.projectName);
   }
-  return buildScopeQuery(scope.scopeType);
+  return buildScopeQuery(scope.scope);
 };
 
 // ---------------------------------------------------------------------------

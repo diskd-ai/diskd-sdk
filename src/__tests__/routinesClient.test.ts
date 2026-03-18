@@ -179,7 +179,7 @@ test('routines.update sends PATCH with slug, body, and scope query', async () =>
       const result = await client.update(
         'daily-summary',
         { name: 'Updated Summary' },
-        { scopeType: 'workspace' }
+        { scope: 'workspace' }
       );
 
       assert.deepEqual(result, updatedRoutine);
@@ -208,7 +208,7 @@ test('routines.update with project scope includes projectName', async () => {
       await client.update(
         'daily-summary',
         { status: 'paused' },
-        { scopeType: 'project', projectName: 'my-project' }
+        { scope: 'project', projectName: 'my-project' }
       );
 
       assert.equal(
