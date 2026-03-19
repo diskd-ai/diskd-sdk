@@ -1,8 +1,8 @@
 /**
- * HTTP client for the NATS Bridge (Platform Events).
+ * HTTP client for Platform Events.
  *
- * Publishes domain events via POST /publish to the nats-bridge service,
- * which forwards them to NATS JetStream.
+ * Publishes domain events via POST /publish to the app-service events endpoint,
+ * which constructs an envelope and publishes to NATS JetStream directly.
  */
 import type { AuthModule } from '../auth/types.js';
 import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
