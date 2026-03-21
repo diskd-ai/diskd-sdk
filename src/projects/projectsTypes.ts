@@ -9,7 +9,6 @@ export type Project = {
   readonly description?: string;
   readonly icon?: string;
   readonly iconColor?: string;
-  readonly driveFolderInode: string | null;
   readonly updatedAt: string;
 };
 
@@ -19,7 +18,6 @@ export type ProjectDetailed = {
   readonly description?: string;
   readonly icon?: string;
   readonly iconColor?: string;
-  readonly driveFolderInode: string | null;
   readonly updatedAt: string;
 };
 

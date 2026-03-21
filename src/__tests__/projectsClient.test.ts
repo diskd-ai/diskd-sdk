@@ -12,7 +12,6 @@ const stubProject: Project = {
   description: 'A test project',
   icon: 'folder',
   iconColor: '#3B82F6',
-  driveFolderInode: 'inode-abc-123',
   updatedAt: '2026-03-16T10:00:00Z',
 };
 
