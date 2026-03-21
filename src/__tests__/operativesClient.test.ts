@@ -11,7 +11,7 @@ import { diskd } from '../sdk/diskd.js';
 
 type FetchCall = { readonly url: string; readonly init?: RequestInit };
 
-// Wire uses brainMode/brainProvider/brainModel/intelAccess;
+// Wire uses engine/engineProvider/engineModel/intelAccess;
 // SDK exposes engine/engineProvider/engineModel/fileAccess
 const wireOperative = {
   id: 'op-01',
@@ -20,9 +20,9 @@ const wireOperative = {
   workspaceId: 'ws-1',
   name: 'Research Agent',
   slug: 'research-agent',
-  brainMode: 'quick',
-  brainProvider: 'openai',
-  brainModel: 'gpt-5',
+  engine: 'quick',
+  engineProvider: 'openai',
+  engineModel: 'gpt-5',
   orders: 'You are a research assistant.',
   intelAccess: 'all',
   trustLevel: 2,
@@ -235,16 +235,13 @@ test('operatives.update encodes SDK field names to wire format', async () => {
       });
 
       const body = JSON.parse(String(calls[0]?.init?.body));
-      // Wire names
+      // fileAccess is still encoded to intelAccess on the wire
       assert.equal(body.intelAccess, 'selected');
-      assert.equal(body.brainProvider, 'anthropic');
-      assert.equal(body.brainModel, 'claude-4');
-      assert.equal(body.brainMode, 'deep');
-      // SDK names absent on wire
       assert.equal(body.fileAccess, undefined);
-      assert.equal(body.engineProvider, undefined);
-      assert.equal(body.engineModel, undefined);
-      assert.equal(body.engine, undefined);
+      // engine fields are now pass-through (no renaming)
+      assert.equal(body.engineProvider, 'anthropic');
+      assert.equal(body.engineModel, 'claude-4');
+      assert.equal(body.engine, 'deep');
     }
   );
 });

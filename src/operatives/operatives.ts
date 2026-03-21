@@ -29,9 +29,9 @@ type WireOperative = {
   readonly slug: string;
   readonly avatarUrl?: string;
   readonly intelAccess: 'all' | 'selected';
-  readonly brainProvider?: string;
-  readonly brainModel?: string;
-  readonly brainMode: 'quick' | 'deep';
+  readonly engineProvider?: string;
+  readonly engineModel?: string;
+  readonly engine: 'quick' | 'deep';
   readonly orders: string;
   readonly ordersUpdatedAt?: string;
   readonly trustLevel: 0 | 1 | 2 | 3;
@@ -78,9 +78,9 @@ const decodeOperative = (wire: WireOperative): Operative => {
     slug: wire.slug,
     avatarUrl: wire.avatarUrl,
     fileAccess: wire.intelAccess,
-    engineProvider: wire.brainProvider,
-    engineModel: wire.brainModel,
-    engine: wire.brainMode,
+    engineProvider: wire.engineProvider,
+    engineModel: wire.engineModel,
+    engine: wire.engine,
     orders: wire.orders,
     ordersUpdatedAt: wire.ordersUpdatedAt,
     trustLevel: wire.trustLevel,
@@ -128,18 +128,6 @@ const encodeParams = (params: Record<string, unknown>): Record<string, unknown> 
   if ('fileAccess' in wire) {
     wire.intelAccess = wire.fileAccess;
     delete wire.fileAccess;
-  }
-  if ('engineProvider' in wire) {
-    wire.brainProvider = wire.engineProvider;
-    delete wire.engineProvider;
-  }
-  if ('engineModel' in wire) {
-    wire.brainModel = wire.engineModel;
-    delete wire.engineModel;
-  }
-  if ('engine' in wire) {
-    wire.brainMode = wire.engine;
-    delete wire.engine;
   }
   return wire;
 };
