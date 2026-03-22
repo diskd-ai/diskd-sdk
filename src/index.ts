@@ -44,6 +44,27 @@ export type {
 export { createApiKeyAuth } from './auth/createApiKeyAuth.js';
 export { createAuth } from './auth/createAuth.js';
 export type { ApiKeyAuthParams, AuthModule, SdkCreateParams } from './auth/types.js';
+// -- Calendar --
+export { createCalendarClient } from './calendar/calendar.js';
+export type {
+  AddAttachmentParams,
+  AddAttendeeParams,
+  Calendar,
+  CalendarAccount,
+  CalendarClient,
+  CalendarEvent,
+  CalendarEventMetadata,
+  CalendarEventNoteRef,
+  CalendarSettings,
+  CreateEventParams,
+  EventAttachment,
+  EventAttendee,
+  EventNoteLink,
+  LinkNoteParams,
+  ListEventsParams,
+  UpdateEventParams,
+  UpdateSettingsParams,
+} from './calendar/calendarTypes.js';
 export { createDriveCrontabClient } from './drive/crontab.js';
 export type {
   DriveCrontabClient,

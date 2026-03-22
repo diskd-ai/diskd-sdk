@@ -27,6 +27,7 @@ const agents     = diskd.os.agents({ auth, workspaceId: '...' });
 const mcp        = diskd.os.mcp({ auth, workspaceId: '...' });
 const routines   = diskd.platform.routines({ auth });
 const operatives = diskd.platform.operatives({ auth });
+const calendar   = diskd.platform.calendar({ auth });
 const tg         = diskd.utils.tgUserBot({ auth, workspaceId: '...' });
 const webNav     = diskd.utils.webNavigator({ auth, workspaceId: '...' });
 ```
@@ -125,7 +126,7 @@ Derived default paths:
 - `/os/llm`
 - `/os/agents`
 - `/os/mcp`
-- `/platform/app` (routines, operatives)
+- `/platform/app` (routines, operatives, calendar)
 - `/utils/tg-userbot`
 - `/utils/web-navigator`
 
@@ -372,6 +373,99 @@ const tools = await ops.tools.list('op-01');
 
 // Detach a tool
 await ops.tools.remove('op-01', tools[0].id);
+```
+
+Calendar API
+------------
+
+REST client for workspace calendar management -- events, attendees, note links, attachments, and settings:
+
+```ts
+const calendar = diskd.platform.calendar({ auth });
+
+// Accounts and events
+const accounts = await calendar.listAccounts();
+const events = await calendar.listEvents({
+  startAfter: '2026-03-01T00:00:00Z',
+  startBefore: '2026-03-31T23:59:59Z',
+});
+
+// Event CRUD
+const event = await calendar.createEvent({
+  calendarId: accounts[0].calendars[0].id,
+  title: 'Sprint Planning',
+  startAt: '2026-03-25T10:00:00Z',
+  endAt: '2026-03-25T11:00:00Z',
+});
+
+await calendar.updateEvent(event.id, {
+  title: 'Sprint Planning (updated)',
+  metadata: { timeBlockCategory: 'meeting' },
+});
+
+await calendar.deleteEvent(event.id);
+```
+
+### Attendees
+
+```ts
+const attendee = await calendar.attendees.add(event.id, {
+  email: 'alice@example.com',
+  role: 'required',
+});
+
+await calendar.attendees.updateRsvp(event.id, attendee.id, 'yes');
+await calendar.attendees.remove(event.id, attendee.id);
+```
+
+### Note links
+
+```ts
+const link = await calendar.noteLinks.add(event.id, {
+  noteDiskPath: '/Projects/sprint/notes/planning.md',
+  title: 'Planning Notes',
+  linkType: 'context',
+});
+
+await calendar.noteLinks.remove(event.id, link.id);
+```
+
+### Attachments
+
+```ts
+const attachment = await calendar.attachments.add(event.id, {
+  type: 'url',
+  title: 'Meeting Recording',
+  url: 'https://meet.example.com/recording/123',
+});
+
+await calendar.attachments.remove(event.id, attachment.id);
+```
+
+### Event metadata
+
+Events support an extensible `metadata` JSONB field for cross-domain data:
+
+```ts
+await calendar.updateEvent(event.id, {
+  metadata: {
+    timeBlockCategory: 'focus',
+    linkedNotes: [
+      { noteDiskPath: '/docs/spec.md', title: 'Spec', linkType: 'context' },
+    ],
+  },
+});
+```
+
+### Settings
+
+```ts
+const settings = await calendar.getSettings();
+await calendar.updateSettings({
+  weekStartDay: 0,
+  defaultView: 'month',
+  timezone: 'America/New_York',
+});
 ```
 
 Drive Database API
