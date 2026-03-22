@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { createAgentHubClient } from '../agentHub/agentHub.js';
 import { createApiKeyAuth } from '../auth/createApiKeyAuth.js';
 import { createAuth } from '../auth/createAuth.js';
+import { createCalendarClient } from '../calendar/calendar.js';
 import type { DriveScopedCrontabClient } from '../drive/crontabTypes.js';
 import { createDriveDatabase } from '../drive/DriveRepository.js';
 import { createDriveClient } from '../drive/drive.js';
@@ -140,6 +141,8 @@ export const diskd: DiskD = {
       const eventsUrl = url ?? resolveDiskdGatewayUrl('api/events');
       return createPlatformEventsClient({ auth, url: eventsUrl });
     },
+
+    calendar: ({ auth, url }) => createCalendarClient({ auth, url }),
   },
 
   utils: {
