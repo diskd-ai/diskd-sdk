@@ -54,7 +54,7 @@ export const createCalendarClient = (params: {
   readonly auth: AuthModule;
   readonly url?: string;
 }): CalendarClient => {
-  const baseUrl = (params.url ?? resolveDiskdGatewayUrl('platform/app')).replace(/\/+$/, '');
+  const baseUrl = (params.url ?? resolveDiskdGatewayUrl('platform/calendar')).replace(/\/+$/, '');
 
   const request = async <T>(
     method: HttpMethod,
