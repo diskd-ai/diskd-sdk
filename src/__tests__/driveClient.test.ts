@@ -551,7 +551,7 @@ test('drive.tools.writeFile sends paths/tools/write with path and content', asyn
 // ---------------------------------------------------------------------------
 
 test('drive.tools.ls returns DriveToolsLsResult with typed entries', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -655,12 +655,12 @@ test('drive.tools.ls returns DriveToolsLsResult with typed entries', async () =>
     assert.equal(body.params.recursive, true);
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
 test('drive.tools.ls returns empty entries for empty result', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const originalFetch = globalThis.fetch;
   const fetchMock = async (): Promise<Response> =>
@@ -686,12 +686,12 @@ test('drive.tools.ls returns empty entries for empty result', async () => {
     assert.equal(result.entries.length, 0);
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
 test('drive.tools.glob returns DriveToolsGlobResult with typed entries', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -756,12 +756,12 @@ test('drive.tools.glob returns DriveToolsGlobResult with typed entries', async (
     assert.equal(body.params.pattern, '**/*.md');
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
 test('drive.tools.grep returns DriveToolsGrepResult with typed documents', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -870,12 +870,12 @@ test('drive.tools.grep returns DriveToolsGrepResult with typed documents', async
     assert.deepEqual(body.params.paths, ['/docs/chapter1.md', '/docs/summary.md']);
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
 test('drive.tools.grep returns empty documents when all results are errors', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const originalFetch = globalThis.fetch;
   const fetchMock = async (): Promise<Response> =>
@@ -910,12 +910,12 @@ test('drive.tools.grep returns empty documents when all results are errors', asy
     assert.equal(result.documents.length, 0);
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
 test('drive.tools.vsearch returns DriveToolsVsearchResult with typed documents', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -982,7 +982,7 @@ test('drive.tools.vsearch returns DriveToolsVsearchResult with typed documents',
     assert.equal(body.params.path, '/research');
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
@@ -991,7 +991,7 @@ test('drive.tools.vsearch returns DriveToolsVsearchResult with typed documents',
 // ---------------------------------------------------------------------------
 
 test('drive.tools.biQuery sends paths/tools/bi-query and returns typed tables', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -1055,12 +1055,12 @@ test('drive.tools.biQuery sends paths/tools/bi-query and returns typed tables', 
     assert.deepEqual(body.params.paths, ['/data/report.xlsx']);
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
 test('drive.tools.biQuery returns empty tables for empty result', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const originalFetch = globalThis.fetch;
   const fetchMock = async (): Promise<Response> =>
@@ -1085,12 +1085,12 @@ test('drive.tools.biQuery returns empty tables for empty result', async () => {
     assert.deepEqual(result.tables, {});
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
 test('drive.tools.inodesQuery sends paths/tools/inodes-query with all options', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -1176,12 +1176,12 @@ test('drive.tools.inodesQuery sends paths/tools/inodes-query with all options', 
     assert.equal(body.params.offset, 0);
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
 test('drive.tools.tgSearch sends paths/tools/tg-search and returns typed messages', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -1309,12 +1309,12 @@ test('drive.tools.tgSearch sends paths/tools/tg-search and returns typed message
     assert.equal(body.params.order_by, 'relevance');
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
 test('drive.tools.excelWrite sends paths/tools/excel-write and returns write result', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -1363,12 +1363,12 @@ test('drive.tools.excelWrite sends paths/tools/excel-write and returns write res
     assert.equal(body.params.sheet_name, 'Q4 Data');
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
 test('drive.tools.excelWrite omits sheet_name when not provided', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -1406,7 +1406,7 @@ test('drive.tools.excelWrite omits sheet_name when not provided', async () => {
     assert.equal(body.params.sheet_name, undefined, 'sheet_name must not be sent when omitted');
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
