@@ -115,7 +115,7 @@ All resource APIs resolve from the centralized gateway base URL:
 
 | Env Variable | Default |
 |--------------|---------|
-| `DISKD_BASE_URL` | `https://apis.diskd.local:8080` |
+| `APIS_BASE_URL` | `https://apis.diskd.local:8080` |
 
 The gateway is the single resource entrypoint. The SDK derives API paths from
 the same namespace structure as the public SDK surface and lets the gateway
@@ -137,11 +137,11 @@ Gateway Decision
 ----------------
 
 This SDK does not treat resource APIs as independently-discovered hosts.
-The canonical model is one centralized `apis` gateway behind `DISKD_BASE_URL`.
+The canonical model is one centralized `apis` gateway behind `APIS_BASE_URL`.
 
 That means:
 - no per-service default env vars such as `LLM_ROUTER_BASE_URL`, `AGENT_HUB_BASE_URL`, or `MCP_HUB_BASE_URL`
-- resource clients derive their route from `DISKD_BASE_URL` plus a namespace-derived path prefix
+- resource clients derive their route from `APIS_BASE_URL` plus a namespace-derived path prefix
 - the gateway is responsible for request routing, API orchestration, and auth-strategy handling
 
 Per-client `url` remains available only as an explicit override.

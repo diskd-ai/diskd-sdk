@@ -7,14 +7,14 @@ const stripSurroundingSlashes = (value: string): string => value.replace(/^\/+|\
 
 export const resolveDiskdBaseUrl = (): string => {
   const nodeEnv = readEnvString(
-    (globalThis as { process?: { env?: { DISKD_BASE_URL?: string } } }).process?.env?.DISKD_BASE_URL
+    (globalThis as { process?: { env?: { APIS_BASE_URL?: string } } }).process?.env?.APIS_BASE_URL
   );
   if (nodeEnv) return nodeEnv;
 
-  const runtime = readEnvString((globalThis as { DISKD_BASE_URL?: unknown }).DISKD_BASE_URL);
+  const runtime = readEnvString((globalThis as { APIS_BASE_URL?: unknown }).APIS_BASE_URL);
   if (runtime) return runtime;
 
-  return 'https://apis.diskd.local:8080';
+  throw new Error('APIS_BASE_URL is not set.');
 };
 
 export const resolveDiskdGatewayUrl = (pathPrefix: string): string => {

@@ -4,7 +4,7 @@
  * Validates LLM SDK methods: models.listAll, completions.create, completions.stream
  *
  * Environment:
- *   DISKD_BASE_URL         - Gateway URL (default: https://apis.upgraide.dev)
+ *   APIS_BASE_URL         - Gateway URL (default: https://apis.upgraide.dev)
  *   DISKD_CREDENTIALS_PATH - Path to credentials.json (default: ./credentials.json)
  *
  * Run:
@@ -18,7 +18,7 @@ const CREDENTIALS_PATH = process.env.DISKD_CREDENTIALS_PATH ?? './credentials.js
 const h = createHarness('LLM Router (external)');
 
 console.log('=== LLM Router validation (external / OAuth2) ===\n');
-console.log(`Gateway: ${process.env.DISKD_BASE_URL ?? 'https://apis.upgraide.dev'}`);
+console.log(`Gateway: ${process.env.APIS_BASE_URL ?? 'https://apis.upgraide.dev'}`);
 console.log(`Credentials: ${CREDENTIALS_PATH}\n`);
 
 const auth = await diskd.auth.credentials({

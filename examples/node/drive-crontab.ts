@@ -5,7 +5,7 @@
  * status and normalized jobs list.
  *
  * Environment:
- *   DISKD_BASE_URL          - Gateway URL (default: https://apis.diskd.local:8080)
+ *   APIS_BASE_URL          - Gateway URL (default: https://apis.diskd.local:8080)
  *   DISKD_CREDENTIALS_PATH  - Path to OAuth2 credentials.json
  *   DISKD_PROJECT_ID        - Project ID (default: my-project)
  */

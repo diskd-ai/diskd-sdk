@@ -153,7 +153,7 @@ const buildQuery = (entries: readonly (readonly [string, string | undefined])[])
 /**
  * Creates an Operatives REST client bound to a given auth module.
  *
- * The URL defaults to the centralized `DISKD_BASE_URL` gateway with the
+ * The URL defaults to the centralized `APIS_BASE_URL` gateway with the
  * `/platform/app` path prefix.
  *
  * Example:

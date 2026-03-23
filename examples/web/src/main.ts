@@ -9,8 +9,8 @@ const ISSUER = env.VITE_DISKD_OIDC_ISSUER ?? 'https://oauth2.diskd.local:8080';
 const AUDIENCE = env.VITE_DISKD_AUDIENCE ?? 'diskd-api';
 const SCOPES = ['openid'];
 
-const DISKD_BASE_URL = env.VITE_DISKD_BASE_URL ?? 'https://apis.diskd.local:8080';
-window.DISKD_BASE_URL = DISKD_BASE_URL;
+const APIS_BASE_URL = env.VITE_APIS_BASE_URL ?? 'https://apis.diskd.local:8080';
+window.APIS_BASE_URL = APIS_BASE_URL;
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) {

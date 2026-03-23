@@ -2,7 +2,7 @@
 
 declare global {
   interface Window {
-    DISKD_BASE_URL?: string;
+    APIS_BASE_URL?: string;
   }
 }
 

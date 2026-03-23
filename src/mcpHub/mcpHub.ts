@@ -162,7 +162,7 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
 /**
  * Creates an MCP Hub REST client bound to a given auth module and workspace.
  *
- * The URL defaults to the centralized `DISKD_BASE_URL` gateway with the
+ * The URL defaults to the centralized `APIS_BASE_URL` gateway with the
  * `/os/mcp` path prefix.
  *
  * The workspace is derived from `auth.getWorkspaceId()` and forwarded as

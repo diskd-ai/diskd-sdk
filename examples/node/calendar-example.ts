@@ -19,7 +19,7 @@ const credentialsPath =
   process.env.DISKD_CREDENTIALS_PATH ??
   path.resolve(process.cwd(), 'credentials.json');
 
-const calendarUrl = process.env.CALENDAR_URL ?? `${process.env.DISKD_BASE_URL ?? 'https://apis.upgraide.dev'}/platform/calendar`;
+const calendarUrl = process.env.CALENDAR_URL ?? `${process.env.APIS_BASE_URL ?? 'https://apis.upgraide.dev'}/platform/calendar`;
 
 console.log(`[auth] Using credentials: ${credentialsPath}`);
 console.log(`[info] Calendar URL: ${calendarUrl}`);

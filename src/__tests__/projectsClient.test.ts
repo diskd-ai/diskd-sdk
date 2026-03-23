@@ -192,7 +192,7 @@ test('projects client throws on HTTP error with parsed message', async () => {
 });
 
 test('projects client uses gateway URL when no url override provided', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   await withFetchMock(
     () =>
@@ -208,7 +208,7 @@ test('projects client uses gateway URL when no url override provided', async () 
     }
   );
 
-  delete process.env.DISKD_BASE_URL;
+  delete process.env.APIS_BASE_URL;
 });
 
 test('diskd.platform.projects factory returns a client with all methods', () => {

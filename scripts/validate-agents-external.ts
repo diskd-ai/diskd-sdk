@@ -4,7 +4,7 @@
  * Validates Agent Hub SDK methods: agents.list, invoke (streaming)
  *
  * Environment:
- *   DISKD_BASE_URL         - Gateway URL (default: https://apis.upgraide.dev)
+ *   APIS_BASE_URL         - Gateway URL (default: https://apis.upgraide.dev)
  *   DISKD_CREDENTIALS_PATH - Path to credentials.json (default: ./credentials.json)
  * Run:
  *   bun run scripts:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-scripts/scripts/validate-agents-external.js

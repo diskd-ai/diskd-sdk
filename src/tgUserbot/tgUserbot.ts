@@ -278,7 +278,7 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
 /**
  * Creates a TG Userbot REST client bound to a given auth module and workspace.
  *
- * The URL defaults to the centralized `DISKD_BASE_URL` gateway with the
+ * The URL defaults to the centralized `APIS_BASE_URL` gateway with the
  * `/utils/tg-userbot` path prefix.
  *
  * The workspace is derived from `auth.getWorkspaceId()` and forwarded as

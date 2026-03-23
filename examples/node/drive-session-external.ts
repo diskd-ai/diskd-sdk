@@ -5,12 +5,12 @@
  * using OAuth2 service-account credentials.
  *
  * Environment:
- *   DISKD_BASE_URL          - Gateway URL (default: https://apis.diskd.local:8080)
+ *   APIS_BASE_URL          - Gateway URL (default: https://apis.diskd.local:8080)
  *   DISKD_CREDENTIALS_PATH  - Path to OAuth2 credentials.json
  *   DISKD_PROJECT_ID        - Project ID (default: my-project)
  *
  * Run:
- *   DISKD_BASE_URL=https://apis.diskd.local:8080 \
+ *   APIS_BASE_URL=https://apis.diskd.local:8080 \
  *   npm run examples:build && node dist-examples/node/drive-session-external.js
  */
 import path from 'node:path';

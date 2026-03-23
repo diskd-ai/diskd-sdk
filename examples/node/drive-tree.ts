@@ -9,7 +9,7 @@
  *
  * Environment:
  *   DISKD_CREDENTIALS_PATH  - path to credentials.json (default: ./data/credentials.json)
- *   DISKD_BASE_URL           - API base URL (default: https://apis.diskd.local:8080)
+ *   APIS_BASE_URL           - API base URL (default: https://apis.diskd.local:8080)
  */
 
 import path from 'node:path';
@@ -214,7 +214,7 @@ const main = async (): Promise<void> => {
   console.log('DiskD Drive Tree Demo');
   console.log('\u{2500}'.repeat(50));
   console.log(`  Credentials: ${credentialsPath}`);
-  console.log(`  Base URL:    ${process.env.DISKD_BASE_URL ?? 'https://apis.diskd.local:8080'}`);
+  console.log(`  Base URL:    ${process.env.APIS_BASE_URL ?? 'https://apis.diskd.local:8080'}`);
   console.log(`  Max depth:   ${maxDepth}`);
   console.log('\u{2500}'.repeat(50));
   console.log();

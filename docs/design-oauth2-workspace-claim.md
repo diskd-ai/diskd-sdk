@@ -229,10 +229,10 @@ type KeyfileJson = {
 
 ### Gateway URL resolution
 
-When `apisUrl` is present in credentials, use it as `DISKD_BASE_URL` default:
+When `apisUrl` is present in credentials, use it as `APIS_BASE_URL` default:
 - `diskd.auth.credentials()` reads `apisUrl` from keyfile
-- Sets it as the SDK-wide base URL if `DISKD_BASE_URL` env var is not set
-- No changes needed in service clients -- they already read from `DISKD_BASE_URL`
+- Sets it as the SDK-wide base URL if `APIS_BASE_URL` env var is not set
+- No changes needed in service clients -- they already read from `APIS_BASE_URL`
 
 
 Error handling and UX
@@ -243,7 +243,7 @@ Error handling and UX
 | Token hook returns 403 | IAM -> Hydra | `invalid_client: token hook denied` | Re-generate credentials for a valid workspace |
 | Token hook unreachable | Hydra -> IAM | `server_error: token hook failed` | Check IAM service health in cluster |
 | workspace_id missing in token | Drive | `Missing workspace_id claim` (existing) | Re-generate credentials (stale client without metadata) |
-| Old credentials without apisUrl | SDK | Falls back to `DISKD_BASE_URL` env | User sets env var or regenerates credentials |
+| Old credentials without apisUrl | SDK | Falls back to `APIS_BASE_URL` env | User sets env var or regenerates credentials |
 
 Stale credentials (created before this change) continue to work with the internal API
 key path. For the OAuth2 path, users must regenerate credentials to get the
@@ -342,7 +342,7 @@ Acceptance criteria
 3. Given a newly generated `credentials.json`, when the file is read, then it contains
    `apisUrl` pointing to the correct apis gateway for that environment
 4. Given a `credentials.json` without `apisUrl` (legacy), when the SDK loads it, then it
-   falls back to `DISKD_BASE_URL` env var without error
+   falls back to `APIS_BASE_URL` env var without error
 5. Given an unknown `client_id` in a token request, when Hydra calls the token hook, then
    the hook returns 403 and Hydra rejects the token
 6. Given the token hook endpoint is down, when a token is requested, then Hydra rejects

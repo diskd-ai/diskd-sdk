@@ -6,7 +6,7 @@ import { diskd } from '../sdk/diskd.js';
 type FetchCall = { readonly url: string; readonly init?: RequestInit };
 
 test('drive.init calls JSON-RPC with Bearer token', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -41,12 +41,12 @@ test('drive.init calls JSON-RPC with Bearer token', async () => {
     assert.ok(String(init?.body).includes('"method":"drive/init"'));
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
 test('drive.crontab.getStatus uses the drive JSON-RPC endpoint', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -98,12 +98,12 @@ test('drive.crontab.getStatus uses the drive JSON-RPC endpoint', async () => {
     assert.ok(String(calls[0]?.init?.body).includes('"scope_type":"workspace"'));
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
 test('diskd.platform.crontab binds scope + timezone in the constructor', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -162,12 +162,12 @@ test('diskd.platform.crontab binds scope + timezone in the constructor', async (
     assert.ok(String(calls[0]?.init?.body).includes('"timezone":"UTC"'));
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
 test('diskd.platform.crontab defaults timezone from the caller runtime', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -221,12 +221,12 @@ test('diskd.platform.crontab defaults timezone from the caller runtime', async (
     assert.ok(String(calls[0]?.init?.body).includes(expectedTimezoneFragment));
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
 test('diskd.platform.sessions.list uses the drive JSON-RPC endpoint', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -294,7 +294,7 @@ test('diskd.platform.sessions.list uses the drive JSON-RPC endpoint', async () =
     assert.ok(String(calls[0]?.init?.body).includes('"project_id":"proj-1"'));
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
@@ -325,7 +325,7 @@ test('diskd exposes namespaced os and utils factories for non-drive services', (
 });
 
 test('resource clients derive gateway paths from SDK namespaces', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -428,12 +428,12 @@ test('resource clients derive gateway paths from SDK namespaces', async () => {
     );
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
 test('drive.tools.readFile sends paths/tools/read and decodes parts', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -495,12 +495,12 @@ test('drive.tools.readFile sends paths/tools/read and decodes parts', async () =
     assert.equal(body.params.parts_offset, 0);
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
 test('drive.tools.writeFile sends paths/tools/write with path and content', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -542,12 +542,12 @@ test('drive.tools.writeFile sends paths/tools/write with path and content', asyn
     assert.equal(result.path, '/docs/readme.md');
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });
 
 test('drive.tools.applyPatch sends paths/tools/apply-patch with path and patch', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
@@ -591,6 +591,6 @@ test('drive.tools.applyPatch sends paths/tools/apply-patch with path and patch',
     assert.equal(result.path, '/docs/readme.md');
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
-    delete process.env.DISKD_BASE_URL;
+    delete process.env.APIS_BASE_URL;
   }
 });

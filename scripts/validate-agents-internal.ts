@@ -4,12 +4,12 @@
  * Validates Agent Hub SDK methods: agents.list, invoke (streaming)
  *
  * Environment:
- *   DISKD_BASE_URL  - Gateway URL (default: https://apis.diskd.local:8080)
+ *   APIS_BASE_URL  - Gateway URL (default: https://apis.diskd.local:8080)
  *   API_KEY         - API key (default: key-dev-1234567890)
  *   WORKSPACE_ID    - Workspace ID (default: dev-user-id)
  *
  * Run:
- *   DISKD_BASE_URL=https://apis.diskd.local:8080 NODE_TLS_REJECT_UNAUTHORIZED=0 \
+ *   APIS_BASE_URL=https://apis.diskd.local:8080 NODE_TLS_REJECT_UNAUTHORIZED=0 \
  *     bun run scripts:build && node dist-scripts/scripts/validate-agents-internal.js
  */
 
@@ -19,7 +19,7 @@ import { createHarness } from './_harness.js';
 
 const API_KEY = process.env.API_KEY ?? 'key-dev-1234567890';
 const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
-const BASE_URL = process.env.DISKD_BASE_URL ?? 'https://apis.diskd.local:8080';
+const BASE_URL = process.env.APIS_BASE_URL ?? 'https://apis.diskd.local:8080';
 const h = createHarness('Agent Hub (internal)');
 
 console.log('=== Agent Hub validation (internal / API key) ===\n');

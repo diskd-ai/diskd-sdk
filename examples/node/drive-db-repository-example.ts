@@ -5,7 +5,7 @@
  * insert, find, findOne, count, update, deleteRows, plus raw SQL queries.
  *
  * Environment:
- *   DISKD_BASE_URL   - Drive API URL (default: https://apis.upgraide.dev:8080)
+ *   APIS_BASE_URL   - Drive API URL (default: https://apis.upgraide.dev:8080)
  *   DRIVE_API_KEY    - API key
  *   WORKSPACE_ID     - Workspace ID
  *

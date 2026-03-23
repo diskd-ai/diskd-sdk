@@ -23,7 +23,7 @@ Runs the Node quickstart against a real DiskD environment (local Tilt overlay is
 
 ```bash
 cd mono/platform-api
-export DISKD_BASE_URL='https://apis.upgraide.dev:8080'
+export APIS_BASE_URL='https://apis.upgraide.dev:8080'
 export DISKD_CREDENTIALS_PATH='/absolute/path/to/credentials.json'
 npm run examples:smoke
 ```
@@ -35,7 +35,7 @@ Node quickstart (real DiskD + real `credentials.json`)
 2. Set Drive API base URL via env:
 
 ```bash
-export DISKD_BASE_URL='https://apis.upgraide.dev:8080'
+export APIS_BASE_URL='https://apis.upgraide.dev:8080'
 ```
 
 Local TLS note (dev only):
@@ -86,7 +86,7 @@ npm run build
 VITE_DISKD_CLIENT_ID='<YOUR_CLIENT_ID>'
 VITE_DISKD_OIDC_ISSUER='https://oauth2.upgraide.dev:8080'
 VITE_DISKD_AUDIENCE='diskd-api'
-VITE_DISKD_BASE_URL='https://apis.upgraide.dev:8080'
+VITE_APIS_BASE_URL='https://apis.upgraide.dev:8080'
 ```
 
 3. Install + run Vite:

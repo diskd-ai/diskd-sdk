@@ -334,7 +334,7 @@ test('throws on HTTP error with status', async () => {
 });
 
 test('gateway URL derivation uses env var when no url override', async () => {
-  process.env.DISKD_BASE_URL = 'https://apis.example';
+  process.env.APIS_BASE_URL = 'https://apis.example';
 
   let callIndex = 0;
   await withFetchMock(
@@ -357,7 +357,7 @@ test('gateway URL derivation uses env var when no url override', async () => {
     }
   );
 
-  delete process.env.DISKD_BASE_URL;
+  delete process.env.APIS_BASE_URL;
 });
 
 test('diskd.os.mcpTools factory returns client with list, find, and call', () => {

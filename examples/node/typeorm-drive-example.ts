@@ -6,7 +6,7 @@
  * flushes WAL to S3, ROLLBACK discards uncommitted changes.
  *
  * Environment:
- *   DISKD_BASE_URL   - Drive API URL (default: https://apis.upgraide.dev:8080)
+ *   APIS_BASE_URL   - Drive API URL (default: https://apis.upgraide.dev:8080)
  *   DRIVE_API_KEY    - API key
  *   WORKSPACE_ID     - Workspace ID
  *
@@ -23,8 +23,8 @@ import { diskd } from '../../src/index.js';
 
 const DRIVE_API_KEY = process.env.DRIVE_API_KEY ?? 'key-dev-1234567890';
 const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
-const DRIVE_URL = process.env.DISKD_BASE_URL
-  ? `${process.env.DISKD_BASE_URL}/drive/api/v1`
+const DRIVE_URL = process.env.APIS_BASE_URL
+  ? `${process.env.APIS_BASE_URL}/drive/api/v1`
   : 'https://apis.upgraide.dev:8080/drive/api/v1';
 
 const auth = diskd.auth.apiKey({ apiKey: DRIVE_API_KEY, workspaceId: WORKSPACE_ID });
