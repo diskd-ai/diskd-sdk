@@ -375,6 +375,12 @@ export type {
   RoutineUpdateParams,
   SignalRhythm,
 } from './routines/routinesTypes.js';
+// -- Inbox (stored email types) --
+export type {
+  StoredEmail,
+  StoredEmailAttachment,
+  StoredEmailContact,
+} from './inbox/inboxTypes.js';
 export { diskd } from './sdk/diskd.js';
 export type { DiskD } from './sdk/types.js';
 // -- Telegram Userbot --
