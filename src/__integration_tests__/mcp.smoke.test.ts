@@ -10,7 +10,7 @@ const MCP_HUB_URL = process.env.MCP_HUB_URL;
 
 const makeMcp = () => {
   if (check.tag !== 'Ready') throw new Error('unreachable');
-  const auth = diskd.auth.apiKey({ apiKey: check.env.apiKey, workspaceId: check.env.workspaceId });
+  const auth = diskd.auth.apiKey({ workspaceId: check.env.workspaceId });
   return diskd.os.mcp({ auth, ...(MCP_HUB_URL ? { url: MCP_HUB_URL } : {}) });
 };
 

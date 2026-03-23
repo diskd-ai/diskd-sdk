@@ -10,13 +10,13 @@ const ROUTINES_URL = process.env.ROUTINES_URL;
 
 const makeRoutines = () => {
   if (check.tag !== 'Ready') throw new Error('unreachable');
-  const auth = diskd.auth.apiKey({ apiKey: check.env.apiKey, workspaceId: check.env.workspaceId });
+  const auth = diskd.auth.apiKey({ workspaceId: check.env.workspaceId });
   return diskd.platform.routines({ auth, ...(ROUTINES_URL ? { url: ROUTINES_URL } : {}) });
 };
 
 const makeRoutineRuns = () => {
   if (check.tag !== 'Ready') throw new Error('unreachable');
-  const auth = diskd.auth.apiKey({ apiKey: check.env.apiKey, workspaceId: check.env.workspaceId });
+  const auth = diskd.auth.apiKey({ workspaceId: check.env.workspaceId });
   return diskd.platform.routineRuns({ auth, ...(ROUTINES_URL ? { url: ROUTINES_URL } : {}) });
 };
 
@@ -26,7 +26,7 @@ test('integration: routines.list returns array for profile scope', {
   skip: skipReason,
 }, async () => {
   const routines = makeRoutines();
-  const list = await routines.list({ scope: 'profile' });
+  const list = await routines.list({ scope: 'workspace' });
   assert.ok(Array.isArray(list));
 });
 

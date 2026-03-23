@@ -10,10 +10,10 @@ const DRIVE_API_URL = process.env.DRIVE_API_URL;
 
 const makeCrontab = () => {
   if (check.tag !== 'Ready') throw new Error('unreachable');
-  const auth = diskd.auth.apiKey({ apiKey: check.env.apiKey, workspaceId: check.env.workspaceId });
+  const auth = diskd.auth.apiKey({ workspaceId: check.env.workspaceId });
   return diskd.platform.crontab({
     auth,
-    scope: { scopeType: 'profile' },
+    scope: { scopeType: 'workspace' },
     timezone: 'UTC',
     ...(DRIVE_API_URL ? { url: DRIVE_API_URL } : {}),
   });

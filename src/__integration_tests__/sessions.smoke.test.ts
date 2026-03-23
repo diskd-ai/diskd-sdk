@@ -22,7 +22,7 @@ const getEnv = () => {
 const makeSessions = () => {
   const env = getEnv();
   if (!PROJECT_ID) throw new Error('unreachable');
-  const auth = diskd.auth.apiKey({ apiKey: env.apiKey, workspaceId: env.workspaceId });
+  const auth = diskd.auth.apiKey({ workspaceId: env.workspaceId });
   return diskd.platform.sessions({
     auth,
     scope: { scopeType: 'project', projectId: PROJECT_ID },

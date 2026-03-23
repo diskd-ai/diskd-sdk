@@ -10,7 +10,7 @@ const LLM_ROUTER_URL = process.env.LLM_ROUTER_URL;
 
 const makeLlm = () => {
   if (check.tag !== 'Ready') throw new Error('unreachable');
-  const auth = diskd.auth.apiKey({ apiKey: check.env.apiKey, workspaceId: check.env.workspaceId });
+  const auth = diskd.auth.apiKey({ workspaceId: check.env.workspaceId });
   return diskd.os.llm({ auth, ...(LLM_ROUTER_URL ? { url: LLM_ROUTER_URL } : {}) });
 };
 

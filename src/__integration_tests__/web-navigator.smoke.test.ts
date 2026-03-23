@@ -10,7 +10,7 @@ const WEB_NAV_URL = process.env.WEB_NAV_URL;
 
 const makeWebNav = () => {
   if (check.tag !== 'Ready') throw new Error('unreachable');
-  const auth = diskd.auth.apiKey({ apiKey: check.env.apiKey, workspaceId: check.env.workspaceId });
+  const auth = diskd.auth.apiKey({ workspaceId: check.env.workspaceId });
   return diskd.utils.webNavigator({ auth, ...(WEB_NAV_URL ? { url: WEB_NAV_URL } : {}) });
 };
 

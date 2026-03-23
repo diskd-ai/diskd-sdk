@@ -11,7 +11,7 @@ const TEST_DIR = `__sdk-integration-${Date.now()}`;
 
 const makeDrive = () => {
   if (check.tag !== 'Ready') throw new Error('unreachable');
-  const auth = diskd.auth.apiKey({ apiKey: check.env.apiKey, workspaceId: check.env.workspaceId });
+  const auth = diskd.auth.apiKey({ workspaceId: check.env.workspaceId });
   return diskd.os.drive({ version: 'v1', auth, ...(DRIVE_API_URL ? { url: DRIVE_API_URL } : {}) });
 };
 

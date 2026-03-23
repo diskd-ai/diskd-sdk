@@ -13,7 +13,7 @@ const skipEvents =
 
 test('integration: platformEvents.publish sends event', { skip: skipEvents }, async () => {
   if (check.tag !== 'Ready' || !EVENTS_URL) return;
-  const auth = diskd.auth.apiKey({ apiKey: check.env.apiKey, workspaceId: check.env.workspaceId });
+  const auth = diskd.auth.apiKey({ workspaceId: check.env.workspaceId });
   const events = diskd.platform.events({ auth, url: EVENTS_URL });
 
   const result = await events.publish({

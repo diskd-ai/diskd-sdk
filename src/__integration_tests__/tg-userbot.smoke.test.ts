@@ -10,7 +10,7 @@ const TG_USERBOT_URL = process.env.TG_USERBOT_URL;
 
 const makeTg = () => {
   if (check.tag !== 'Ready') throw new Error('unreachable');
-  const auth = diskd.auth.apiKey({ apiKey: check.env.apiKey, workspaceId: check.env.workspaceId });
+  const auth = diskd.auth.apiKey({ workspaceId: check.env.workspaceId });
   return diskd.utils.tgUserBot({ auth, ...(TG_USERBOT_URL ? { url: TG_USERBOT_URL } : {}) });
 };
 
