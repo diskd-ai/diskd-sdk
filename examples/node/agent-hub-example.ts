@@ -5,8 +5,8 @@
  * supported agents listing, model discovery, and billing aliases.
  *
  * Environment:
- *   AGENT_HUB_URL    - Agent Hub service URL (default: http://localhost:8081)
- *   AGENT_HUB_API_KEY - API key (default: key-dev-1234567890)
+ *   APIS_BASE_URL    - APIS gateway URL (default: https://apis.diskd.local:8080)
+ *   APIS_API_KEY     - Gateway API key (default: key-dev-1234567890)
  *   WORKSPACE_ID     - Workspace ID (default: dev-user-id)
  *
  * Run:
@@ -26,22 +26,21 @@ import { diskd } from '../../src/sdk/diskd.js';
 // Configuration from environment
 // ---------------------------------------------------------------------------
 
-const AGENT_HUB_URL = process.env.AGENT_HUB_URL ?? 'http://localhost:8081';
-const AGENT_HUB_API_KEY = process.env.AGENT_HUB_API_KEY ?? 'key-dev-1234567890';
+const APIS_BASE_URL = process.env.APIS_BASE_URL ?? 'https://apis.diskd.local:8080';
+const APIS_API_KEY = process.env.APIS_API_KEY ?? 'key-dev-1234567890';
 const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
+process.env.APIS_BASE_URL = APIS_BASE_URL;
+process.env.APIS_API_KEY = APIS_API_KEY;
 
 // ---------------------------------------------------------------------------
 // Create Agent Hub client via diskd factory (internal service pattern)
 // ---------------------------------------------------------------------------
 
-const auth = diskd.auth.apiKey({
-  apiKey: AGENT_HUB_API_KEY,
-  workspaceId: WORKSPACE_ID,
-});
+const auth = diskd.auth.apiKey({ workspaceId: WORKSPACE_ID });
 
-const agentHub = diskd.os.agents({ auth, workspaceId: WORKSPACE_ID, url: AGENT_HUB_URL });
+const agentHub = diskd.os.agents({ auth, workspaceId: WORKSPACE_ID });
 
-console.log(`Connecting to Agent Hub at ${AGENT_HUB_URL}`);
+console.log(`Connecting to APIS gateway at ${APIS_BASE_URL}`);
 console.log(`Workspace: ${WORKSPACE_ID}\n`);
 
 // ---------------------------------------------------------------------------

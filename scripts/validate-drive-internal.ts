@@ -10,7 +10,7 @@
  *
  * Environment:
  *   APIS_BASE_URL  - Gateway URL (default: https://apis.diskd.local:8080)
- *   API_KEY         - API key (default: key-dev-1234567890)
+ *   APIS_API_KEY    - Gateway API key (default: key-dev-1234567890)
  *   WORKSPACE_ID    - Workspace ID (default: dev-user-id)
  *
  * Run:
@@ -21,9 +21,11 @@
 import { diskd } from '../src/sdk/diskd.js';
 import { createHarness } from './_harness.js';
 
-const API_KEY = process.env.API_KEY ?? 'key-dev-1234567890';
+const APIS_API_KEY = process.env.APIS_API_KEY ?? 'key-dev-1234567890';
 const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
 const BASE_URL = process.env.APIS_BASE_URL ?? 'https://apis.diskd.local:8080';
+process.env.APIS_API_KEY = APIS_API_KEY;
+process.env.APIS_BASE_URL = BASE_URL;
 const h = createHarness('Drive (internal)');
 
 const TEST_DIR = '/sdk-validation-test';
@@ -33,11 +35,10 @@ console.log('=== Drive validation (internal / API key) ===\n');
 console.log(`Gateway: ${BASE_URL}`);
 console.log(`Workspace: ${WORKSPACE_ID}\n`);
 
-const driveAuth = diskd.auth.apiKey({ apiKey: API_KEY, workspaceId: WORKSPACE_ID });
+const driveAuth = diskd.auth.apiKey({ workspaceId: WORKSPACE_ID });
 h.ok('auth', 'api_key configured');
 
-const driveUrl = `${BASE_URL}/os/drive/api/v1`;
-const drive = diskd.os.drive({ version: 'v1', auth: driveAuth, url: driveUrl });
+const drive = diskd.os.drive({ version: 'v1', auth: driveAuth });
 
 // -- init --
 try {

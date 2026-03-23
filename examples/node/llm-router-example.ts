@@ -5,8 +5,8 @@
  * and embeddings using API key auth (internal service pattern).
  *
  * Environment:
- *   LLM_ROUTER_URL   - LLM Router service URL (default: http://localhost:3000)
- *   LLM_API_KEY      - API key (default: key-dev-1234567890)
+ *   APIS_BASE_URL    - APIS gateway URL (default: https://apis.diskd.local:8080)
+ *   APIS_API_KEY     - Gateway API key (default: key-dev-1234567890)
  *   WORKSPACE_ID     - Workspace ID (default: dev-user-id)
  *
  * Run:
@@ -19,22 +19,21 @@ import { diskd } from '../../src/sdk/diskd.js';
 // Configuration from environment
 // ---------------------------------------------------------------------------
 
-const LLM_ROUTER_URL = process.env.LLM_ROUTER_URL ?? 'http://localhost:3000';
-const LLM_API_KEY = process.env.LLM_API_KEY ?? 'key-dev-1234567890';
+const APIS_BASE_URL = process.env.APIS_BASE_URL ?? 'https://apis.diskd.local:8080';
+const APIS_API_KEY = process.env.APIS_API_KEY ?? 'key-dev-1234567890';
 const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
+process.env.APIS_BASE_URL = APIS_BASE_URL;
+process.env.APIS_API_KEY = APIS_API_KEY;
 
 // ---------------------------------------------------------------------------
 // Create LLM Router client via diskd factory (internal service pattern)
 // ---------------------------------------------------------------------------
 
-const auth = diskd.auth.apiKey({
-  apiKey: LLM_API_KEY,
-  workspaceId: WORKSPACE_ID,
-});
+const auth = diskd.auth.apiKey({ workspaceId: WORKSPACE_ID });
 
-const llm = diskd.os.llm({ auth, url: LLM_ROUTER_URL });
+const llm = diskd.os.llm({ auth });
 
-console.log(`Connecting to LLM Router at ${LLM_ROUTER_URL}`);
+console.log(`Connecting to APIS gateway at ${APIS_BASE_URL}`);
 console.log(`Workspace: ${WORKSPACE_ID}\n`);
 
 // ---------------------------------------------------------------------------

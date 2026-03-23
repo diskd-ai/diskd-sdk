@@ -34,7 +34,7 @@ Everything is accessed via the `diskd` namespace. No standalone `createX` import
 import { diskd } from '@diskd/sdk';
 
 // Auth
-const auth = diskd.auth.apiKey({ apiKey, workspaceId });
+const auth = diskd.auth.apiKey({ workspaceId });
 const auth = await diskd.auth.credentials({ scopes, keyfilePath });
 
 // Services

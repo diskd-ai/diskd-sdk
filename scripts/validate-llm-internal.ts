@@ -5,7 +5,7 @@
  *
  * Environment:
  *   APIS_BASE_URL  - Gateway URL (default: https://apis.diskd.local:8080)
- *   API_KEY         - API key (default: key-dev-1234567890)
+ *   APIS_API_KEY    - Gateway API key (default: key-dev-1234567890)
  *   WORKSPACE_ID    - Workspace ID (default: dev-user-id)
  *
  * Run:
@@ -13,36 +13,24 @@
  *     bun run scripts:build && node dist-scripts/scripts/validate-llm-internal.js
  */
 
-import type { AuthModule } from '../src/auth/types.js';
 import { diskd } from '../src/sdk/diskd.js';
 import { createHarness } from './_harness.js';
 
-const API_KEY = process.env.API_KEY ?? 'key-dev-1234567890';
+const APIS_API_KEY = process.env.APIS_API_KEY ?? 'key-dev-1234567890';
 const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
 const BASE_URL = process.env.APIS_BASE_URL ?? 'https://apis.diskd.local:8080';
+process.env.APIS_API_KEY = APIS_API_KEY;
+process.env.APIS_BASE_URL = BASE_URL;
 const h = createHarness('LLM Router (internal)');
 
 console.log('=== LLM Router validation (internal / API key) ===\n');
 console.log(`Gateway: ${BASE_URL}`);
 console.log(`Workspace: ${WORKSPACE_ID}\n`);
 
-const bearerAuth: AuthModule = {
-  signIn: async () => {},
-  signOut: () => {},
-  handleRedirectCallback: async () => {},
-  getAccessToken: async () => API_KEY,
-  getToken: () => ({ accessToken: API_KEY }),
-  getWorkspaceId: async () => WORKSPACE_ID,
-  getRequestHeaders: async () => ({
-    Authorization: `Bearer ${API_KEY}`,
-    'X-Workspace-Id': WORKSPACE_ID,
-    'X-User-Id': WORKSPACE_ID,
-  }),
-};
-h.ok('auth', 'bearer configured');
+const apiKeyAuth = diskd.auth.apiKey({ workspaceId: WORKSPACE_ID });
+h.ok('auth', 'api_key configured');
 
-const llmUrl = `${BASE_URL}/os/llm`;
-const llm = diskd.os.llm({ auth: bearerAuth, url: llmUrl });
+const llm = diskd.os.llm({ auth: apiKeyAuth });
 
 // -- models.listAll --
 try {

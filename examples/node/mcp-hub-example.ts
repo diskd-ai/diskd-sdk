@@ -5,8 +5,8 @@
  * retrieval using the diskd.os.mcp() factory with API key auth.
  *
  * Environment:
- *   MCP_HUB_URL      - MCP Hub service URL (default: http://localhost:8300)
- *   MCP_HUB_API_KEY  - API key (default: key-dev-1234567890)
+ *   APIS_BASE_URL    - APIS gateway URL (default: https://apis.diskd.local:8080)
+ *   APIS_API_KEY     - Gateway API key (default: key-dev-1234567890)
  *   WORKSPACE_ID     - Workspace ID (default: dev-user-id)
  *
  * Run:
@@ -19,22 +19,21 @@ import { diskd } from '../../src/sdk/diskd.js';
 // Configuration from environment
 // ---------------------------------------------------------------------------
 
-const MCP_HUB_URL = (process.env.MCP_HUB_URL ?? 'http://localhost:8300').replace(/\/+$/, '');
-const MCP_HUB_API_KEY = process.env.MCP_HUB_API_KEY ?? 'key-dev-1234567890';
+const APIS_BASE_URL = (process.env.APIS_BASE_URL ?? 'https://apis.diskd.local:8080').replace(/\/+$/, '');
+const APIS_API_KEY = process.env.APIS_API_KEY ?? 'key-dev-1234567890';
 const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
+process.env.APIS_BASE_URL = APIS_BASE_URL;
+process.env.APIS_API_KEY = APIS_API_KEY;
 
 // ---------------------------------------------------------------------------
 // Create MCP Hub client via diskd factory (internal service pattern)
 // ---------------------------------------------------------------------------
 
-const auth = diskd.auth.apiKey({
-  apiKey: MCP_HUB_API_KEY,
-  workspaceId: WORKSPACE_ID,
-});
+const auth = diskd.auth.apiKey({ workspaceId: WORKSPACE_ID });
 
-const mcpHub = diskd.os.mcp({ auth, workspaceId: WORKSPACE_ID, url: MCP_HUB_URL });
+const mcpHub = diskd.os.mcp({ auth, workspaceId: WORKSPACE_ID });
 
-console.log(`Connecting to MCP Hub at ${MCP_HUB_URL}`);
+console.log(`Connecting to APIS gateway at ${APIS_BASE_URL}`);
 console.log(`Workspace: ${WORKSPACE_ID}\n`);
 
 // ---------------------------------------------------------------------------

@@ -6,8 +6,8 @@
  * flushes WAL to S3, ROLLBACK discards uncommitted changes.
  *
  * Environment:
- *   APIS_BASE_URL   - Drive API URL (default: https://apis.upgraide.dev:8080)
- *   DRIVE_API_KEY    - API key
+ *   APIS_BASE_URL    - APIS gateway URL (default: https://apis.diskd.local:8080)
+ *   APIS_API_KEY     - Gateway API key
  *   WORKSPACE_ID     - Workspace ID
  *
  * Run:
@@ -21,13 +21,14 @@ import { diskd } from '../../src/index.js';
 // Configuration
 // ---------------------------------------------------------------------------
 
-const DRIVE_API_KEY = process.env.DRIVE_API_KEY ?? 'key-dev-1234567890';
+const APIS_BASE_URL = process.env.APIS_BASE_URL ?? 'https://apis.diskd.local:8080';
+const APIS_API_KEY = process.env.APIS_API_KEY ?? 'key-dev-1234567890';
 const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
-const DRIVE_URL = process.env.APIS_BASE_URL
-  ? `${process.env.APIS_BASE_URL}/drive/api/v1`
-  : 'https://apis.upgraide.dev:8080/drive/api/v1';
+process.env.APIS_BASE_URL = APIS_BASE_URL;
+process.env.APIS_API_KEY = APIS_API_KEY;
+const DRIVE_URL = `${APIS_BASE_URL}/os/database/api/v1`;
 
-const auth = diskd.auth.apiKey({ apiKey: DRIVE_API_KEY, workspaceId: WORKSPACE_ID });
+const auth = diskd.auth.apiKey({ workspaceId: WORKSPACE_ID });
 
 // ---------------------------------------------------------------------------
 // 1. Define TypeORM entities

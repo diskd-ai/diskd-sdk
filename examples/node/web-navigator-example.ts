@@ -5,8 +5,8 @@
  * using the diskd.utils.webNavigator() factory with API key auth.
  *
  * Environment:
- *   WEB_NAVIGATOR_URL - Web Navigator service URL (default: http://localhost:8080)
- *   WEB_NAV_API_KEY   - API key (default: key-dev-1234567890)
+ *   APIS_BASE_URL     - APIS gateway URL (default: https://apis.diskd.local:8080)
+ *   APIS_API_KEY      - Gateway API key (default: key-dev-1234567890)
  *   WORKSPACE_ID      - Workspace ID (default: dev-user-id)
  *
  * Run:
@@ -19,26 +19,24 @@ import { diskd } from '../../src/sdk/diskd.js';
 // Configuration from environment
 // ---------------------------------------------------------------------------
 
-const WEB_NAVIGATOR_URL = process.env.WEB_NAVIGATOR_URL ?? 'http://localhost:8080';
-const WEB_NAV_API_KEY = process.env.WEB_NAV_API_KEY ?? 'key-dev-1234567890';
+const APIS_BASE_URL = process.env.APIS_BASE_URL ?? 'https://apis.diskd.local:8080';
+const APIS_API_KEY = process.env.APIS_API_KEY ?? 'key-dev-1234567890';
 const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
+process.env.APIS_BASE_URL = APIS_BASE_URL;
+process.env.APIS_API_KEY = APIS_API_KEY;
 
 // ---------------------------------------------------------------------------
 // Create Web Navigator client via diskd factory
 // ---------------------------------------------------------------------------
 
-const auth = diskd.auth.apiKey({
-  apiKey: WEB_NAV_API_KEY,
-  workspaceId: WORKSPACE_ID,
-});
+const auth = diskd.auth.apiKey({ workspaceId: WORKSPACE_ID });
 
 const webNav = diskd.utils.webNavigator({
   auth,
   workspaceId: WORKSPACE_ID,
-  url: WEB_NAVIGATOR_URL,
 });
 
-console.log(`Connecting to Web Navigator at ${WEB_NAVIGATOR_URL}`);
+console.log(`Connecting to APIS gateway at ${APIS_BASE_URL}`);
 console.log(`Workspace: ${WORKSPACE_ID}\n`);
 
 // ---------------------------------------------------------------------------

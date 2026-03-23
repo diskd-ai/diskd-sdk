@@ -21,7 +21,7 @@ import type { WebNavigatorClient } from '../webNavigator/webNavigatorTypes.js';
 export type DiskD = {
   /** Auth factory methods. */
   readonly auth: {
-    /** Create an AuthModule for internal service-to-service communication (API key). */
+    /** Create an AuthModule for internal service-to-service communication (uses APIS_API_KEY from env). */
     readonly apiKey: (params: ApiKeyAuthParams) => AuthModule;
     /** Create an AuthModule for external clients (OAuth2 service-account or PKCE). */
     readonly credentials: (params: SdkCreateParams) => Promise<AuthModule>;

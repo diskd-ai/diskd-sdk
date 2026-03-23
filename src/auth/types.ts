@@ -12,7 +12,6 @@ export type SdkCreateParams =
     };
 
 export type ApiKeyAuthParams = {
-  readonly apiKey: string;
   readonly workspaceId: string;
   readonly orgId?: string;
   readonly userId?: string;
@@ -32,7 +31,7 @@ export type AuthModule = {
   readonly getWorkspaceId: () => Promise<string>;
   /** Returns all auth-related headers for RPC calls.
    *  OAuth: { Authorization: 'Bearer ...' }
-   *  API key: { 'X-Api-Key': '...', 'X-Workspace-Id': '...', ... }
+   *  API key: { 'X-Api-Key': APIS_API_KEY, 'X-Workspace-Id': '...', ... }
    *  When absent, falls back to Bearer token from getAccessToken(). */
   readonly getRequestHeaders?: () => Promise<Readonly<Record<string, string>>>;
 };

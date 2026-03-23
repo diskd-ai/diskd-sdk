@@ -9,7 +9,7 @@ and `diskd.utils.*`:
 ```ts
 import { diskd } from '@diskd/sdk';
 
-const auth = diskd.auth.apiKey({ apiKey: '...', workspaceId: '...' });
+const auth = diskd.auth.apiKey({ workspaceId: '...' });
 
 const drive      = diskd.os.drive({ version: 'v1', auth });
 const sessions   = diskd.platform.sessions({
@@ -98,13 +98,13 @@ Use `diskd.auth.apiKey()` for service-to-service communication within the cluste
 ```ts
 import { diskd } from '@diskd/sdk';
 
-const auth = diskd.auth.apiKey({
-  apiKey: process.env.DRIVE_API_KEY!,
-  workspaceId: process.env.WORKSPACE_ID!,
-});
+const auth = diskd.auth.apiKey({ workspaceId: process.env.WORKSPACE_ID! });
 
 const drive = diskd.os.drive({ version: 'v1', auth });
 ```
+
+`diskd.auth.apiKey()` reads `APIS_API_KEY` from the environment and fails fast when
+either `APIS_API_KEY` or `APIS_BASE_URL` is missing.
 
 Both auth modes produce identical client instances.
 
@@ -116,6 +116,7 @@ All resource APIs resolve from the centralized gateway base URL:
 | Env Variable | Default |
 |--------------|---------|
 | `APIS_BASE_URL` | `https://apis.diskd.local:8080` |
+| `APIS_API_KEY` | none |
 
 The gateway is the single resource entrypoint. The SDK derives API paths from
 the same namespace structure as the public SDK surface and lets the gateway
@@ -602,11 +603,13 @@ class User {
 }
 
 // Create DataSource backed by Drive DB
-const auth = diskd.auth.apiKey({ apiKey: '...', workspaceId: '...' });
+process.env.APIS_BASE_URL ??= 'https://apis.diskd.local:8080';
+
+const auth = diskd.auth.apiKey({ workspaceId: 'workspace-123' });
 
 const ds = diskd.os.datasource({
   auth,
-  url: 'https://apis.upgraide.me/drive/api/v1',
+  url: `${process.env.APIS_BASE_URL}/os/database/api/v1`,
   dbName: 'shop.workspace-123.main',
   entities: [User],
   synchronize: true,

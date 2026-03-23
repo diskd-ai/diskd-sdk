@@ -1,13 +1,11 @@
 /**
  * Drive Session SDK -- internal service example
  *
- * Connects directly to the Drive service using API key auth.
- * Use this pattern for services running inside the Tilt cluster
- * or connecting to localhost port-forwards.
+ * Connects through the APIS gateway using API key auth.
  *
  * Environment:
- *   DRIVE_API_URL       - Drive service URL (default: http://localhost:8000/api/v1)
- *   DRIVE_API_KEY       - API key (default: key-dev-1234567890)
+ *   APIS_BASE_URL       - APIS gateway URL (default: https://apis.diskd.local:8080)
+ *   APIS_API_KEY        - Gateway API key (default: key-dev-1234567890)
  *   DRIVE_WORKSPACE_ID  - Workspace ID (default: dev-user-id)
  *   DRIVE_ORG_ID        - Organization ID (default: dev-org-id)
  *   DRIVE_PROJECT_ID    - Project ID to use (default: sdk-test)
@@ -22,33 +20,30 @@ import { diskd } from '@diskd/sdk';
 // Configuration from environment
 // ---------------------------------------------------------------------------
 
-const DRIVE_API_URL = process.env.DRIVE_API_URL ?? 'http://localhost:8000/api/v1';
-const DRIVE_API_KEY = process.env.DRIVE_API_KEY ?? 'key-dev-1234567890';
+const APIS_BASE_URL = process.env.APIS_BASE_URL ?? 'https://apis.diskd.local:8080';
+const APIS_API_KEY = process.env.APIS_API_KEY ?? 'key-dev-1234567890';
 const DRIVE_WORKSPACE_ID = process.env.DRIVE_WORKSPACE_ID ?? 'dev-user-id';
 const DRIVE_ORG_ID = process.env.DRIVE_ORG_ID ?? 'dev-org-id';
 const PROJECT_ID = process.env.DRIVE_PROJECT_ID ?? 'sdk-test';
+process.env.APIS_BASE_URL = APIS_BASE_URL;
+process.env.APIS_API_KEY = APIS_API_KEY;
 
 // ---------------------------------------------------------------------------
 // Create Drive client with API key auth (internal service pattern)
 // ---------------------------------------------------------------------------
 
-const auth = diskd.auth.apiKey({
-  apiKey: DRIVE_API_KEY,
-  workspaceId: DRIVE_WORKSPACE_ID,
-  orgId: DRIVE_ORG_ID,
-});
+const auth = diskd.auth.apiKey({ workspaceId: DRIVE_WORKSPACE_ID, orgId: DRIVE_ORG_ID });
 
-const drive = diskd.os.drive({ version: 'v1', auth, url: DRIVE_API_URL });
+const drive = diskd.os.drive({ version: 'v1', auth });
 const sessions = diskd.platform.sessions({
   auth,
   scope: {
     scopeType: 'project',
     projectId: PROJECT_ID,
   },
-  url: DRIVE_API_URL,
 });
 
-console.log(`Connecting to Drive at ${DRIVE_API_URL}`);
+console.log(`Connecting to APIS gateway at ${APIS_BASE_URL}`);
 console.log(`Project: ${PROJECT_ID}\n`);
 
 // ---------------------------------------------------------------------------

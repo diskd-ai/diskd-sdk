@@ -9,8 +9,8 @@
  *   5. Clean up (delete the uploaded file)
  *
  * Environment:
- *   DRIVE_API_URL   - Drive service URL (default: http://localhost:8000/api/v1)
- *   DRIVE_API_KEY   - API key (default: key-dev-1234567890)
+ *   APIS_BASE_URL   - APIS gateway URL (default: https://apis.diskd.local:8080)
+ *   APIS_API_KEY    - Gateway API key (default: key-dev-1234567890)
  *   WORKSPACE_ID    - Workspace ID (default: dev-user-id)
  *
  * Run:
@@ -23,22 +23,21 @@ import { diskd } from '../../src/sdk/diskd.js';
 // Configuration from environment
 // ---------------------------------------------------------------------------
 
-const DRIVE_API_URL = process.env.DRIVE_API_URL ?? 'http://localhost:8000/api/v1';
-const DRIVE_API_KEY = process.env.DRIVE_API_KEY ?? 'key-dev-1234567890';
+const APIS_BASE_URL = process.env.APIS_BASE_URL ?? 'https://apis.diskd.local:8080';
+const APIS_API_KEY = process.env.APIS_API_KEY ?? 'key-dev-1234567890';
 const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
+process.env.APIS_BASE_URL = APIS_BASE_URL;
+process.env.APIS_API_KEY = APIS_API_KEY;
 
 // ---------------------------------------------------------------------------
 // Create Drive client via diskd factory (internal service pattern)
 // ---------------------------------------------------------------------------
 
-const auth = diskd.auth.apiKey({
-  apiKey: DRIVE_API_KEY,
-  workspaceId: WORKSPACE_ID,
-});
+const auth = diskd.auth.apiKey({ workspaceId: WORKSPACE_ID });
 
-const drive = diskd.os.drive({ version: 'v1', auth, url: DRIVE_API_URL });
+const drive = diskd.os.drive({ version: 'v1', auth });
 
-console.log(`Connecting to Drive at ${DRIVE_API_URL}`);
+console.log(`Connecting to APIS gateway at ${APIS_BASE_URL}`);
 console.log(`Workspace: ${WORKSPACE_ID}\n`);
 
 // ---------------------------------------------------------------------------

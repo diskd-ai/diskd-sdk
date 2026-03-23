@@ -50,7 +50,7 @@ SDK usage
 ```ts
 import { diskd, mcpToolName } from '@diskd/sdk';
 
-const auth = diskd.auth.apiKey({ apiKey, workspaceId });
+const auth = diskd.auth.apiKey({ workspaceId });
 const tools = diskd.os.mcpTools({ auth });
 
 // List all available tools across installed MCP servers

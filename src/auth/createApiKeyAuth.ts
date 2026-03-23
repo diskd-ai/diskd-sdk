@@ -1,3 +1,4 @@
+import { resolveApisApiKey } from '../env/apiKey.js';
 import { resolveDiskdBaseUrl } from '../env/baseUrl.js';
 import type { ApiKeyAuthParams, AuthModule } from './types.js';
 
@@ -10,15 +11,12 @@ import type { ApiKeyAuthParams, AuthModule } from './types.js';
  * with OAuth2 credentials instead.
  */
 export const createApiKeyAuth = (params: ApiKeyAuthParams): AuthModule => {
-  if (params.apiKey.length === 0) {
-    throw new Error('APIS_API_KEY is not set.');
-  }
-
   // API-key auth is only supported through the APIS gateway contract.
   resolveDiskdBaseUrl();
+  const apiKey = resolveApisApiKey();
 
   const headers: Readonly<Record<string, string>> = {
-    'X-Api-Key': params.apiKey,
+    'X-Api-Key': apiKey,
     'X-Workspace-Id': params.workspaceId,
     'X-User-Id': params.userId ?? params.workspaceId,
     'X-Organization-Id': params.orgId ?? params.workspaceId,
@@ -28,8 +26,8 @@ export const createApiKeyAuth = (params: ApiKeyAuthParams): AuthModule => {
     signIn: async () => {},
     signOut: () => {},
     handleRedirectCallback: async () => {},
-    getAccessToken: async () => params.apiKey,
-    getToken: () => ({ accessToken: params.apiKey }),
+    getAccessToken: async () => apiKey,
+    getToken: () => ({ accessToken: apiKey }),
     getWorkspaceId: async () => params.workspaceId,
     getRequestHeaders: async () => headers,
   };
