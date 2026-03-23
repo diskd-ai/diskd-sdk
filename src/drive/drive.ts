@@ -13,7 +13,17 @@ import type {
   DrivePathType,
   DriveReadFilePart,
   DriveReadFileResult,
-  DriveToolsResult,
+  DriveToolsBiQueryResult,
+  DriveToolsDocument,
+  DriveToolsDocumentPart,
+  DriveToolsGlobResult,
+  DriveToolsGrepResult,
+  DriveToolsInodesQueryResult,
+  DriveToolsLsResult,
+  DriveToolsTableData,
+  DriveToolsTgMessage,
+  DriveToolsTgSearchResult,
+  DriveToolsVsearchResult,
   DriveToolsWriteResult,
   DriveUploadCommitResult,
   DriveUploadFileResult,
@@ -199,16 +209,6 @@ const decodeDiskUsage = (o: unknown): DriveDiskUsageResult => {
   return { used: numRequired(r, 'used') };
 };
 
-const decodeToolsResult = (o: unknown): DriveToolsResult => {
-  const r = raw(o);
-  const arr = r.items;
-  if (Array.isArray(arr)) {
-    return { items: arr.filter(isObject) };
-  }
-  // Some tools return results at the top level
-  return { items: [r] };
-};
-
 const decodeReadFilePart = (o: unknown): DriveReadFilePart => {
   const r = raw(o);
   const t = strRequired(r, 'type');
@@ -233,6 +233,147 @@ const decodeWriteResult = (o: unknown): DriveToolsWriteResult => {
   return {
     id: strRequired(r, 'inode'),
     path: strRequired(r, 'path'),
+  };
+};
+
+// -- Typed tools decoders --
+
+const decodeDocumentPart = (o: unknown): DriveToolsDocumentPart => {
+  const r = raw(o);
+  return {
+    type: strRequired(r, 'type'),
+    title: str(r, 'title'),
+    content: typeof r.content === 'string' ? r.content : '',
+    pageNumber: num(r, 'page_number') ?? num(r, 'pageNumber'),
+    originUrl: str(r, 'origin_url') ?? str(r, 'originUrl'),
+    author: str(r, 'author'),
+    timestamp: num(r, 'timestamp'),
+  };
+};
+
+const decodeDocument = (o: unknown): DriveToolsDocument => {
+  const r = raw(o);
+  const partsArr = r.parts;
+  return {
+    id: strRequired(r, 'id'),
+    parts: Array.isArray(partsArr) ? partsArr.map(decodeDocumentPart) : [],
+  };
+};
+
+const isErrorResult = (o: unknown): boolean =>
+  isObject(o) && 'error' in o;
+
+const decodeLsResult = (o: unknown): DriveToolsLsResult => {
+  const r = raw(o);
+  const arr = r.items ?? r.entries;
+  if (!Array.isArray(arr)) return { entries: [] };
+  return { entries: arr.map(decodePathEntry) };
+};
+
+const decodeGlobResult = (o: unknown): DriveToolsGlobResult => {
+  const r = raw(o);
+  const arr = r.items ?? r.entries;
+  if (!Array.isArray(arr)) return { entries: [] };
+  return { entries: arr.map(decodePathEntry) };
+};
+
+const decodeDocumentResults = (o: unknown): readonly DriveToolsDocument[] => {
+  const r = raw(o);
+  const arr = r.results ?? r.documents ?? r.items;
+  if (!Array.isArray(arr)) return [];
+  return arr.filter((item) => !isErrorResult(item)).map(decodeDocument);
+};
+
+const decodeGrepResult = (o: unknown): DriveToolsGrepResult => ({
+  documents: decodeDocumentResults(o),
+});
+
+const decodeVsearchResult = (o: unknown): DriveToolsVsearchResult => ({
+  documents: decodeDocumentResults(o),
+});
+
+const decodeTableData = (o: unknown): DriveToolsTableData => {
+  const r = raw(o);
+  const headers = Array.isArray(r.headers)
+    ? r.headers.filter((h): h is string => typeof h === 'string')
+    : [];
+  const rows = Array.isArray(r.rows)
+    ? r.rows.map((row) =>
+        Array.isArray(row)
+          ? row.map((cell) => {
+              if (typeof cell === 'string' || typeof cell === 'number' || typeof cell === 'boolean') return cell;
+              return null;
+            })
+          : []
+      )
+    : [];
+  return { headers, rows };
+};
+
+const isTableDataLike = (o: unknown): boolean =>
+  isObject(o) && Array.isArray((o as RawObject).headers) && Array.isArray((o as RawObject).rows);
+
+const decodeBiQueryResult = (o: unknown): DriveToolsBiQueryResult => {
+  const r = raw(o);
+  const tablesRaw = r.tables;
+  if (!isObject(tablesRaw)) return { tables: {} };
+  const tables: Record<string, DriveToolsTableData> = {};
+  for (const [key, value] of Object.entries(tablesRaw as RawObject)) {
+    if (isTableDataLike(value)) {
+      tables[key] = decodeTableData(value);
+    }
+  }
+  return { tables };
+};
+
+const decodeInodesQueryResult = (o: unknown): DriveToolsInodesQueryResult => {
+  const r = raw(o);
+  const documents = decodeDocumentResults(o);
+  const tablesRaw = r.tables;
+  const tables: Record<string, DriveToolsTableData> = {};
+  if (isObject(tablesRaw)) {
+    for (const [key, value] of Object.entries(tablesRaw as RawObject)) {
+      if (isTableDataLike(value)) {
+        tables[key] = decodeTableData(value);
+      }
+    }
+  }
+  return { documents, tables };
+};
+
+const decodeTgMessage = (o: unknown): DriveToolsTgMessage => {
+  const r = raw(o);
+  return {
+    messageId: numRequired(r, 'message_id'),
+    text: typeof r.text === 'string' ? r.text : '',
+    senderName: typeof r.sender_name === 'string' ? r.sender_name : '',
+    date: typeof r.date === 'string' ? r.date : '',
+    timestamp: num(r, 'timestamp') ?? 0,
+    replyToMessageId: num(r, 'reply_to_message_id'),
+    isForward: bool(r, 'is_forward', false),
+    views: num(r, 'views'),
+    channelUsername: str(r, 'channel_username'),
+    originUrl: str(r, 'origin_url'),
+  };
+};
+
+const decodeTgSearchResult = (o: unknown): DriveToolsTgSearchResult => {
+  const r = raw(o);
+  const messagesRaw = Array.isArray(r.messages) ? r.messages : [];
+  const messages = messagesRaw.map((item) => {
+    const entry = raw(item);
+    return {
+      message: decodeTgMessage(entry.message),
+      score: num(entry, 'score'),
+      replyContext: isObject(entry.reply_context) ? decodeTgMessage(entry.reply_context) : null,
+    };
+  });
+  return {
+    messages,
+    totalFound: numRequired(r, 'total_found'),
+    limit: numRequired(r, 'limit'),
+    offset: num(r, 'offset') ?? 0,
+    hasMore: bool(r, 'has_more', false),
   };
 };
 
@@ -543,7 +684,7 @@ export const createDriveClient = (params: {
           ...optional('path', p?.path),
           ...optional('recursive', p?.recursive),
         });
-        return decodeToolsResult(result);
+        return decodeLsResult(result);
       },
 
       glob: async (p) => {
@@ -551,7 +692,7 @@ export const createDriveClient = (params: {
           pattern: p.pattern,
           ...optional('path', p.path),
         });
-        return decodeToolsResult(result);
+        return decodeGlobResult(result);
       },
 
       grep: async (p) => {
@@ -559,7 +700,7 @@ export const createDriveClient = (params: {
           query: p.query,
           paths: [...p.paths],
         });
-        return decodeToolsResult(result);
+        return decodeGrepResult(result);
       },
 
       vsearch: async (p) => {
@@ -568,7 +709,7 @@ export const createDriveClient = (params: {
           ...optional('top_k', p.topK),
           ...optional('path', p.path),
         });
-        return decodeToolsResult(result);
+        return decodeVsearchResult(result);
       },
 
       readFile: async (p) => {
@@ -592,6 +733,50 @@ export const createDriveClient = (params: {
         const result = await call('paths/tools/apply-patch', {
           path: p.path,
           patch: p.patch,
+        });
+        return decodeWriteResult(result);
+      },
+
+      biQuery: async (p) => {
+        const result = await call('paths/tools/bi-query', {
+          query: p.query,
+          paths: [...p.paths],
+        });
+        return decodeBiQueryResult(result);
+      },
+
+      inodesQuery: async (p) => {
+        const result = await call('paths/tools/inodes-query', {
+          query: p.query,
+          paths: [...p.paths],
+          ...optional('date_start', p.dateStart),
+          ...optional('date_end', p.dateEnd),
+          ...optional('order_by', p.orderBy),
+          ...optional('limit', p.limit),
+          ...optional('offset', p.offset),
+        });
+        return decodeInodesQueryResult(result);
+      },
+
+      tgSearch: async (p) => {
+        const result = await call('paths/tools/tg-search', {
+          database_path: p.databasePath,
+          ...optional('query', p.query),
+          ...optional('limit', p.limit),
+          ...optional('offset', p.offset),
+          ...optional('date_start', p.dateStart),
+          ...optional('date_end', p.dateEnd),
+          ...optional('order_by', p.orderBy),
+        });
+        return decodeTgSearchResult(result);
+      },
+
+      excelWrite: async (p) => {
+        const result = await call('paths/tools/excel-write', {
+          path: p.path,
+          headers: [...p.headers],
+          rows: p.rows.map((row) => [...row]),
+          ...optional('sheet_name', p.sheetName),
         });
         return decodeWriteResult(result);
       },

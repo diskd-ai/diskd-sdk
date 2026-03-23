@@ -18,12 +18,22 @@ import type {
   DriveRenameParams,
   DriveResolveParams,
   DriveToolsApplyPatchParams,
+  DriveToolsBiQueryParams,
+  DriveToolsBiQueryResult,
+  DriveToolsExcelWriteParams,
   DriveToolsGlobParams,
+  DriveToolsGlobResult,
   DriveToolsGrepParams,
+  DriveToolsGrepResult,
+  DriveToolsInodesQueryParams,
+  DriveToolsInodesQueryResult,
   DriveToolsLsParams,
+  DriveToolsLsResult,
   DriveToolsReadFileParams,
-  DriveToolsResult,
+  DriveToolsTgSearchParams,
+  DriveToolsTgSearchResult,
   DriveToolsVsearchParams,
+  DriveToolsVsearchResult,
   DriveToolsWriteFileParams,
   DriveToolsWriteResult,
   DriveUpdateAttributesParams,
@@ -79,13 +89,17 @@ export type DriveClient = {
 
   // Tools (path-based query and file operations)
   readonly tools: {
-    readonly ls: (params?: DriveToolsLsParams) => Promise<DriveToolsResult>;
-    readonly glob: (params: DriveToolsGlobParams) => Promise<DriveToolsResult>;
-    readonly grep: (params: DriveToolsGrepParams) => Promise<DriveToolsResult>;
-    readonly vsearch: (params: DriveToolsVsearchParams) => Promise<DriveToolsResult>;
+    readonly ls: (params?: DriveToolsLsParams) => Promise<DriveToolsLsResult>;
+    readonly glob: (params: DriveToolsGlobParams) => Promise<DriveToolsGlobResult>;
+    readonly grep: (params: DriveToolsGrepParams) => Promise<DriveToolsGrepResult>;
+    readonly vsearch: (params: DriveToolsVsearchParams) => Promise<DriveToolsVsearchResult>;
     readonly readFile: (params: DriveToolsReadFileParams) => Promise<DriveReadFileResult>;
     readonly writeFile: (params: DriveToolsWriteFileParams) => Promise<DriveToolsWriteResult>;
     readonly applyPatch: (params: DriveToolsApplyPatchParams) => Promise<DriveToolsWriteResult>;
+    readonly biQuery: (params: DriveToolsBiQueryParams) => Promise<DriveToolsBiQueryResult>;
+    readonly inodesQuery: (params: DriveToolsInodesQueryParams) => Promise<DriveToolsInodesQueryResult>;
+    readonly tgSearch: (params: DriveToolsTgSearchParams) => Promise<DriveToolsTgSearchResult>;
+    readonly excelWrite: (params: DriveToolsExcelWriteParams) => Promise<DriveToolsWriteResult>;
   };
 
   // Database operations (Drive DB -- SQLite via JSON-RPC)

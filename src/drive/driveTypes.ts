@@ -263,10 +263,114 @@ export type DriveDownloadFileResult = {
 };
 
 /**
- * Generic tools result. The item schema varies per operation; callers should
- * narrow the shape of each item using type guards against the specific tool's
- * documented response fields. `unknown` is used deliberately -- no `any`.
+ * Generic tools result.
+ * @deprecated Use the specific result type for each tool method instead
+ * (DriveToolsLsResult, DriveToolsGlobResult, DriveToolsGrepResult, etc.).
  */
 export type DriveToolsResult = {
   readonly items: readonly Readonly<Record<string, unknown>>[];
+};
+
+// -- Typed tools results --
+
+export type DriveToolsLsResult = {
+  readonly entries: readonly DrivePathEntry[];
+};
+
+export type DriveToolsGlobResult = {
+  readonly entries: readonly DrivePathEntry[];
+};
+
+export type DriveToolsDocumentPart = {
+  readonly type: string;
+  readonly title: string | null;
+  readonly content: string;
+  readonly pageNumber: number | null;
+  readonly originUrl: string | null;
+  readonly author: string | null;
+  readonly timestamp: number | null;
+};
+
+export type DriveToolsDocument = {
+  readonly id: string;
+  readonly parts: readonly DriveToolsDocumentPart[];
+};
+
+export type DriveToolsGrepResult = {
+  readonly documents: readonly DriveToolsDocument[];
+};
+
+export type DriveToolsVsearchResult = {
+  readonly documents: readonly DriveToolsDocument[];
+};
+
+export type DriveToolsTableData = {
+  readonly headers: readonly string[];
+  readonly rows: readonly (readonly (string | number | boolean | null)[])[];
+};
+
+export type DriveToolsBiQueryParams = {
+  readonly query: string;
+  readonly paths: readonly string[];
+};
+
+export type DriveToolsBiQueryResult = {
+  readonly tables: Readonly<Record<string, DriveToolsTableData>>;
+};
+
+export type DriveToolsInodesQueryParams = {
+  readonly query: string;
+  readonly paths: readonly string[];
+  readonly dateStart?: string;
+  readonly dateEnd?: string;
+  readonly orderBy?: string;
+  readonly limit?: number;
+  readonly offset?: number;
+};
+
+export type DriveToolsInodesQueryResult = {
+  readonly documents: readonly DriveToolsDocument[];
+  readonly tables: Readonly<Record<string, DriveToolsTableData>>;
+};
+
+export type DriveToolsTgMessage = {
+  readonly messageId: number;
+  readonly text: string;
+  readonly senderName: string;
+  readonly date: string;
+  readonly timestamp: number;
+  readonly replyToMessageId: number | null;
+  readonly isForward: boolean;
+  readonly views: number | null;
+  readonly channelUsername: string | null;
+  readonly originUrl: string | null;
+};
+
+export type DriveToolsTgSearchParams = {
+  readonly databasePath: string;
+  readonly query?: string;
+  readonly limit?: number;
+  readonly offset?: number;
+  readonly dateStart?: string;
+  readonly dateEnd?: string;
+  readonly orderBy?: 'relevance' | 'date_desc' | 'date_asc';
+};
+
+export type DriveToolsTgSearchResult = {
+  readonly messages: readonly {
+    readonly message: DriveToolsTgMessage;
+    readonly score: number | null;
+    readonly replyContext: DriveToolsTgMessage | null;
+  }[];
+  readonly totalFound: number;
+  readonly limit: number;
+  readonly offset: number;
+  readonly hasMore: boolean;
+};
+
+export type DriveToolsExcelWriteParams = {
+  readonly path: string;
+  readonly headers: readonly string[];
+  readonly rows: readonly (readonly (string | number | boolean | null)[])[];
+  readonly sheetName?: string;
 };

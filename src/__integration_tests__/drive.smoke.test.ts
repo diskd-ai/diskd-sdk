@@ -88,9 +88,9 @@ test('integration: drive tools.writeFile → ls → list → delete', {
   assert.ok(writeResult.id);
 
   try {
-    // tools.ls should return items
+    // tools.ls should return typed entries
     const lsResult = await drive.tools.ls({ path: '/' });
-    assert.ok(lsResult.items.length > 0, 'ls should return at least one item');
+    assert.ok(lsResult.entries.length > 0, 'ls should return at least one entry');
 
     // list should include the written file
     const entries = await drive.list({ path: '/' });
@@ -144,7 +144,7 @@ test('integration: drive tools.glob finds files by pattern', { skip: skipReason 
 
   try {
     const globResult = await drive.tools.glob({ pattern: '__sdk-glob-test-*.txt', path: '/' });
-    assert.ok(globResult.items.length > 0, 'glob should find the test file');
+    assert.ok(globResult.entries.length > 0, 'glob should find the test file');
   } finally {
     await drive.delete({ paths: [filePath] });
   }
@@ -161,7 +161,7 @@ test('integration: drive tools.grep searches file content', { skip: skipReason }
       query: 'findme-unique-marker-xyz',
       paths: [filePath],
     });
-    assert.ok(grepResult.items.length > 0, 'grep should find the marker');
+    assert.ok(grepResult.documents.length > 0, 'grep should find the marker');
   } finally {
     await drive.delete({ paths: [filePath] });
   }
