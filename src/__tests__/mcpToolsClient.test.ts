@@ -1,3 +1,5 @@
+/* REQUIREMENT ADR-028: MCP tools traffic must use `/v1/os/mcp` through APIS by default and `/v1/mcp` for direct host overrides. */
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { AuthModule } from '../auth/types.js';
@@ -84,7 +86,7 @@ test('mcpToolName constructs namespaced tool name', () => {
 });
 
 test('list() sends initialize then tools/list and returns tools', async () => {
-  const url = 'http://mcp-hub:3000/os/mcp';
+  const url = 'http://mcp-hub:3000';
 
   let callIndex = 0;
   await withFetchMock(
@@ -140,7 +142,7 @@ test('list() sends initialize then tools/list and returns tools', async () => {
 });
 
 test('list() second call reuses session (no re-initialize)', async () => {
-  const url = 'http://mcp-hub:3000/os/mcp';
+  const url = 'http://mcp-hub:3000';
 
   let callIndex = 0;
   await withFetchMock(
@@ -183,7 +185,7 @@ test('list() second call reuses session (no re-initialize)', async () => {
 });
 
 test('find() filters tools by regex on name and description', async () => {
-  const url = 'http://mcp-hub:3000/os/mcp';
+  const url = 'http://mcp-hub:3000';
 
   let callIndex = 0;
   await withFetchMock(
@@ -214,7 +216,7 @@ test('find() filters tools by regex on name and description', async () => {
 });
 
 test('call() sends tools/call with correct params and returns result', async () => {
-  const url = 'http://mcp-hub:3000/os/mcp';
+  const url = 'http://mcp-hub:3000';
 
   const stubResult = {
     content: [{ type: 'text', text: '{"repos": ["repo1", "repo2"]}' }],
@@ -256,7 +258,7 @@ test('call() sends tools/call with correct params and returns result', async () 
 });
 
 test('call() without args sends empty arguments object', async () => {
-  const url = 'http://mcp-hub:3000/os/mcp';
+  const url = 'http://mcp-hub:3000';
 
   let callIndex = 0;
   await withFetchMock(
@@ -282,7 +284,7 @@ test('call() without args sends empty arguments object', async () => {
 });
 
 test('throws on JSON-RPC error with code and message', async () => {
-  const url = 'http://mcp-hub:3000/os/mcp';
+  const url = 'http://mcp-hub:3000';
 
   let callIndex = 0;
   await withFetchMock(
@@ -311,7 +313,7 @@ test('throws on JSON-RPC error with code and message', async () => {
 });
 
 test('throws on HTTP error with status', async () => {
-  const url = 'http://mcp-hub:3000/os/mcp';
+  const url = 'http://mcp-hub:3000';
 
   await withFetchMock(
     () =>
@@ -352,8 +354,8 @@ test('gateway URL derivation uses env var when no url override', async () => {
       const client = diskd.os.mcpTools({ auth: makeAuth() });
       await client.list();
 
-      // The gateway URL should be derived from the base URL origin
-      assert.equal(calls[0]?.url, 'https://apis.example/v1/mcp');
+      // The default APIS path should preserve the versioned public prefix
+      assert.equal(calls[0]?.url, 'https://apis.example/v1/os/mcp');
     }
   );
 
@@ -363,7 +365,7 @@ test('gateway URL derivation uses env var when no url override', async () => {
 test('diskd.os.mcpTools factory returns client with list, find, and call', () => {
   const client = diskd.os.mcpTools({
     auth: makeAuth(),
-    url: 'http://mcp-hub:3000/os/mcp',
+    url: 'http://mcp-hub:3000',
   });
 
   assert.equal(typeof client.list, 'function');

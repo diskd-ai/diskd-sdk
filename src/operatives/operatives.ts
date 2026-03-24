@@ -154,7 +154,7 @@ const buildQuery = (entries: readonly (readonly [string, string | undefined])[])
  * Creates an Operatives REST client bound to a given auth module.
  *
  * The URL defaults to the centralized `APIS_BASE_URL` gateway with the
- * `/platform/app` path prefix.
+ * `/v1/platform/operatives` path prefix.
  *
  * Example:
  * ```ts

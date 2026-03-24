@@ -12,7 +12,7 @@ The `diskd.os.mcp()` SDK client provides registry management (install, configure
 
 External consumers (SDK scripts, routine templates, pipeline orchestrators, debugging/testing tools) need to list available tools and call them programmatically without spinning up an agent session. This is gap **S5** from `docs/acceptance/email-to-project-pipeline-gaps-v4.md`.
 
-The MCP Hub already exposes a fully functional JSON-RPC gateway at `POST /v1/mcp/:profileId` supporting `initialize`, `tools/list`, and `tools/call`. No new MCP Hub routes are needed -- S5 is a pure SDK-layer addition.
+The MCP Hub already exposes a fully functional upstream JSON-RPC gateway at `POST /v1/mcp` supporting `initialize`, `tools/list`, and `tools/call`. Through APIS, the SDK defaults to the versioned public route `POST /v1/os/mcp`. No new MCP Hub routes are needed -- S5 is a pure SDK-layer addition.
 
 Goals:
 - Provide a dedicated `McpToolsClient` at `diskd.os.mcpTools({ auth })` for tool invocation
@@ -120,7 +120,7 @@ Session lifecycle
 The MCP protocol requires an `initialize` handshake before calling methods. The SDK handles this transparently:
 
 1. **Lazy initialization**: No network call on client creation. The first `list()`, `find()`, or `call()` triggers initialization.
-2. **Initialize request**: `POST /v1/mcp[/:profileId]` with `{ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion, capabilities, clientInfo } }`.
+2. **Initialize request**: default APIS route `POST /v1/os/mcp`; direct host override `POST /v1/mcp`, with `{ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion, capabilities, clientInfo } }`.
 3. **Session capture**: The response includes an `mcp-session-id` header. Stored in the client closure.
 4. **Session reuse**: All subsequent requests include `mcp-session-id: {storedId}` header.
 5. **No explicit disconnect**: Sessions have a server-side TTL (30 minutes). The SDK does not send explicit disconnect requests.
@@ -171,7 +171,8 @@ platform-api SDK                        MCP Hub (no changes)
   mcpToolsTypes.ts                        mcp-gateway.controller.ts
     McpGatewayTool   <---matches-->         tools/list response shape
     McpToolCallResult <---matches-->        tools/call response shape
-  mcpTools.ts        ----JSON-RPC-->      POST /v1/mcp/:profileId
+  mcpTools.ts        ----JSON-RPC-->      POST /v1/os/mcp (default)
+                           or            POST /v1/mcp (direct override)
     initialize       ------>                handleRpc (initialize)
     tools/list       ------>                handleRpc (tools/list)
     tools/call       ------>                handleRpc (tools/call)

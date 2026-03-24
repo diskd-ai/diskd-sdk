@@ -20,7 +20,7 @@ import type {
  * Creates a Web Navigator REST client bound to a given auth module and workspace.
  *
  * The URL defaults to the centralized `APIS_BASE_URL` gateway with the
- * `/utils/web-navigator` path prefix.
+ * `/v1/utils/web-navigator` path prefix.
  *
  * The workspace is derived from `auth.getWorkspaceId()` and forwarded as
  * `X-Workspace-Id` on all requests.

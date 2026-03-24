@@ -118,18 +118,26 @@ All resource APIs resolve from the centralized gateway base URL:
 | `APIS_BASE_URL` | `https://apis.diskd.local:8080` |
 | `APIS_API_KEY` | none |
 
-The gateway is the single resource entrypoint. The SDK derives API paths from
-the same namespace structure as the public SDK surface and lets the gateway
-handle API orchestration and auth strategy.
+The gateway is the single resource entrypoint. Public gateway URLs follow the
+versioned convention `https://apis.example/v1/{namespace}/{module}`. The SDK
+derives API paths from the same namespace structure as the public SDK surface
+and lets the gateway handle API orchestration and auth strategy.
 
 Derived default paths:
-- `/os/drive`
-- `/os/llm`
-- `/os/agents`
-- `/os/mcp`
-- `/platform/app` (routines, operatives, calendar)
-- `/utils/tg-userbot`
-- `/utils/web-navigator`
+- `/v1/os/drive`
+- `/v1/os/database`
+- `/v1/os/llm`
+- `/v1/os/agents`
+- `/v1/os/mcp`
+- `/v1/platform/sessions`
+- `/v1/platform/crontab`
+- `/v1/platform/operatives`
+- `/v1/platform/projects`
+- `/v1/platform/routines`
+- `/v1/platform/events`
+- `/v1/platform/calendar`
+- `/v1/utils/tg-userbot`
+- `/v1/utils/web-navigator`
 
 You can still override a client with an explicit `url`, but the default mode is
 the centralized gateway.
@@ -609,7 +617,7 @@ const auth = diskd.auth.apiKey({ workspaceId: 'workspace-123' });
 
 const ds = diskd.os.datasource({
   auth,
-  url: `${process.env.APIS_BASE_URL}/os/database/api/v1`,
+  url: `${process.env.APIS_BASE_URL}/v1/os/database/api/v1`,
   dbName: 'shop.workspace-123.main',
   entities: [User],
   synchronize: true,

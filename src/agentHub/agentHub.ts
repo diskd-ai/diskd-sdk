@@ -121,7 +121,7 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
  * Creates an Agent Hub client bound to a given auth module and workspace.
  *
  * The URL defaults to the centralized `APIS_BASE_URL` gateway with the
- * `/os/agents` path prefix.
+ * `/v1/os/agents` path prefix.
  *
  * The workspace is derived from `auth.getWorkspaceId()` on each request.
  *

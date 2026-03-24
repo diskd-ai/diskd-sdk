@@ -473,7 +473,7 @@ async function* readNdjsonStream(response: Response): AsyncGenerator<unknown, vo
  * Creates an LLM Router client bound to a given auth module and optional base URL.
  *
  * The URL defaults to the centralized `APIS_BASE_URL` gateway with the
- * `/os/llm` path prefix.
+ * `/v1/os/llm` path prefix.
  *
  * Example:
  * ```ts

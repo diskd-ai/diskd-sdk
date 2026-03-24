@@ -138,7 +138,7 @@ export const diskd: DiskD = {
     projects: ({ auth, url }) => createProjectsClient({ auth, url }),
 
     events: ({ auth, url }) => {
-      const eventsUrl = url ?? resolveDiskdGatewayUrl('api/events');
+      const eventsUrl = url ?? resolveDiskdGatewayUrl('platform/events');
       return createPlatformEventsClient({ auth, url: eventsUrl });
     },
 

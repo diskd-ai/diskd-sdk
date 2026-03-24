@@ -1,6 +1,7 @@
 // MCP Tools gateway client -- JSON-RPC transport with automatic session management.
 //
-// Communicates with MCP Hub's JSON-RPC gateway at POST /v1/mcp.
+// Communicates with the public APIS MCP gateway at POST /v1/os/mcp by default,
+// or directly to MCP Hub at POST /v1/mcp when given a host-only override.
 // Session lifecycle (initialize handshake, mcp-session-id reuse) is handled
 // internally so consumers only see list/find/call.
 
@@ -48,9 +49,13 @@ export const mcpToolName = (instanceNamespace: string, toolName: string): string
 // ---------------------------------------------------------------------------
 
 const deriveGatewayUrl = (baseUrlOrUndefined: string | undefined): string => {
-  const base = baseUrlOrUndefined ?? resolveDiskdGatewayUrl('os/mcp');
+  if (baseUrlOrUndefined === undefined) {
+    return resolveDiskdGatewayUrl('os/mcp');
+  }
+
+  const base = baseUrlOrUndefined.replace(/\/+$/, '');
   const url = new URL(base);
-  return `${url.origin}/v1/mcp`;
+  return url.pathname === '' || url.pathname === '/' ? `${url.origin}/v1/mcp` : base;
 };
 
 // ---------------------------------------------------------------------------
@@ -60,9 +65,12 @@ const deriveGatewayUrl = (baseUrlOrUndefined: string | undefined): string => {
 /**
  * Creates an MCP Tools gateway client for listing and invoking MCP tools.
  *
- * The client talks to MCP Hub's JSON-RPC endpoint (`POST /v1/mcp`).
- * Session initialization is lazy -- the first call triggers the MCP
- * `initialize` handshake and captures the `mcp-session-id` header.
+ * The client talks to the public APIS MCP gateway endpoint (`POST /v1/os/mcp`)
+ * by default. When `url` is a direct MCP Hub host override, it targets
+ * `POST /v1/mcp` on that host.
+ *
+ * Session initialization is lazy -- the first call triggers the MCP `initialize`
+ * handshake and captures the `mcp-session-id` header.
  *
  * Example:
  * ```ts

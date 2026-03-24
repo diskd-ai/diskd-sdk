@@ -26,7 +26,7 @@ const APIS_API_KEY = process.env.APIS_API_KEY ?? 'key-dev-1234567890';
 const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
 process.env.APIS_BASE_URL = APIS_BASE_URL;
 process.env.APIS_API_KEY = APIS_API_KEY;
-const DRIVE_URL = `${APIS_BASE_URL}/os/database/api/v1`;
+const DRIVE_URL = `${APIS_BASE_URL}/v1/os/database/api/v1`;
 
 const auth = diskd.auth.apiKey({ workspaceId: WORKSPACE_ID });
 

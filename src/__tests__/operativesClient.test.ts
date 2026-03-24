@@ -1,3 +1,5 @@
+/* REQUIREMENT ADR-028: Platform REST clients must derive versioned APIS gateway URLs under `/v1/platform/*`. */
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { AuthModule } from '../auth/types.js';
@@ -506,7 +508,7 @@ test('operatives client uses gateway URL when no url override provided', async (
 
       assert.equal(
         calls[0]?.url,
-        'https://apis.example/platform/operatives/api/operatives?projectId=proj-1'
+        'https://apis.example/v1/platform/operatives/api/operatives?projectId=proj-1'
       );
     }
   );

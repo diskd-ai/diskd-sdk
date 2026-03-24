@@ -17,7 +17,7 @@ import type {
  * Creates a Projects REST client bound to a given auth module.
  *
  * The URL defaults to the centralized `APIS_BASE_URL` gateway with the
- * `/platform/projects` path prefix.
+ * `/v1/platform/projects` path prefix.
  *
  * Example:
  * ```ts

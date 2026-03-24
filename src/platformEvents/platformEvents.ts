@@ -50,9 +50,10 @@ const resolveAuthHeaders = async (auth: AuthModule): Promise<Record<string, stri
   return { Authorization: `Bearer ${token}` };
 };
 
-const resolveWorkspaceId = (auth: AuthModule): string => {
-  if ('workspaceId' in auth && typeof auth.workspaceId === 'string') {
-    return auth.workspaceId;
+const resolveWorkspaceId = async (auth: AuthModule): Promise<string> => {
+  const workspaceId = await auth.getWorkspaceId();
+  if (workspaceId.length > 0) {
+    return workspaceId;
   }
   throw new Error('Platform Events: AuthModule must include a workspaceId');
 };
@@ -73,7 +74,7 @@ export const createPlatformEventsClient = (
 
   const publish = async (eventParams: PublishEventParams): Promise<PublishEventResult> => {
     const authHeaders = await resolveAuthHeaders(params.auth);
-    const workspaceId = resolveWorkspaceId(params.auth);
+    const workspaceId = await resolveWorkspaceId(params.auth);
 
     const response = await fetch(`${baseUrl}/publish`, {
       method: 'POST',
