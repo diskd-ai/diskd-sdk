@@ -126,3 +126,7 @@ npm run examples:build  # build examples
 
 Version bumps and tag pushes trigger GitLab CI which builds, tests, and publishes
 to the GitLab Package Registry. See README.md for details.
+
+Do not update consumer repos to a new `@diskd/sdk` version until the matching
+`vX.Y.Z` tag has been pushed from this repo and the GitLab Package Registry
+shows that exact version as published.
