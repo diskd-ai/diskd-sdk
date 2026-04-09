@@ -65,6 +65,21 @@ export type {
   UpdateEventParams,
   UpdateSettingsParams,
 } from './calendar/calendarTypes.js';
+// -- Contacts --
+export { createContactsClient } from './contacts/contacts.js';
+export type {
+  AddContactMethodParams,
+  Contact,
+  ContactMethod,
+  ContactProjectLink,
+  ContactsClient,
+  ContactSource,
+  CreateContactParams,
+  LinkContactToProjectParams,
+  ListContactsParams,
+  SearchContactsParams,
+  UpdateContactParams,
+} from './contacts/contactsTypes.js';
 export { createDriveCrontabClient } from './drive/crontab.js';
 export type {
   DriveCrontabClient,

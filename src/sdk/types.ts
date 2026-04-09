@@ -1,6 +1,7 @@
 import type { AgentHubClient } from '../agentHub/agentHubTypes.js';
 import type { ApiKeyAuthParams, AuthModule, SdkCreateParams } from '../auth/types.js';
 import type { CalendarClient } from '../calendar/calendarTypes.js';
+import type { ContactsClient } from '../contacts/contactsTypes.js';
 import type { DriveCrontabScopeRef, DriveScopedCrontabClient } from '../drive/crontabTypes.js';
 import type { DriveDatabase, DriveDatabaseParams } from '../drive/DriveRepository.js';
 import type { DriveScopedSessionManager } from '../drive/sessionObject.js';
@@ -102,6 +103,11 @@ export type DiskD = {
       readonly auth: AuthModule;
       readonly url?: string;
     }) => CalendarClient;
+
+    readonly contacts: (params: {
+      readonly auth: AuthModule;
+      readonly url?: string;
+    }) => ContactsClient;
   };
 
   readonly utils: {
