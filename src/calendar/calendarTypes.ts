@@ -19,6 +19,7 @@ export type CalendarAccount = {
   readonly provider: string;
   readonly email: string;
   readonly status: string;
+  readonly lastSyncAt: string | null;
   readonly calendars: readonly Calendar[];
 };
 

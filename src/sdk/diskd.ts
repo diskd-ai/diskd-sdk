@@ -3,6 +3,7 @@ import { createAgentHubClient } from '../agentHub/agentHub.js';
 import { createApiKeyAuth } from '../auth/createApiKeyAuth.js';
 import { createAuth } from '../auth/createAuth.js';
 import { createCalendarClient } from '../calendar/calendar.js';
+import { createContactsClient } from '../contacts/contacts.js';
 import type { DriveScopedCrontabClient } from '../drive/crontabTypes.js';
 import { createDriveDatabase } from '../drive/DriveRepository.js';
 import { createDriveClient } from '../drive/drive.js';
@@ -143,6 +144,8 @@ export const diskd: DiskD = {
     },
 
     calendar: ({ auth, url }) => createCalendarClient({ auth, url }),
+
+    contacts: ({ auth, url }) => createContactsClient({ auth, url }),
   },
 
   utils: {

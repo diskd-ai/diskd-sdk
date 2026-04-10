@@ -60,7 +60,6 @@ const created: CalendarEvent = await calendar.createEvent({
   title: 'deployment kick off',
   startAt: '2026-03-22T18:15:00Z',
   endAt: '2026-03-22T19:15:00Z',
-  timezoneId: 'Europe/Moscow',
 });
 
 console.log(`[ok] Created event:`);
