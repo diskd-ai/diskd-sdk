@@ -293,7 +293,7 @@ test('diskd.platform.sessions.list uses the drive JSON-RPC endpoint', async () =
     });
     assert.equal(calls[0]?.url, 'https://apis.example/v1/platform/sessions/api/v1');
     assert.ok(String(calls[0]?.init?.body).includes('"method":"drive/session/list"'));
-    assert.ok(String(calls[0]?.init?.body).includes('"project_id":"proj-1"'));
+    assert.ok(String(calls[0]?.init?.body).includes('"root_path":"/Projects/proj-1"'));
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
     delete process.env.APIS_BASE_URL;
