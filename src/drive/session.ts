@@ -29,6 +29,15 @@ type UnknownObject = { readonly [key: string]: unknown };
 
 type RpcCall = (method: string, rpcParams: unknown) => Promise<unknown>;
 
+// Drive's session API addresses sessions by `root_path`, the canonical
+// folder under which `.sessions/<sessionId>.session` lives. The SDK's
+// public surface keeps `projectId` as the domain handle (callers do not
+// need to know about the storage layout), and we translate to the wire
+// `root_path` here. The convention `/Projects/<projectId>` matches
+// app-service, which writes sessions under
+// `Projects/<projectId>/.sessions/<sessionId>.session`.
+const projectRootPath = (projectId: string): string => `/Projects/${projectId}`;
+
 const isObject = (value: unknown): value is UnknownObject =>
   typeof value === 'object' && value !== null;
 
@@ -465,7 +474,7 @@ export const createDriveSessionClient = (params: {
   return {
     save: async (p: DriveSessionSaveParams): Promise<DriveSessionSaveResult> => {
       const result = await params.call('drive/session/save', {
-        project_id: p.projectId,
+        root_path: projectRootPath(p.projectId),
         session: encodeSessionDocument(p.session),
         ...(p.attributes ? { attributes: p.attributes } : {}),
       });
@@ -474,7 +483,7 @@ export const createDriveSessionClient = (params: {
 
     get: async (p: DriveSessionGetParams): Promise<DriveSessionGetResult> => {
       const result = await params.call('drive/session/get', {
-        project_id: p.projectId,
+        root_path: projectRootPath(p.projectId),
         session_id: p.sessionId,
       });
       return decodeGetResult(result);
@@ -482,7 +491,7 @@ export const createDriveSessionClient = (params: {
 
     getPreview: async (p: DriveSessionGetPreviewParams): Promise<DriveSessionGetPreviewResult> => {
       const result = await params.call('drive/session/get-preview', {
-        project_id: p.projectId,
+        root_path: projectRootPath(p.projectId),
         session_id: p.sessionId,
         ...(p.limit !== undefined ? { limit: p.limit } : {}),
       });
@@ -493,7 +502,7 @@ export const createDriveSessionClient = (params: {
       p: DriveSessionGetMessageRangeParams
     ): Promise<DriveSessionGetMessageRangeResult> => {
       const result = await params.call('drive/session/get-message-range', {
-        project_id: p.projectId,
+        root_path: projectRootPath(p.projectId),
         session_id: p.sessionId,
         limit: p.limit,
         ...(p.before !== undefined ? { before: p.before } : {}),
@@ -502,7 +511,9 @@ export const createDriveSessionClient = (params: {
     },
 
     list: async (p: DriveSessionListParams): Promise<DriveSessionListResult> => {
-      const result = await params.call('drive/session/list', { project_id: p.projectId });
+      const result = await params.call('drive/session/list', {
+        root_path: projectRootPath(p.projectId),
+      });
       return decodeListResult(result);
     },
 
@@ -510,7 +521,7 @@ export const createDriveSessionClient = (params: {
       p: DriveSessionAppendMessagesParams
     ): Promise<DriveSessionAppendMessagesResult> => {
       const result = await params.call('drive/session/append-messages', {
-        project_id: p.projectId,
+        root_path: projectRootPath(p.projectId),
         session_id: p.sessionId,
         messages: p.messages.map(encodeSessionMessage),
       });
@@ -525,13 +536,13 @@ export const createDriveSessionClient = (params: {
         (() => {
           if ('messageIds' in p) {
             return {
-              project_id: p.projectId,
+              root_path: projectRootPath(p.projectId),
               session_id: p.sessionId,
               message_ids: p.messageIds,
             };
           }
           return {
-            project_id: p.projectId,
+            root_path: projectRootPath(p.projectId),
             session_id: p.sessionId,
             rollback_after_message_id: p.rollbackAfterMessageId,
           };
@@ -542,7 +553,7 @@ export const createDriveSessionClient = (params: {
 
     delete: async (p: DriveSessionDeleteParams): Promise<DriveSessionDeleteResult> => {
       const result = await params.call('drive/session/delete', {
-        project_id: p.projectId,
+        root_path: projectRootPath(p.projectId),
         session_id: p.sessionId,
       });
       return decodeDeleteResult(result);

@@ -14,7 +14,7 @@ const makeRpcMock = (response: unknown) => {
   return { calls, call };
 };
 
-test('session client get encodes project_id + session_id', async () => {
+test('session client get encodes root_path (from projectId) + session_id', async () => {
   const { calls, call } = makeRpcMock({
     session: {
       id: 'sess-1',
@@ -44,7 +44,7 @@ test('session client get encodes project_id + session_id', async () => {
 
   assert.equal(calls.length, 1);
   assert.equal(calls[0]?.method, 'drive/session/get');
-  assert.deepEqual(calls[0]?.params, { project_id: 'proj-1', session_id: 'sess-1' });
+  assert.deepEqual(calls[0]?.params, { root_path: '/Projects/proj-1', session_id: 'sess-1' });
 });
 
 test('session client deleteMessages supports rollbackAfterMessageId encoding', async () => {
@@ -64,7 +64,7 @@ test('session client deleteMessages supports rollbackAfterMessageId encoding', a
   assert.equal(calls.length, 1);
   assert.equal(calls[0]?.method, 'drive/session/delete-messages');
   assert.deepEqual(calls[0]?.params, {
-    project_id: 'proj-1',
+    root_path: '/Projects/proj-1',
     session_id: 'sess-1',
     rollback_after_message_id: 'm-10',
   });
@@ -87,7 +87,7 @@ test('session client deleteMessages supports messageIds encoding', async () => {
   assert.equal(calls.length, 1);
   assert.equal(calls[0]?.method, 'drive/session/delete-messages');
   assert.deepEqual(calls[0]?.params, {
-    project_id: 'proj-1',
+    root_path: '/Projects/proj-1',
     session_id: 'sess-1',
     message_ids: ['m-2', 'm-3'],
   });
