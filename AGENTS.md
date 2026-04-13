@@ -122,11 +122,32 @@ npm run examples:build  # build examples
 - Integration tests: `src/__integration_tests__/*.test.ts`
 - Only run unit tests affected by changes (never run all tests by default)
 
-## Publishing
+## Publishing / Releasing a New Version
 
-Version bumps and tag pushes trigger GitLab CI which builds, tests, and publishes
-to the GitLab Package Registry. See README.md for details.
+Semver tags trigger the GitLab CI `publish` stage which builds, tests, and
+publishes to the GitLab Package Registry (project 80).
 
-Do not update consumer repos to a new `@diskd/sdk` version until the matching
-`vX.Y.Z` tag has been pushed from this repo and the GitLab Package Registry
-shows that exact version as published.
+### Release checklist
+
+1. **Verify locally**: `npm run build && npm run typecheck && npm test`
+2. **Bump version** in `package.json` (e.g. `5.0.4` -> `5.0.5`). Follow semver:
+   - **patch** (5.0.x): backward-compatible bug fixes, new optional fields on existing types
+   - **minor** (5.x.0): new modules, new client methods, new exports
+   - **major** (x.0.0): breaking changes to existing types, removed exports, renamed fields
+3. **Commit**: `git add package.json && git commit -m "release: bump version to X.Y.Z"`
+4. **Push to main**: `git push origin main`
+5. **Tag and push**: `git tag vX.Y.Z && git push origin vX.Y.Z`
+6. **Wait for CI**: the `v*.*.*` tag triggers build -> test:unit -> test:typecheck -> publish.
+   Monitor with `glab ci list --per-page 3`. The `publish` job pushes to the GitLab npm registry.
+7. **Verify published**: `glab api "projects/80/packages?per_page=3&sort=desc&order_by=version"` --
+   confirm the new version appears.
+8. **Update consumers**: bump `@diskd/sdk` in each consumer's `package.json` to the exact
+   new version (no `^`/`~`), run `npm install`, and verify typecheck + tests pass.
+   Common consumers: `pi-agent-service`, `app-service`, `agent-hub`.
+
+### Rules
+
+- Do NOT update consumer repos until the GitLab Package Registry shows the exact version as published.
+- Use exact versions in consumers (e.g. `"5.0.5"` not `"^5.0.5"`).
+- One version bump per release commit. Do not combine version bumps with feature code.
+- If CI publish fails, fix the issue, do NOT re-tag. Bump to the next patch and re-release.
