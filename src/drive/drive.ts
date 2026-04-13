@@ -683,6 +683,8 @@ export const createDriveClient = (params: {
         const result = await call('paths/tools/ls', {
           ...optional('path', p?.path),
           ...optional('recursive', p?.recursive),
+          ...optional('show_hidden', p?.showHidden),
+          ...optional('show_system', p?.showSystem),
         });
         return decodeLsResult(result);
       },
@@ -691,6 +693,8 @@ export const createDriveClient = (params: {
         const result = await call('paths/tools/glob', {
           pattern: p.pattern,
           ...optional('path', p.path),
+          ...optional('show_hidden', p?.showHidden),
+          ...optional('show_system', p?.showSystem),
         });
         return decodeGlobResult(result);
       },

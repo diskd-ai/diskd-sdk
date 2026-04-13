@@ -161,11 +161,15 @@ export type DriveDiskUsageResult = {
 export type DriveToolsLsParams = {
   readonly path?: string;
   readonly recursive?: boolean;
+  readonly showHidden?: boolean;
+  readonly showSystem?: boolean;
 };
 
 export type DriveToolsGlobParams = {
   readonly pattern: string;
   readonly path?: string;
+  readonly showHidden?: boolean;
+  readonly showSystem?: boolean;
 };
 
 export type DriveToolsGrepParams = {
