@@ -35,8 +35,8 @@ export type DriveSessionMessage = {
   readonly participantName: string | null;
   readonly participantSlug: string | null;
 
-  // Content
-  readonly content: string;
+  // Content (null for assistant messages with only tool calls)
+  readonly content: string | null;
   readonly contentBlocksJson: string | null;
 
   // Source + observability

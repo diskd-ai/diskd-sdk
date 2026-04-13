@@ -245,7 +245,7 @@ const decodeSessionMessage = (raw: unknown): DriveSessionMessage => {
     participantId: readNullableString(raw, 'participant_id', 'participantId'),
     participantName: readNullableString(raw, 'participant_name', 'participantName'),
     participantSlug: readNullableString(raw, 'participant_slug', 'participantSlug'),
-    content: readRequiredString(raw, 'content', 'content'),
+    content: readNullableString(raw, 'content', 'content'),
     contentBlocksJson: readNullableString(raw, 'content_blocks_json', 'contentBlocksJson'),
     sourceOrigin: readNullableString(raw, 'source_origin', 'sourceOrigin'),
     turnCorrelationId: readNullableString(raw, 'turn_correlation_id', 'turnCorrelationId'),
