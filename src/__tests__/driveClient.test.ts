@@ -47,6 +47,79 @@ test('drive.init calls JSON-RPC with Bearer token', async () => {
   }
 });
 
+test('drive.create forwards file_id for file-link creation', async () => {
+  process.env.APIS_BASE_URL = 'https://apis.example';
+
+  const calls: FetchCall[] = [];
+  const originalFetch = globalThis.fetch;
+  const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const url = typeof input === 'string' ? input : input.toString();
+    calls.push({ url, init });
+    return new Response(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        result: {
+          inode: 'inode-1',
+          name: 'invoice.pdf',
+          type: 'file',
+          parent_inode: 'parent-1',
+          file_id: 'file-123',
+          etag: 'etag-1',
+          metadata: {},
+          attributes: [],
+          updated_at: 1710000000,
+        },
+        id: 1,
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  };
+  (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
+
+  const auth: AuthModule = {
+    signIn: async () => {},
+    signOut: () => {},
+    handleRedirectCallback: async () => {},
+    getAccessToken: async () => 'token-123',
+    getToken: () => ({ accessToken: 'token-123' }),
+    getWorkspaceId: async () => 'test-workspace',
+  };
+
+  try {
+    const drive = diskd.os.drive({ version: 'v1', auth });
+    const result = await drive.create({
+      name: 'invoice.pdf',
+      type: 'file',
+      parentPath: '/Projects/prj-1/docs',
+      fileId: 'file-123',
+    });
+
+    assert.equal(calls[0]?.url, 'https://apis.example/v1/os/drive/api/v1');
+    assert.ok(String(calls[0]?.init?.body).includes('"method":"drive/paths/create"'));
+    assert.ok(String(calls[0]?.init?.body).includes('"name":"invoice.pdf"'));
+    assert.ok(String(calls[0]?.init?.body).includes('"type":"file"'));
+    assert.ok(String(calls[0]?.init?.body).includes('"parent_path":"/Projects/prj-1/docs"'));
+    assert.ok(String(calls[0]?.init?.body).includes('"file_id":"file-123"'));
+    assert.deepEqual(result, {
+      id: 'inode-1',
+      parentId: 'parent-1',
+      name: 'invoice.pdf',
+      type: 'file',
+      fileId: 'file-123',
+      etag: 'etag-1',
+      metadata: {},
+      attributes: [],
+      updatedAt: 1710000000,
+    });
+  } finally {
+    (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
+    delete process.env.APIS_BASE_URL;
+  }
+});
+
 test('drive.crontab.getStatus uses the drive JSON-RPC endpoint', async () => {
   process.env.APIS_BASE_URL = 'https://apis.example';
 

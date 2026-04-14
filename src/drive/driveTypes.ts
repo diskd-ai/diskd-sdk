@@ -51,10 +51,21 @@ export type DrivePathMutationResult = {
 
 // -- Path operation params --
 
-export type DriveCreateParams = {
-  readonly dirName: string;
-  readonly parentPath?: string;
-};
+export type DriveCreateParams =
+  | {
+      readonly dirName: string;
+      readonly parentPath?: string;
+      readonly metadata?: Readonly<Record<string, unknown>>;
+      readonly fileId?: string;
+      readonly type?: Extract<DrivePathType, 'dir'>;
+    }
+  | {
+      readonly name: string;
+      readonly type: DrivePathType;
+      readonly parentPath?: string;
+      readonly metadata?: Readonly<Record<string, unknown>>;
+      readonly fileId?: string;
+    };
 
 export type DriveRenameParams = {
   readonly path: string;

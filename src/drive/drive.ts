@@ -448,9 +448,15 @@ export const createDriveClient = (params: {
     },
 
     create: async (p) => {
+      const name = 'name' in p ? p.name : p.dirName;
+      const type = 'type' in p ? p.type : ('dir' as const);
       const result = await call('drive/paths/create', {
-        dir_name: p.dirName,
+        name,
+        dir_name: name,
+        type,
         ...optional('parent_path', p.parentPath),
+        ...optional('metadata', p.metadata),
+        ...optional('file_id', p.fileId),
       });
       return decodeMutationResult(result);
     },
