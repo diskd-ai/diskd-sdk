@@ -371,16 +371,28 @@ export type DriveToolsTgSearchParams = {
   readonly orderBy?: 'relevance' | 'date_desc' | 'date_asc';
 };
 
+export type DriveToolsTgSearchResultMessage = {
+  readonly message: DriveToolsTgMessage;
+  readonly score: number | null;
+  readonly replyContext: DriveToolsTgMessage | null;
+};
+
+export type DriveToolsTgTopic = {
+  readonly topicId: string;
+  readonly title: string;
+  readonly summary: string | null;
+  readonly messageCount: number;
+  readonly dateRange: readonly [string, string];
+  readonly sampleMessages: readonly DriveToolsTgMessage[];
+};
+
 export type DriveToolsTgSearchResult = {
-  readonly messages: readonly {
-    readonly message: DriveToolsTgMessage;
-    readonly score: number | null;
-    readonly replyContext: DriveToolsTgMessage | null;
-  }[];
+  readonly queryType: 'discovery' | 'search' | 'recent';
+  readonly topics: readonly DriveToolsTgTopic[] | null;
+  readonly messages: readonly DriveToolsTgSearchResultMessage[] | null;
   readonly totalFound: number;
-  readonly limit: number;
-  readonly offset: number;
-  readonly hasMore: boolean;
+  readonly dateRangeApplied: readonly [string, string] | null;
+  readonly databasePath: string;
 };
 
 export type DriveToolsExcelWriteParams = {

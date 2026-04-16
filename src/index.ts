@@ -190,6 +190,8 @@ export type {
   DriveToolsTgMessage,
   DriveToolsTgSearchParams,
   DriveToolsTgSearchResult,
+  DriveToolsTgSearchResultMessage,
+  DriveToolsTgTopic,
   DriveToolsVsearchParams,
   DriveToolsVsearchResult,
   DriveToolsWriteFileParams,

@@ -1312,9 +1312,9 @@ test('drive.tools.tgSearch sends paths/tools/tg-search and returns typed message
             },
           ],
           total_found: 2,
-          limit: 20,
-          offset: 0,
-          has_more: false,
+          query_type: 'search',
+          topics: null,
+          date_range_applied: ['2025-03-01', '2025-03-31'],
           database_path: '/Telegram/devops-alerts.telegram',
         },
         id: 1,
@@ -1347,11 +1347,13 @@ test('drive.tools.tgSearch sends paths/tools/tg-search and returns typed message
 
     // Top-level fields
     assert.equal(result.totalFound, 2);
-    assert.equal(result.limit, 20);
-    assert.equal(result.offset, 0);
-    assert.equal(result.hasMore, false);
+    assert.equal(result.queryType, 'search');
+    assert.equal(result.topics, null);
+    assert.deepStrictEqual(result.dateRangeApplied, ['2025-03-01', '2025-03-31']);
+    assert.equal(result.databasePath, '/Telegram/devops-alerts.telegram');
 
     // First message
+    assert.ok(result.messages);
     assert.equal(result.messages.length, 2);
     const msg1 = result.messages[0];
     assert.equal(msg1?.message.messageId, 101);
@@ -1366,6 +1368,7 @@ test('drive.tools.tgSearch sends paths/tools/tg-search and returns typed message
     assert.equal(msg1?.replyContext, null);
 
     // Second message with reply context
+    assert.ok(result.messages);
     const msg2 = result.messages[1];
     assert.equal(msg2?.message.messageId, 99);
     assert.ok(msg2?.replyContext);

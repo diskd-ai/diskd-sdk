@@ -23,6 +23,7 @@ import type {
   DriveToolsTableData,
   DriveToolsTgMessage,
   DriveToolsTgSearchResult,
+  DriveToolsTgTopic,
   DriveToolsVsearchResult,
   DriveToolsWriteResult,
   DriveUploadCommitResult,
@@ -357,23 +358,62 @@ const decodeTgMessage = (o: unknown): DriveToolsTgMessage => {
   };
 };
 
+const decodeTgTopic = (o: unknown): DriveToolsTgTopic => {
+  const r = raw(o);
+  const dateRangeRaw = Array.isArray(r.date_range) ? r.date_range : [];
+  const sampleRaw = Array.isArray(r.sample_messages) ? r.sample_messages : [];
+  return {
+    topicId: typeof r.topic_id === 'string' ? r.topic_id : '',
+    title: typeof r.title === 'string' ? r.title : '',
+    summary: str(r, 'summary'),
+    messageCount: num(r, 'message_count') ?? 0,
+    dateRange: [
+      typeof dateRangeRaw[0] === 'string' ? dateRangeRaw[0] : '',
+      typeof dateRangeRaw[1] === 'string' ? dateRangeRaw[1] : '',
+    ] as const,
+    sampleMessages: sampleRaw.map(decodeTgMessage),
+  };
+};
+
 const decodeTgSearchResult = (o: unknown): DriveToolsTgSearchResult => {
   const r = raw(o);
-  const messagesRaw = Array.isArray(r.messages) ? r.messages : [];
-  const messages = messagesRaw.map((item) => {
-    const entry = raw(item);
-    return {
-      message: decodeTgMessage(entry.message),
-      score: num(entry, 'score'),
-      replyContext: isObject(entry.reply_context) ? decodeTgMessage(entry.reply_context) : null,
-    };
-  });
+
+  const queryTypeRaw = r.query_type;
+  const queryType: DriveToolsTgSearchResult['queryType'] =
+    queryTypeRaw === 'discovery' || queryTypeRaw === 'search' || queryTypeRaw === 'recent'
+      ? queryTypeRaw
+      : 'search';
+
+  const topicsRaw = Array.isArray(r.topics) ? r.topics : null;
+  const topics = topicsRaw ? topicsRaw.map(decodeTgTopic) : null;
+
+  const messagesRaw = Array.isArray(r.messages) ? r.messages : null;
+  const messages = messagesRaw
+    ? messagesRaw.map((item) => {
+        const entry = raw(item);
+        return {
+          message: decodeTgMessage(entry.message),
+          score: num(entry, 'score'),
+          replyContext: isObject(entry.reply_context) ? decodeTgMessage(entry.reply_context) : null,
+        };
+      })
+    : null;
+
+  const dateRangeRaw = Array.isArray(r.date_range_applied) ? r.date_range_applied : null;
+  const dateRangeApplied: readonly [string, string] | null = dateRangeRaw
+    ? ([
+        typeof dateRangeRaw[0] === 'string' ? dateRangeRaw[0] : '',
+        typeof dateRangeRaw[1] === 'string' ? dateRangeRaw[1] : '',
+      ] as const)
+    : null;
+
   return {
+    queryType,
+    topics,
     messages,
     totalFound: numRequired(r, 'total_found'),
-    limit: numRequired(r, 'limit'),
-    offset: num(r, 'offset') ?? 0,
-    hasMore: bool(r, 'has_more', false),
+    dateRangeApplied,
+    databasePath: typeof r.database_path === 'string' ? r.database_path : '',
   };
 };
 
