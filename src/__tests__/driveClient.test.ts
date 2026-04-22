@@ -1037,7 +1037,7 @@ test('drive.tools.vsearch returns DriveToolsVsearchResult with typed documents',
     const drive = diskd.os.drive({ version: 'v1', auth });
     const result = await drive.tools.vsearch({
       query: 'machine learning concepts',
-      path: '/research',
+      paths: ['/research', '/notes'],
     });
 
     assert.ok(Array.isArray(result.documents), 'result.documents must be an array');
@@ -1054,7 +1054,8 @@ test('drive.tools.vsearch returns DriveToolsVsearchResult with typed documents',
     const body = JSON.parse(String(calls[0]?.init?.body));
     assert.equal(body.method, 'paths/tools/vsearch');
     assert.equal(body.params.query, 'machine learning concepts');
-    assert.equal(body.params.path, '/research');
+    assert.ok(Array.isArray(body.params.paths), 'wire params.paths must be an array');
+    assert.deepEqual(body.params.paths, ['/research', '/notes']);
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
     delete process.env.APIS_BASE_URL;

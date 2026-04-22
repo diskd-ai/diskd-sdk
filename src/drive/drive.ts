@@ -757,7 +757,7 @@ export const createDriveClient = (params: {
         const result = await call('paths/tools/vsearch', {
           query: p.query,
           ...optional('top_k', p.topK),
-          ...optional('path', p.path),
+          paths: [...p.paths],
         });
         return decodeVsearchResult(result);
       },

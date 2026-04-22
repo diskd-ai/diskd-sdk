@@ -191,7 +191,7 @@ export type DriveToolsGrepParams = {
 export type DriveToolsVsearchParams = {
   readonly query: string;
   readonly topK?: number;
-  readonly path?: string;
+  readonly paths: readonly string[];
 };
 
 // -- Tools: file read / write / patch --
