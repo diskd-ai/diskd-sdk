@@ -25,6 +25,7 @@ const ds         = diskd.os.datasource({ auth, dbName: '...', entities: [...] })
 const llm        = diskd.os.llm({ auth });
 const agents     = diskd.os.agents({ auth, workspaceId: '...' });
 const mcp        = diskd.os.mcp({ auth, workspaceId: '...' });
+const messages   = diskd.os.messagesStore({ auth });
 const routines   = diskd.platform.routines({ auth });
 const operatives = diskd.platform.operatives({ auth });
 const calendar   = diskd.platform.calendar({ auth });
@@ -272,6 +273,205 @@ const status = await crontab.getStatus();
 ```
 
 See `examples/node/drive-upload-download.ts`, `examples/node/drive-session-external.ts`, and `examples/node/drive-crontab.ts`.
+
+Messages Store API
+------------------
+
+Channel-agnostic message storage on top of Drive. Each workspace mailbox is one
+SQLite file under `/Mailboxes/<mailboxId>.mailbox`; attachment bytes live in
+Drive under `/Mailboxes/<mailboxId>/<per-message-folder>/`. The wire is the
+`messages_store/*` JSON-RPC namespace served by drive.
+
+Use it to persist email (IMAP / JMAP), Telegram, WhatsApp, or any other
+channel where messages live in folders inside per-account mailboxes. Message
+`payload` is opaque JSON; the store never inspects it.
+
+The client exposes four boundaries -- mailboxes, folders, messages, attachments
+-- via a **functional scoping pattern**: each level returns a client that
+captures its identifiers in a closure, so callers never repeat
+`(mailboxId, folderId, externalId)` on every call.
+
+```ts
+const messagesStore = diskd.os.messagesStore({ auth });
+const mailbox = messagesStore.mailbox({ mailboxId: 'gmail-acme' });
+const folder  = mailbox.folder({ folderId: 'INBOX' });
+const message = folder.message({ externalId: 'imap-uid-1001' });
+```
+
+### Mailboxes
+
+```ts
+// Allocate the mailbox SQLite file under /Mailboxes/.
+// metadata is opaque JSON, stashed on the underlying drive_databases record.
+const created = await messagesStore.createMailbox({
+  mailboxId: 'gmail-acme',
+  displayName: 'acme@gmail.com',
+  metadata: { protocol: 'imap', host: 'imap.gmail.com' },
+});
+// → { mailboxId, dbInode, drivePath: '/Mailboxes/gmail-acme.mailbox' }
+
+// Bind a mailbox-scoped client; subsequent calls don't repeat mailboxId.
+const mailbox = messagesStore.mailbox({ mailboxId: 'gmail-acme' });
+
+// Idempotent SQLite-schema bootstrap. Required before any folder/message ops.
+await mailbox.init();
+
+// Workspace-scoped enumeration.
+const all = await messagesStore.listMailboxes();
+//   → readonly { mailboxId, displayName, dbInode, recordCount,
+//                sizeBytes, updatedAt }[]
+
+// Cascade-delete (mailbox file + per-mailbox attachment subtree).
+await mailbox.delete();
+```
+
+### Folders
+
+`folderId` is opaque (caller-chosen) -- IMAP folder name, JMAP id, Telegram
+chat_id, etc. Folder `metadata` is the natural place for protocol-specific
+sync state (`UIDVALIDITY`/`UIDNEXT`/`HIGHESTMODSEQ` for IMAP, JMAP `state`,
+Telegram pts, etc.). The store never reads it.
+
+```ts
+// Idempotent upsert. created=true on first call, false thereafter.
+await mailbox.upsertFolder({
+  folderId: 'INBOX',
+  displayName: 'Inbox',
+  metadata: { uidvalidity: 12345, uidnext: 1101 },
+});
+
+// List folders in this mailbox.
+const folders = await mailbox.listFolders();
+
+// Bind a folder-scoped client.
+const folder = mailbox.folder({ folderId: 'INBOX' });
+
+// Update display name / sync metadata via the scoped client (folderId implicit).
+await folder.upsert({
+  displayName: 'Inbox',
+  metadata: { uidvalidity: 12345, uidnext: 1200 },
+});
+
+// Read one folder.
+const summary = await folder.get();
+//   → { folderId, displayName, metadata, messageCount, updatedAt }
+
+// Cascade-delete folder + messages + per-message attachments.
+const result = await folder.delete();
+//   → { folderId, deleted, deletedMessageCount }
+```
+
+### Messages
+
+`externalId` is the caller's idempotency key within the folder (IMAP UID
+stringified, Telegram `message_id`, JMAP id, ...). `payload` is opaque JSON
+the store never inspects.
+
+A successful `upsertBatch` response means the batch is durable in S3 -- the
+SQLite head is committed before the call returns.
+
+```ts
+// Bulk insert-or-update by externalId.
+const ub = await folder.upsertBatch({
+  items: [
+    {
+      externalId: 'imap-uid-1001',
+      payload: {
+        subject: 'Welcome to upgraide',
+        from: 'noreply@upgraide.dev',
+        receivedAt: '2026-04-28T13:21:32Z',
+        labels: ['inbox', 'unread'],
+      },
+    },
+    { externalId: 'imap-uid-1002', payload: { subject: 'Your weekly digest' } },
+  ],
+});
+//   → { inserted: 2, updated: 0 }
+
+// Cursor-paginated read.
+let cursor: string | null = null;
+do {
+  const page = await folder.listMessages({ limit: 100, cursor: cursor ?? undefined });
+  for (const m of page.items) {
+    // m.externalId, m.payload, m.createdAt, m.updatedAt
+  }
+  cursor = page.nextCursor;
+} while (cursor);
+
+// Single-message lookup.
+const msg = await folder.getMessage({ externalId: 'imap-uid-1001' });
+
+// Bulk delete; missing ids are silently skipped.
+const del = await folder.deleteBatch({
+  externalIds: ['imap-uid-1001', 'imap-uid-1002'],
+});
+//   → { deleted: 2 }
+```
+
+### Attachments
+
+Attachments follow Drive's upload-intent contract (start → PUT bytes →
+commit) but are scoped to a single message. The per-message Drive folder is
+created lazily on the first `uploadStart` call.
+
+```ts
+const message = folder.message({ externalId: 'imap-uid-1001' });
+
+// 1. Begin upload -- get an intent + presigned URL.
+const intent = await message.attachments.uploadStart({
+  attachmentId: 'att-1',
+  filename: 'invoice.pdf',
+  contentType: 'application/pdf',
+  sizeBytes: 12345,
+});
+
+// 2. PUT the bytes to intent.uploadUrl with header X-Upload-Intent-Id.
+//    (See Drive upload examples for streaming/buffer modes.)
+const putRes = await fetch(intent.uploadUrl, {
+  method: 'PUT',
+  headers: { 'X-Upload-Intent-Id': intent.intentId, 'Content-Type': 'application/pdf' },
+  body: pdfBytes,
+});
+const { etag } = (await putRes.json()) as { etag: string };
+
+// 3. Commit -- registers the attachment row.
+await message.attachments.uploadCommit({
+  attachmentId: 'att-1',
+  intentId: intent.intentId,
+  etag,
+});
+
+// Enumerate this message's attachments.
+const list = await message.attachments.list();
+
+// Presigned download URL (with explicit expiresAt).
+const dl = await message.attachments.downloadUrl({ attachmentId: 'att-1' });
+
+// Delete the attachment row + its Drive file.
+await message.attachments.delete({ attachmentId: 'att-1' });
+```
+
+### Auth modes
+
+Same as the rest of the SDK -- both work:
+
+```ts
+// API key (internal services / Tilt / port-forward).
+const auth = diskd.auth.apiKey({ workspaceId: 'ws-...' });
+
+// OAuth2 client-credentials (external clients).
+const auth = await diskd.auth.credentials({
+  scopes: ['openid'],
+  keyfilePath: '.agents/credentials.json',
+});
+
+const messagesStore = diskd.os.messagesStore({ auth });
+```
+
+Workspace identity is always auth-derived (`X-Workspace-Id` header from API
+key, `ext.workspace_id` claim from OAuth JWT) -- never sent on the wire as a
+parameter. See `examples/node/messages-store-example.ts` for a full
+end-to-end walk-through.
 
 Routines API
 ------------

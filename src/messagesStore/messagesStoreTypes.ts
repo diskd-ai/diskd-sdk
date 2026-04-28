@@ -193,59 +193,173 @@ export type AttachmentDeleteResult = {
 // ---------------------------------------------------------------------------
 
 /**
- * Scoped to (mailboxId, folderId, externalId). Carries the
- * five attachment methods so callers don't repeat the triple.
+ * Scoped to a single message identified by `(mailboxId, folderId,
+ * externalId)`. Returned by {@link FolderScopedClient.message}.
+ *
+ * Carries the five attachment methods so callers don't repeat the
+ * triple on every call. Attachments live in Drive under
+ * `/Mailboxes/<mailboxId>/<per-message-folder>/`; the per-message
+ * folder is created lazily on the first
+ * {@link MessageScopedClient.attachments.uploadStart} call.
  */
 export type MessageScopedClient = {
   readonly attachments: {
+    /**
+     * Begin a per-attachment upload. Returns an upload intent
+     * (`intentId` + `uploadUrl`). PUT the bytes to the upload URL
+     * with header `X-Upload-Intent-Id: <intentId>`, then call
+     * {@link MessageScopedClient.attachments.uploadCommit}.
+     */
     readonly uploadStart: (
       params: AttachmentUploadStartParams
     ) => Promise<AttachmentUploadStartResult>;
+    /**
+     * Finalize a previously-started upload. Registers the
+     * attachment row in the mailbox SQLite and returns the
+     * persisted Drive inode + size.
+     */
     readonly uploadCommit: (
       params: AttachmentUploadCommitParams
     ) => Promise<AttachmentUploadCommitResult>;
+    /** Enumerate all attachments owned by this message. */
     readonly list: () => Promise<readonly AttachmentSummary[]>;
+    /**
+     * Return a presigned URL for one attachment with explicit
+     * `expiresAt`. Use this for client-side downloads without
+     * exposing storage credentials.
+     */
     readonly downloadUrl: (
       params: AttachmentDownloadUrlParams
     ) => Promise<AttachmentDownloadUrlResult>;
+    /** Remove the attachment row and cascade-delete the Drive file. */
     readonly delete: (params: AttachmentDeleteParams) => Promise<AttachmentDeleteResult>;
   };
 };
 
 /**
- * Scoped to (mailboxId, folderId). Carries CRUD for the folder
- * itself plus the four message methods, and a `.message()`
- * factory that drills into the message-scoped client.
+ * Scoped to a single folder identified by `(mailboxId, folderId)`.
+ * Returned by {@link MailboxScopedClient.folder}.
+ *
+ * Carries CRUD for the folder itself plus the four message
+ * methods, and a {@link FolderScopedClient.message} factory that
+ * drills into per-message attachment operations.
  */
 export type FolderScopedClient = {
+  /**
+   * Idempotent folder upsert; mirrors
+   * {@link MailboxScopedClient.upsertFolder} but the `folderId`
+   * is implicit. Use this to update folder display name or
+   * metadata (e.g. IMAP `UIDVALIDITY`/`UIDNEXT`).
+   */
   readonly upsert: (params: Omit<UpsertFolderParams, 'folderId'>) => Promise<UpsertFolderResult>;
+  /** Fetch the {@link FolderSummary} for this folder. */
   readonly get: () => Promise<FolderSummary>;
+  /**
+   * Cascade-delete the folder, all messages it owns, and any
+   * per-message attachment Drive subtrees. Returns the count of
+   * deleted messages so callers can report telemetry.
+   */
   readonly delete: () => Promise<DeleteFolderResult>;
+  /**
+   * Bulk insert-or-update messages keyed by `externalId`. The
+   * batch is committed before this method returns; a successful
+   * response means the change is durable in S3.
+   */
   readonly upsertBatch: (params: UpsertBatchParams) => Promise<UpsertBatchResult>;
+  /**
+   * Bulk-delete messages by `externalId` list. Missing ids are
+   * silently skipped; the response reports the count actually
+   * deleted. Cascades attachment Drive files.
+   */
   readonly deleteBatch: (params: DeleteBatchParams) => Promise<DeleteBatchResult>;
+  /**
+   * Cursor-paginated message listing. Pass the previous response's
+   * `nextCursor` to continue; `null` means end of stream. Default
+   * page size is server-defined (currently 100, max 1000).
+   */
   readonly listMessages: (params?: ListMessagesParams) => Promise<ListMessagesResult>;
+  /**
+   * Read one message by `externalId`. Throws when the message
+   * does not exist (server returns a `MESSAGE_NOT_FOUND` failure).
+   */
   readonly getMessage: (params: { readonly externalId: string }) => Promise<StoredMessage>;
+  /**
+   * Bind a message-scoped client over `(mailboxId, folderId,
+   * externalId)`. The returned client exposes attachment operations
+   * for that message.
+   */
   readonly message: (params: { readonly externalId: string }) => MessageScopedClient;
 };
 
 /**
- * Scoped to (mailboxId). Carries CRUD for the mailbox itself
- * plus folder-level helpers and a `.folder()` factory.
+ * Scoped to a single mailbox identified by `mailboxId`. Returned
+ * by {@link MessagesStoreClient.mailbox}.
+ *
+ * Carries CRUD for the mailbox itself plus folder-level helpers
+ * and a {@link MailboxScopedClient.folder} factory.
  */
 export type MailboxScopedClient = {
+  /**
+   * Idempotent SQLite-schema bootstrap. Creates `mailbox_meta`,
+   * `folders`, `messages`, and `attachments` tables on first call
+   * and is safe to re-run. Required before any folder/message ops.
+   */
   readonly init: () => Promise<InitMailboxResult>;
+  /**
+   * Delete the mailbox file and the per-mailbox attachment Drive
+   * subtree (`/Mailboxes/<mailboxId>/`). Reports whether the
+   * mailbox existed prior to the call.
+   */
   readonly delete: () => Promise<DeleteMailboxResult>;
+  /**
+   * Idempotent folder upsert. `folderId` is opaque (caller-chosen,
+   * e.g. the IMAP folder name). `metadata` is opaque JSON the
+   * store never inspects -- ideal for protocol-specific sync state.
+   */
   readonly upsertFolder: (params: UpsertFolderParams) => Promise<UpsertFolderResult>;
+  /** Enumerate all folders in this mailbox. */
   readonly listFolders: () => Promise<readonly FolderSummary[]>;
+  /**
+   * Bind a folder-scoped client over `(mailboxId, folderId)`. The
+   * returned client exposes folder CRUD plus message operations.
+   */
   readonly folder: (params: { readonly folderId: string }) => FolderScopedClient;
 };
 
 /**
- * Workspace-scoped messages-store client. Workspace identity
- * is auth-derived; callers never pass workspaceId on the wire.
+ * Workspace-scoped messages-store client. Returned by
+ * `diskd.os.messagesStore({ auth })`.
+ *
+ * Workspace identity is auth-derived (X-Workspace-Id from API key
+ * or `ext.workspace_id` from OAuth JWT); callers never pass
+ * `workspaceId` on the wire.
+ *
+ * Functional scoping pattern -- drill into a single mailbox,
+ * folder, or message to skip repeating identifiers:
+ *
+ * ```ts
+ * const messagesStore = diskd.os.messagesStore({ auth });
+ * const mailbox = messagesStore.mailbox({ mailboxId: 'gmail-acme' });
+ * const folder  = mailbox.folder({ folderId: 'INBOX' });
+ * const message = folder.message({ externalId: 'imap-uid-1001' });
+ * ```
  */
 export type MessagesStoreClient = {
+  /**
+   * Allocate a new mailbox SQLite file at
+   * `/Mailboxes/<mailboxId>.mailbox`. `mailboxId` is a workspace-
+   * unique slug (`[a-z0-9-]{1,64}`). `metadata` is opaque JSON
+   * stashed on the underlying drive_databases record.
+   *
+   * The mailbox SQLite schema is bootstrapped lazily by
+   * {@link MailboxScopedClient.init}, not by this call.
+   */
   readonly createMailbox: (params: CreateMailboxParams) => Promise<CreateMailboxResult>;
+  /** Workspace-scoped mailbox enumeration. Read-only. */
   readonly listMailboxes: () => Promise<readonly MailboxSummary[]>;
+  /**
+   * Bind a mailbox-scoped client over `mailboxId`. The returned
+   * client exposes mailbox CRUD plus folder/message operations.
+   */
   readonly mailbox: (params: { readonly mailboxId: string }) => MailboxScopedClient;
 };
