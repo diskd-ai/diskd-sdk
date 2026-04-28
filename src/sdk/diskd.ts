@@ -13,6 +13,7 @@ import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import { createLlmRouterClient } from '../llmRouter/llmRouter.js';
 import { createMcpHubClient } from '../mcpHub/mcpHub.js';
 import { createMcpToolsClient } from '../mcpTools/mcpTools.js';
+import { createMessagesStoreClient } from '../messagesStore/messagesStore.js';
 import { createOperativesClient } from '../operatives/operatives.js';
 import { createPlatformEventsClient } from '../platformEvents/platformEvents.js';
 import { createProjectsClient } from '../projects/projects.js';
@@ -68,6 +69,8 @@ export const diskd: DiskD = {
     mcpTools: ({ auth, url }) => createMcpToolsClient({ auth, url }),
 
     agents: ({ auth, url }) => createAgentHubClient({ auth, url }),
+
+    messagesStore: ({ auth, url }) => createMessagesStoreClient({ auth, url }),
   },
 
   platform: {

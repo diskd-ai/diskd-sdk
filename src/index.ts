@@ -72,8 +72,8 @@ export type {
   Contact,
   ContactMethod,
   ContactProjectLink,
-  ContactsClient,
   ContactSource,
+  ContactsClient,
   CreateContactParams,
   LinkContactToProjectParams,
   ListContactsParams,
@@ -83,8 +83,8 @@ export type {
 export { createDriveCrontabClient } from './drive/crontab.js';
 export type {
   DriveCrontabClient,
-  DriveCrontabCreateWorkspaceJobParams,
   DriveCrontabCreateProjectJobParams,
+  DriveCrontabCreateWorkspaceJobParams,
   DriveCrontabDocument,
   DriveCrontabGetParams,
   DriveCrontabGetResult,
@@ -100,7 +100,6 @@ export type {
   DriveCrontabPathPayload,
   DriveCrontabPayload,
   DriveCrontabPayloadKind,
-  DriveCrontabWorkspaceScopeRef,
   DriveCrontabProjectScopeRef,
   DriveCrontabRequest,
   DriveCrontabRunJobParams,
@@ -110,6 +109,7 @@ export type {
   DriveCrontabSchedule,
   DriveCrontabScopeRef,
   DriveCrontabUriPayload,
+  DriveCrontabWorkspaceScopeRef,
   DriveScopedCrontabClient,
   DriveScopedCrontabCreateJobParams,
   DriveScopedCrontabSaveParams,
@@ -264,6 +264,12 @@ export type {
   DriveDataSourceRepository,
 } from './drive/typeorm/datasourceTypes.js';
 export type { DriveClient, DrivePathEntry, DrivePathType } from './drive/types.js';
+// -- Inbox (stored email types) --
+export type {
+  StoredEmail,
+  StoredEmailAttachment,
+  StoredEmailContact,
+} from './inbox/inboxTypes.js';
 // -- LLM Router --
 export { createLlmRouterClient } from './llmRouter/llmRouter.js';
 export type {
@@ -300,15 +306,6 @@ export type {
 } from './llmRouter/llmRouterTypes.js';
 // -- MCP Hub --
 export { createMcpHubClient } from './mcpHub/mcpHub.js';
-// -- MCP Tools --
-export { createMcpToolsClient, mcpToolName } from './mcpTools/mcpTools.js';
-export type {
-  McpGatewayTool,
-  McpGatewayToolInputSchema,
-  McpToolCallContentItem,
-  McpToolCallResult,
-  McpToolsClient,
-} from './mcpTools/mcpToolsTypes.js';
 export type {
   CatalogListResult,
   CatalogQueryParams,
@@ -322,14 +319,49 @@ export type {
   McpServerStatus,
   McpTool,
 } from './mcpHub/mcpHubTypes.js';
-// -- Platform Events --
-export { createPlatformEventsClient } from './platformEvents/platformEvents.js';
+// -- MCP Tools --
+export { createMcpToolsClient, mcpToolName } from './mcpTools/mcpTools.js';
 export type {
-  PlatformEventsClient,
-  PublishEventError,
-  PublishEventParams,
-  PublishEventResult,
-} from './platformEvents/platformEventsTypes.js';
+  McpGatewayTool,
+  McpGatewayToolInputSchema,
+  McpToolCallContentItem,
+  McpToolCallResult,
+  McpToolsClient,
+} from './mcpTools/mcpToolsTypes.js';
+// -- Messages Store (drive_messages_store) --
+export { createMessagesStoreClient } from './messagesStore/messagesStore.js';
+export type {
+  AttachmentDeleteParams,
+  AttachmentDeleteResult,
+  AttachmentDownloadUrlParams,
+  AttachmentDownloadUrlResult,
+  AttachmentSummary,
+  AttachmentUploadCommitParams,
+  AttachmentUploadCommitResult,
+  AttachmentUploadStartParams,
+  AttachmentUploadStartResult,
+  CreateMailboxParams,
+  CreateMailboxResult,
+  DeleteBatchParams,
+  DeleteBatchResult,
+  DeleteFolderResult,
+  DeleteMailboxResult,
+  FolderScopedClient,
+  FolderSummary,
+  IncomingMessage,
+  InitMailboxResult,
+  ListMessagesParams,
+  ListMessagesResult,
+  MailboxScopedClient,
+  MailboxSummary,
+  MessageScopedClient,
+  MessagesStoreClient,
+  StoredMessage,
+  UpsertBatchParams,
+  UpsertBatchResult,
+  UpsertFolderParams,
+  UpsertFolderResult,
+} from './messagesStore/messagesStoreTypes.js';
 // -- Operatives --
 export { createOperativesClient } from './operatives/operatives.js';
 export type {
@@ -354,6 +386,14 @@ export type {
   WorkspaceScopedOperative,
 } from './operatives/operativesTypes.js';
 export { isProjectScoped, isWorkspaceScoped } from './operatives/operativesTypes.js';
+// -- Platform Events --
+export { createPlatformEventsClient } from './platformEvents/platformEvents.js';
+export type {
+  PlatformEventsClient,
+  PublishEventError,
+  PublishEventParams,
+  PublishEventResult,
+} from './platformEvents/platformEventsTypes.js';
 // -- Projects --
 export { createProjectsClient } from './projects/projects.js';
 export type {
@@ -370,8 +410,8 @@ export type {
   RoutineRunErrorTag,
   RoutineRunGetParams,
   RoutineRunListParams,
-  RoutineRunsClient,
   RoutineRunStatus,
+  RoutineRunsClient,
 } from './routineRuns/routineRunsTypes.js';
 // -- Routines --
 export { createRoutinesClient } from './routines/routines.js';
@@ -392,12 +432,6 @@ export type {
   RoutineUpdateParams,
   SignalRhythm,
 } from './routines/routinesTypes.js';
-// -- Inbox (stored email types) --
-export type {
-  StoredEmail,
-  StoredEmailAttachment,
-  StoredEmailContact,
-} from './inbox/inboxTypes.js';
 export { diskd } from './sdk/diskd.js';
 export type { DiskD } from './sdk/types.js';
 // -- Telegram Userbot --

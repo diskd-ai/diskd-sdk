@@ -11,6 +11,7 @@ import type { DriveClient } from '../drive/types.js';
 import type { LlmRouterClient } from '../llmRouter/llmRouterTypes.js';
 import type { McpHubClient } from '../mcpHub/mcpHubTypes.js';
 import type { McpToolsClient } from '../mcpTools/mcpToolsTypes.js';
+import type { MessagesStoreClient } from '../messagesStore/messagesStoreTypes.js';
 import type { OperativesClient } from '../operatives/operativesTypes.js';
 import type { PlatformEventsClient } from '../platformEvents/platformEventsTypes.js';
 import type { ProjectsClient } from '../projects/projectsTypes.js';
@@ -58,6 +59,11 @@ export type DiskD = {
       readonly auth: AuthModule;
       readonly url?: string;
     }) => AgentHubClient;
+
+    readonly messagesStore: (params: {
+      readonly auth: AuthModule;
+      readonly url?: string;
+    }) => MessagesStoreClient;
   };
 
   readonly platform: {
