@@ -19,7 +19,10 @@
  *                              (default resolved from keyfile.apisUrl)
  */
 
+import { unlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import type { StoredMessage } from '@diskd/sdk';
 import { diskd } from '@diskd/sdk';
 
@@ -39,6 +42,91 @@ const FOLDER_ID = 'INBOX';
 /** Read a subject string out of an opaque message payload for display. */
 const readSubject = (m: StoredMessage): string =>
   typeof m.payload.subject === 'string' ? m.payload.subject : '(no subject)';
+
+/**
+ * Typed row decoders for the mailbox SQLite schema.
+ *
+ * Concept: node:sqlite returns `Record<string, SQLOutputValue>` rows; we
+ * convert each row to a domain shape at the boundary. Bad rows fail loudly
+ * rather than producing silently-undefined fields downstream.
+ */
+type MailboxMetaRow = {
+  readonly mailboxId: string;
+  readonly displayName: string;
+  readonly schemaVersion: number;
+};
+
+type FolderRow = {
+  readonly folderId: string;
+  readonly displayName: string;
+};
+
+type MessageIdRow = { readonly externalId: string };
+
+type PayloadRow = { readonly payload: string };
+
+const requireString = (raw: Record<string, unknown>, key: string): string => {
+  const v = raw[key];
+  if (typeof v !== 'string') {
+    throw new Error(`SQLite row: expected string at '${key}', got ${typeof v}`);
+  }
+  return v;
+};
+
+const requireNumber = (raw: Record<string, unknown>, key: string): number => {
+  const v = raw[key];
+  if (typeof v !== 'number') {
+    throw new Error(`SQLite row: expected number at '${key}', got ${typeof v}`);
+  }
+  return v;
+};
+
+const decodeMailboxMetaRow = (raw: Record<string, unknown>): MailboxMetaRow => ({
+  mailboxId: requireString(raw, 'mailbox_id'),
+  displayName: requireString(raw, 'display_name'),
+  schemaVersion: requireNumber(raw, 'schema_version'),
+});
+
+const decodeFolderRow = (raw: Record<string, unknown>): FolderRow => ({
+  folderId: requireString(raw, 'folder_id'),
+  displayName: requireString(raw, 'display_name'),
+});
+
+const decodeMessageIdRow = (raw: Record<string, unknown>): MessageIdRow => ({
+  externalId: requireString(raw, 'external_id'),
+});
+
+const decodePayloadRow = (raw: Record<string, unknown>): PayloadRow => ({
+  payload: requireString(raw, 'payload'),
+});
+
+/**
+ * Collect a Web ReadableStream<Uint8Array> into a single Uint8Array.
+ *
+ * Concept: node:sqlite needs a file path on disk, not a stream, so the
+ * mailbox SQLite blob must be fully buffered before we can open it.
+ * Pure helper -- the I/O lives in the caller (writeFile).
+ */
+const collectStream = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const total = chunks.reduce((sum, c) => sum + c.byteLength, 0);
+  const out = new Uint8Array(total);
+  chunks.reduce((offset, chunk) => {
+    out.set(chunk, offset);
+    return offset + chunk.byteLength;
+  }, 0);
+  return out;
+};
 
 // ---------------------------------------------------------------------------
 // Sample messages -- payload is opaque JSON; the store never reads any field.
@@ -98,6 +186,11 @@ const main = async (): Promise<void> => {
 
   // -- Top-level client (B-style: own factory at diskd.os.messagesStore) --
   const messagesStore = diskd.os.messagesStore({ auth });
+
+  // -- Drive client (used later to fetch the per-mailbox SQLite file) --
+  // Concept: each mailbox is backed by a `.mailbox` SQLite file on Drive at
+  // `drivePath`. We reuse the same auth so the download is workspace-scoped.
+  const drive = diskd.os.drive({ version: 'v1', auth });
 
   // ---------- Boundary 1: mailbox lifecycle ----------
 
@@ -183,6 +276,112 @@ const main = async (): Promise<void> => {
   console.log('\n=== 11. folder.getMessage ===');
   const fetched = await folder.getMessage({ externalId: 'imap-uid-1002' });
   console.log(`[ok] "${readSubject(fetched)}" (created=${fetched.createdAt})`);
+
+  // -------------------------------------------------------------------------
+  // Verify the underlying SQLite file on Drive.
+  //
+  // Concept: every mailbox is backed by a `.mailbox` SQLite file at
+  // `created.drivePath`. We download that file via Drive, open it locally
+  // with node:sqlite, and assert that the schema + the rows we just wrote
+  // are physically present. This proves the mailbox API isn't lying about
+  // persistence -- the bytes round-trip through Drive.
+  // -------------------------------------------------------------------------
+  console.log('\n=== 11b. Verify SQLite file on Drive ===');
+  console.log(`     drivePath: ${created.drivePath}`);
+
+  const downloaded = await drive.download.file({ path: created.drivePath });
+  console.log(`[ok] download stream acquired (size=${downloaded.size} bytes)`);
+
+  // Collect the stream into a single buffer; node:sqlite needs a file path,
+  // so we materialise the bytes to a unique tmp file and clean up after.
+  const sqliteBytes = await collectStream(downloaded.stream);
+  const localDbPath = path.join(tmpdir(), `mailbox-verify-${RUN_ID}.sqlite`);
+  await writeFile(localDbPath, sqliteBytes);
+  console.log(`[ok] wrote ${sqliteBytes.byteLength} bytes -> ${localDbPath}`);
+
+  const db = new DatabaseSync(localDbPath, { readOnly: true });
+  try {
+    // 1. mailbox_meta should hold exactly our mailboxId.
+    const metaRaw = db
+      .prepare('SELECT mailbox_id, display_name, schema_version FROM mailbox_meta')
+      .get();
+    if (!metaRaw) {
+      throw new Error('mailbox_meta is empty -- schema bootstrap did not seed metadata');
+    }
+    const meta = decodeMailboxMetaRow(metaRaw);
+    if (meta.mailboxId !== MAILBOX_ID) {
+      throw new Error(
+        `mailbox_meta mismatch: expected mailbox_id=${MAILBOX_ID}, got=${meta.mailboxId}`
+      );
+    }
+    console.log(
+      `[ok] mailbox_meta: id=${meta.mailboxId} name="${meta.displayName}" schema=v${meta.schemaVersion}`
+    );
+
+    // 2. folders should hold exactly our INBOX.
+    const folderRows = db
+      .prepare('SELECT folder_id, display_name FROM folders ORDER BY folder_id')
+      .all()
+      .map(decodeFolderRow);
+    if (folderRows.length !== 1 || folderRows[0]?.folderId !== FOLDER_ID) {
+      throw new Error(
+        `folders mismatch: expected [${FOLDER_ID}], got=${JSON.stringify(folderRows)}`
+      );
+    }
+    console.log(
+      `[ok] folders (${folderRows.length}): ${folderRows.map((f) => `${f.folderId}="${f.displayName}"`).join(', ')}`
+    );
+
+    // 3. messages should hold all three external_ids we upserted.
+    const actualIds = db
+      .prepare('SELECT external_id FROM messages ORDER BY external_id')
+      .all()
+      .map(decodeMessageIdRow)
+      .map((r) => r.externalId);
+    const expectedIds = sampleMessages
+      .map((m) => m.externalId)
+      .slice()
+      .sort();
+    const idsMatch =
+      actualIds.length === expectedIds.length && actualIds.every((id, i) => id === expectedIds[i]);
+    if (!idsMatch) {
+      throw new Error(
+        `messages mismatch: expected=${JSON.stringify(expectedIds)}, got=${JSON.stringify(actualIds)}`
+      );
+    }
+    console.log(`[ok] messages (${actualIds.length}): ${actualIds.join(', ')}`);
+
+    // 4. Round-trip a payload field through SQLite to prove JSON is intact.
+    const payloadRaw = db
+      .prepare('SELECT payload FROM messages WHERE external_id = ?')
+      .get('imap-uid-1002');
+    if (!payloadRaw) {
+      throw new Error('payload row for imap-uid-1002 missing in SQLite file');
+    }
+    const { payload } = decodePayloadRow(payloadRaw);
+    const decoded: unknown = JSON.parse(payload);
+    const subject =
+      typeof decoded === 'object' &&
+      decoded !== null &&
+      'subject' in decoded &&
+      typeof (decoded as { subject: unknown }).subject === 'string'
+        ? (decoded as { subject: string }).subject
+        : null;
+    if (subject !== 'Your weekly digest') {
+      throw new Error(
+        `payload subject mismatch: expected "Your weekly digest", got ${JSON.stringify(subject)}`
+      );
+    }
+    console.log(`[ok] payload round-trip: subject="${subject}"`);
+  } finally {
+    db.close();
+    // Best-effort cleanup -- do not mask verification errors with rm errors.
+    await unlink(localDbPath).catch((err: unknown) => {
+      console.warn(
+        `[warn] could not delete tmp sqlite file ${localDbPath}: ${err instanceof Error ? err.message : String(err)}`
+      );
+    });
+  }
 
   console.log('\n=== 12. folder.deleteBatch (remove 2 of 3) ===');
   const deleteBatch = await folder.deleteBatch({
