@@ -10,6 +10,11 @@
 
 // -- Boundary 1: mailboxes --
 
+/** Optional S3 flush control for mailbox SQLite mutations. */
+export type AutoCommitParams = {
+  readonly autoCommit?: boolean | null;
+};
+
 /** Caller-supplied parameters for creating a workspace mailbox. */
 export type CreateMailboxParams = {
   readonly mailboxId: string;
@@ -54,6 +59,7 @@ export type UpsertFolderParams = {
   readonly folderId: string;
   readonly displayName: string;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly autoCommit?: boolean | null;
 };
 
 /** Reports whether the folder was created (true) or updated (false). */
@@ -89,6 +95,7 @@ export type IncomingMessage = {
 /** Bulk-upsert parameters; folder is implied by the scoping client. */
 export type UpsertBatchParams = {
   readonly items: readonly IncomingMessage[];
+  readonly autoCommit?: boolean | null;
 };
 
 /** Counts split between insertions and updates; commit is implicit. */
@@ -100,6 +107,7 @@ export type UpsertBatchResult = {
 /** Bulk-delete parameters; folder is implied by the scoping client. */
 export type DeleteBatchParams = {
   readonly externalIds: readonly string[];
+  readonly autoCommit?: boolean | null;
 };
 
 /** Reports the count actually deleted (missing ids skipped). */
@@ -135,6 +143,7 @@ export type AttachmentUploadStartParams = {
   readonly filename: string;
   readonly contentType: string;
   readonly sizeBytes: number;
+  readonly autoCommit?: boolean | null;
 };
 
 /** Intent envelope; passes through Drive's upload-intent contract. */
@@ -148,6 +157,7 @@ export type AttachmentUploadCommitParams = {
   readonly attachmentId: string;
   readonly intentId: string;
   readonly etag: string;
+  readonly autoCommit?: boolean | null;
 };
 
 /** Reports the inode of the persisted file plus its size. */
@@ -181,6 +191,7 @@ export type AttachmentDownloadUrlResult = {
 /** Identifier-only attachment delete; cascades the Drive file. */
 export type AttachmentDeleteParams = {
   readonly attachmentId: string;
+  readonly autoCommit?: boolean | null;
 };
 
 /** Reports whether the attachment existed prior to the call. */
@@ -259,11 +270,11 @@ export type FolderScopedClient = {
    * per-message attachment Drive subtrees. Returns the count of
    * deleted messages so callers can report telemetry.
    */
-  readonly delete: () => Promise<DeleteFolderResult>;
+  readonly delete: (params?: AutoCommitParams) => Promise<DeleteFolderResult>;
   /**
    * Bulk insert-or-update messages keyed by `externalId`. The
-   * batch is committed before this method returns; a successful
-   * response means the change is durable in S3.
+   * batch is committed before this method returns by default; pass
+   * `autoCommit: false` to defer the S3 flush.
    */
   readonly upsertBatch: (params: UpsertBatchParams) => Promise<UpsertBatchResult>;
   /**
@@ -304,7 +315,7 @@ export type MailboxScopedClient = {
    * `folders`, `messages`, and `attachments` tables on first call
    * and is safe to re-run. Required before any folder/message ops.
    */
-  readonly init: () => Promise<InitMailboxResult>;
+  readonly init: (params?: AutoCommitParams) => Promise<InitMailboxResult>;
   /**
    * Delete the mailbox file and the per-mailbox attachment Drive
    * subtree (`/Mailboxes/<mailboxId>/`). Reports whether the

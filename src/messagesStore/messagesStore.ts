@@ -293,6 +293,7 @@ const makeMessageScoped = (
         filename: p.filename,
         content_type: p.contentType,
         size_bytes: p.sizeBytes,
+        ...optional('auto_commit', p.autoCommit),
       });
       return decodeAttachmentUploadStart(result);
     },
@@ -305,6 +306,7 @@ const makeMessageScoped = (
         attachment_id: p.attachmentId,
         intent_id: p.intentId,
         etag: p.etag,
+        ...optional('auto_commit', p.autoCommit),
       });
       return decodeAttachmentUploadCommit(result);
     },
@@ -335,6 +337,7 @@ const makeMessageScoped = (
         folder_id: folderId,
         external_id: externalId,
         attachment_id: p.attachmentId,
+        ...optional('auto_commit', p.autoCommit),
       });
       return decodeAttachmentDelete(result);
     },
@@ -353,6 +356,7 @@ const makeFolderScoped = (
       folder_id: folderId,
       display_name: p.displayName,
       ...optional('metadata', p.metadata),
+      ...optional('auto_commit', p.autoCommit),
     });
     return decodeUpsertFolder(result);
   },
@@ -365,10 +369,11 @@ const makeFolderScoped = (
     return decodeFolderGet(result);
   },
 
-  delete: async () => {
+  delete: async (p) => {
     const result = await call('messages_store/folder/delete', {
       mailbox_id: mailboxId,
       folder_id: folderId,
+      ...optional('auto_commit', p?.autoCommit),
     });
     return decodeDeleteFolder(result);
   },
@@ -378,6 +383,7 @@ const makeFolderScoped = (
       mailbox_id: mailboxId,
       folder_id: folderId,
       items: p.items.map(encodeIncomingMessage),
+      ...optional('auto_commit', p.autoCommit),
     });
     return decodeUpsertBatch(result);
   },
@@ -387,6 +393,7 @@ const makeFolderScoped = (
       mailbox_id: mailboxId,
       folder_id: folderId,
       external_ids: [...p.externalIds],
+      ...optional('auto_commit', p.autoCommit),
     });
     return decodeDeleteBatch(result);
   },
@@ -415,8 +422,11 @@ const makeFolderScoped = (
 
 /** Build the mailbox-scoped client (mailbox CRUD + folder helpers + .folder()). */
 const makeMailboxScoped = (call: CallFn, mailboxId: string): MailboxScopedClient => ({
-  init: async () => {
-    const result = await call('messages_store/init', { mailbox_id: mailboxId });
+  init: async (p) => {
+    const result = await call('messages_store/init', {
+      mailbox_id: mailboxId,
+      ...optional('auto_commit', p?.autoCommit),
+    });
     return decodeInitMailbox(result);
   },
 
@@ -431,6 +441,7 @@ const makeMailboxScoped = (call: CallFn, mailboxId: string): MailboxScopedClient
       folder_id: p.folderId,
       display_name: p.displayName,
       ...optional('metadata', p.metadata),
+      ...optional('auto_commit', p.autoCommit),
     });
     return decodeUpsertFolder(result);
   },
