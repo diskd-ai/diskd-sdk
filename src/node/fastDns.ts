@@ -121,8 +121,17 @@ const shouldEnableFastDns = (): boolean => {
   if (toggle === '0' || toggle === 'false') return false;
   if (toggle === '1' || toggle === 'true') return true;
 
-  const baseUrl = resolveDiskdBaseUrl();
-  return baseUrl.includes('.local');
+  // FastDns is an optional optimization for `.local` hostnames -- if
+  // APIS_BASE_URL is not set yet (e.g. consumers configure it lazily
+  // from a config file after importing the SDK), don't crash the
+  // import. Return false to skip the optimization; nothing else relies
+  // on this code path at import time.
+  try {
+    const baseUrl = resolveDiskdBaseUrl();
+    return baseUrl.includes('.local');
+  } catch {
+    return false;
+  }
 };
 
 const safeReadHostname = (rawUrl: string): string | null => {
