@@ -124,9 +124,12 @@ npm run examples:build  # build examples
 
 ## Publishing / Releasing a New Version
 
-Semver `v*.*.*` tags trigger `.github/workflows/release.yml` which builds,
-typechecks, lints, tests, and publishes to npmjs.com under `@diskd-ai/sdk`
-with provenance attestation.
+Releases are auto-published to npmjs.com on every push to `main` whenever
+`package.json` carries a version that hasn't been published yet. The
+workflow at `.github/workflows/release.yml` runs typecheck + lint + tests +
+build, then `npm publish --provenance --access=public`, then tags `vX.Y.Z`.
+README-only / docs-only commits are no-ops -- the version-already-published
+guard skips the publish step.
 
 ### Release checklist
 
@@ -135,22 +138,23 @@ with provenance attestation.
    - **patch** (5.0.x): backward-compatible bug fixes, new optional fields on existing types
    - **minor** (5.x.0): new modules, new client methods, new exports
    - **major** (x.0.0): breaking changes to existing types, removed exports, renamed fields
-3. **Commit**: `git add package.json && git commit -m "release: bump version to X.Y.Z"`
-4. **Push to main**: `git push github main`
-5. **Tag and push**: `git tag vX.Y.Z && git push github vX.Y.Z`
-6. **Wait for CI**: the `v*.*.*` tag triggers the *Release* workflow on GitHub
+   The shortcut: `npm version patch` (or `minor` / `major`) updates `package.json`
+   and creates a local commit + tag in one step.
+3. **Push to main**: `git push github main` (or `git push github main --follow-tags`
+   if you used `npm version` -- the tag is harmless either way; CI tags after publish).
+4. **Wait for CI**: the push triggers the *Release* workflow on GitHub
    Actions. Monitor at https://github.com/diskd-ai/diskd-sdk/actions or via
    `gh run list --workflow=release.yml --limit 3`.
-7. **Verify published**: `npm view @diskd-ai/sdk version` should show the new version.
-8. **Update consumers**: bump `@diskd-ai/sdk` in each consumer's `package.json` to the exact
+5. **Verify published**: `npm view @diskd-ai/sdk version` should show the new version.
+6. **Update consumers**: bump `@diskd-ai/sdk` in each consumer's `package.json` to the exact
    new version (no `^`/`~`), run `npm install`, and verify typecheck + tests pass.
-   Common consumers: `pi-agent-service`, `email-client-mcp`, `app-service`, `agent-hub`.
+   Common consumers: `pi-agent-service`, `email-client-mcp`, `app-service`.
 
 Alternative: open the *Release* workflow in the Actions tab and click *Run
-workflow* with `bump = patch | minor | major` -- the job bumps the version,
-commits, tags, pushes, and publishes in one step.
+workflow* -- it re-runs the publish job against current `main` (useful for
+retrying after a transient registry outage; bumping is still local).
 
-### Required repo secrets
+### Required repo secret
 
 | Secret | Purpose |
 | --- | --- |

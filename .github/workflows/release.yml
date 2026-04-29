@@ -1,10 +1,15 @@
 name: Release
 
-# Two ways to publish @diskd-ai/sdk to npmjs.com:
-#  1. Push a tag matching v*.*.* (e.g. `git tag v5.1.3 && git push --tags`).
-#  2. Run this workflow manually via the GitHub Actions UI ("Run workflow")
-#     and pick a bump type (patch / minor / major). The job bumps the
-#     version in package.json, commits, tags, pushes, then publishes.
+# Auto-publish @diskd-ai/sdk to npmjs.com whenever main moves and the
+# version in package.json hasn't been published yet. Bumping is local:
+#
+#   npm version patch     # or: minor / major
+#   git push origin main
+#
+# The next CI run sees the new version, runs typecheck + lint + tests +
+# build, publishes with provenance, and tags vX.Y.Z. If the version has
+# already been published, the job exits clean as a no-op -- safe to push
+# README-only commits without re-publishing.
 #
 # Required repo secret:
 #  - NPM_TOKEN — npmjs.com granular token with publish + bypass-2FA
@@ -12,33 +17,26 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
-  workflow_dispatch:
-    inputs:
-      bump:
-        description: 'Version bump (patch / minor / major) before publish'
-        type: choice
-        required: true
-        default: patch
-        options:
-          - patch
-          - minor
-          - major
+    branches: [main]
+  workflow_dispatch: {}
 
 permissions:
-  contents: write    # needed for the bump-and-tag commit on workflow_dispatch
+  contents: write    # tag + push tag back after publish
   id-token: write    # required by npm provenance attestation
 
+# Avoid two parallel publishes if main is updated rapidly.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # Need full history + tags so `npm version` can detect existing tags.
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -69,43 +67,52 @@ jobs:
       - name: Build
         run: bun run build
 
-      # ---- workflow_dispatch path: bump version + tag + push ----
-      - name: Bump version + tag + push (workflow_dispatch)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Check whether package.json version is already published
+        id: ver
         run: |
           set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
-          NEW_VERSION="$(npm version "${{ inputs.bump }}" --no-git-tag-version)"
-          echo "Bumped to $NEW_VERSION"
-          git add package.json
-          git commit -m "release: $NEW_VERSION"
-          git tag "$NEW_VERSION"
-          git push origin HEAD --tags
-          echo "RELEASE_VERSION=${NEW_VERSION#v}" >> "$GITHUB_ENV"
-
-      - name: Read version from tag (push-tag path)
-        if: github.event_name == 'push'
-        run: |
-          REF="${GITHUB_REF#refs/tags/v}"
-          echo "RELEASE_VERSION=$REF" >> "$GITHUB_ENV"
-
-      # ---- publish ----
-      - name: Confirm package.json version matches the tag
-        run: |
-          PKG_VERSION="$(node -p 'require(\"./package.json\").version')"
-          if [ "$PKG_VERSION" != "$RELEASE_VERSION" ]; then
-            echo "package.json version ($PKG_VERSION) != release version ($RELEASE_VERSION)" >&2
-            exit 1
+          VERSION="$(node -p 'require("./package.json").version')"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # Anonymous registry GET on the version-specific endpoint:
+          # 200 = exists (skip publish), 404 = new (do publish).
+          HTTP_CODE="$(curl -s -o /dev/null -w '%{http_code}' "https://registry.npmjs.org/@diskd-ai/sdk/$VERSION")"
+          echo "Registry probe for $VERSION returned HTTP $HTTP_CODE"
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::@diskd-ai/sdk@$VERSION already on npmjs -- nothing to publish."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::@diskd-ai/sdk@$VERSION not yet on npmjs -- will publish."
           fi
 
       - name: npm publish (provenance enabled)
+        if: steps.ver.outputs.publish == 'true'
         run: npm publish --provenance --access=public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Tag the release
+        if: steps.ver.outputs.publish == 'true'
+        run: |
+          set -euo pipefail
+          TAG="v${{ steps.ver.outputs.version }}"
+          # If the tag was pushed manually before this run, re-pushing
+          # is a no-op; we only push when the tag does not yet exist.
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists locally."
+          else
+            git config user.name 'github-actions[bot]'
+            git config user.email 'github-actions[bot]@users.noreply.github.com'
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
+
       - name: Summary
         run: |
-          echo "### Published @diskd-ai/sdk@${RELEASE_VERSION}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.ver.outputs.publish }}" = "true" ]; then
+            echo "### Published @diskd-ai/sdk@${{ steps.ver.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Skipped publish: @diskd-ai/sdk@${{ steps.ver.outputs.version }} already on npmjs" >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "https://www.npmjs.com/package/@diskd-ai/sdk/v/${RELEASE_VERSION}" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://www.npmjs.com/package/@diskd-ai/sdk/v/${{ steps.ver.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
