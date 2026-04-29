@@ -1,7 +1,7 @@
 /**
  * Email-to-Project Pipeline: Segment Tests
  *
- * Verifies each pipeline component independently using @diskd/sdk.
+ * Verifies each pipeline component independently using @diskd-ai/sdk.
  * Run all segments: npx tsx examples/node/test-pipeline-segments.ts
  * Run one segment: npx tsx examples/node/test-pipeline-segments.ts S2
  *
@@ -14,8 +14,8 @@
  *   DISKD_MCP_URL      - direct MCP Hub URL override (e.g., http://localhost:3000)
  */
 
-import type { AuthModule } from '@diskd/sdk';
-import { diskd } from '@diskd/sdk';
+import type { AuthModule } from '@diskd-ai/sdk';
+import { diskd } from '@diskd-ai/sdk';
 
 // ---------------------------------------------------------------------------
 // Config

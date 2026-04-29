@@ -19,8 +19,8 @@
  *   OPERATIVE_SLUG     - operative slug (default: "email-sorter")
  */
 
-import type { RoutineStep } from '@diskd/sdk';
-import { diskd } from '@diskd/sdk';
+import type { RoutineStep } from '@diskd-ai/sdk';
+import { diskd } from '@diskd-ai/sdk';
 
 // ---------------------------------------------------------------------------
 // Config (read from env)

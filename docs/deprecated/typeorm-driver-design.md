@@ -74,7 +74,7 @@ immediately (SQLite WAL read-your-writes), but only becomes durable after
 follows the same inheritance chain but overrides the query execution path to
 route through `drive.db.query()` instead of a local SQLite binding.
 
-**Package boundaries.** `@diskd/typeorm-driver` depends on `@diskd/sdk` (for
+**Package boundaries.** `@diskd/typeorm-driver` depends on `@diskd-ai/sdk` (for
 `DriveDbClient`) and declares `typeorm` as a `peerDependency` to avoid version
 conflicts. The core SDK remains lightweight with no TypeORM dependency.
 
@@ -283,7 +283,7 @@ Implementation outline
 
 1. Create `packages/typeorm-driver/` directory with `package.json`:
    - `peerDependencies: { "typeorm": ">=0.3.0" }`
-   - `dependencies: { "@diskd/sdk": ">=0.3.1" }`
+   - `dependencies: { "@diskd-ai/sdk": ">=0.3.1" }`
 2. Implement `DriveDriver` extending `AbstractSqliteDriver`
 3. Implement `DriveQueryRunner` extending `AbstractSqliteQueryRunner`
    - Override `query()` to route through `drive.db.query()`
@@ -348,4 +348,4 @@ Acceptance criteria
 - `commitTransaction()` persists writes to S3 via `drive.db.commit()`
 - `rollbackTransaction()` discards writes via `drive.db.rollback()`
 - The package declares `typeorm` as `peerDependency`, not a direct dependency
-- The core `@diskd/sdk` package does not gain a TypeORM dependency
+- The core `@diskd-ai/sdk` package does not gain a TypeORM dependency

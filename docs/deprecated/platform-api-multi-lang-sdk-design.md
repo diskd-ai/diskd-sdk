@@ -7,7 +7,7 @@ Affected projects: `platform-api`, `drive`, `app-service`, `agent-hub`
 
 Context and motivation
 ----------------------
-The platform-api (`@diskd/sdk`) currently provides a TypeScript-only SDK with Drive client support. The routine execution epic (see `docs/routine-execution-design.md`) introduces new cross-service contracts (Drive scheduler -> app-service, app-service -> agent-hub) that require SDK client libraries in both TypeScript and Python.
+The platform-api (`@diskd-ai/sdk`) currently provides a TypeScript-only SDK with Drive client support. The routine execution epic (see `docs/routine-execution-design.md`) introduces new cross-service contracts (Drive scheduler -> app-service, app-service -> agent-hub) that require SDK client libraries in both TypeScript and Python.
 
 Today, each service implements its own ad-hoc HTTP clients:
 - `agent-hub/packages/sdk/` has an internal `GradientSdk` with `DriveAPIClient` (axios, org_id/user_id headers -- deprecated identity model).
@@ -22,12 +22,12 @@ Goals:
 - Define all cross-service API contracts (types, request/response shapes, error tags) in `platform-api` as the authoritative source.
 - Provide TypeScript and Python client implementations for each contract, following the existing SDK patterns (`diskd.drive()` for TS, `DriveSDK` facade for Python).
 - Add a `RoutinesClient` (TypeScript) and `RoutinesClient` (Python) for the routine execution contract (Drive scheduler -> app-service).
-- Publish the TypeScript SDK to GitLab npm registry (`@diskd/sdk`) and the Python SDK to GitLab PyPI registry (`diskd-sdk`) so consumers install via `npm install @diskd/sdk` and `pip install diskd-sdk`.
+- Publish the TypeScript SDK to GitLab npm registry (`@diskd-ai/sdk`) and the Python SDK to GitLab PyPI registry (`diskd-sdk`) so consumers install via `npm install @diskd-ai/sdk` and `pip install diskd-sdk`.
 - Migrate `drive/clients/python/` into `platform-api` as the canonical Python SDK. The Drive repo consumes it as a dependency.
-- Ensure `agent-hub` can migrate from its internal `GradientSdk` Drive client to `@diskd/sdk` incrementally (non-blocking for V1).
+- Ensure `agent-hub` can migrate from its internal `GradientSdk` Drive client to `@diskd-ai/sdk` incrementally (non-blocking for V1).
 
 Non-goals (v1):
-- Migrating `agent-hub/packages/sdk/` to `@diskd/sdk` in this iteration. Agent-hub's internal SDK (`GradientSdk`) continues to work. Migration is a follow-up task.
+- Migrating `agent-hub/packages/sdk/` to `@diskd-ai/sdk` in this iteration. Agent-hub's internal SDK (`GradientSdk`) continues to work. Migration is a follow-up task.
 - Generating SDK code from OpenAPI/Protobuf specs. V1 hand-writes clients aligned with the contract types. Code generation is a future improvement.
 - Publishing to public npm/PyPI registries. V1 publishes to GitLab private registries only.
 - Python browser/PKCE auth flows. Python SDK supports internal service auth (API key + workspace headers) only.
@@ -57,7 +57,7 @@ platform-api/
       env/
       node/
       browser/
-    package.json               # @diskd/sdk
+    package.json               # @diskd-ai/sdk
     tsconfig.json
   py/                          # Python SDK (new, absorbs drive/clients/python/)
     src/
@@ -93,7 +93,7 @@ platform-api/
 
 4. **Result-based error handling.** SDK methods return `Result<T, E>` (TypeScript) or `Result` union (Python) -- never throw for domain errors. Transport errors (connection failure, HTTP 5xx) are the only exceptions that propagate.
 
-5. **Additive changes only.** The existing `@diskd/sdk` API (`diskd.drive()`, `createAuth()`) is unchanged. New modules (`routines/`) and the factory extension (`diskd.routines()`) are purely additive.
+5. **Additive changes only.** The existing `@diskd-ai/sdk` API (`diskd.drive()`, `createAuth()`) is unchanged. New modules (`routines/`) and the factory extension (`diskd.routines()`) are purely additive.
 
 ### Auth model for internal clients
 
@@ -125,10 +125,10 @@ High-level behavior
 
 ### TypeScript SDK consumer flow (app-service)
 
-App-service's `RoutineExecutionController` receives a request from the Drive scheduler. It does not use the SDK to receive the request (the controller uses NestJS decorators). However, the **contract types** from `@diskd/sdk` are used to validate the request body and construct the response:
+App-service's `RoutineExecutionController` receives a request from the Drive scheduler. It does not use the SDK to receive the request (the controller uses NestJS decorators). However, the **contract types** from `@diskd-ai/sdk` are used to validate the request body and construct the response:
 
 ```
-import { ExecuteRoutineRequest, RoutineExecutionResult, RoutineExecutionError } from '@diskd/sdk';
+import { ExecuteRoutineRequest, RoutineExecutionResult, RoutineExecutionError } from '@diskd-ai/sdk';
 ```
 
 ### Python SDK consumer flow (Drive scheduler)
@@ -159,7 +159,7 @@ async with DiskdSDK(auth=auth, base_url=config.app_service_base_url) as sdk:
 External consumers (e.g., a dashboard or CLI tool) use OAuth2 auth and the `diskd` factory:
 
 ```
-import { createAuth, diskd } from '@diskd/sdk';
+import { createAuth, diskd } from '@diskd-ai/sdk';
 
 const auth = await createAuth({ scopes: ['routines:execute'], keyfilePath: '...' });
 const routines = diskd.routines({ version: 'v1', auth });
@@ -466,10 +466,10 @@ The SDK handles conversion:
 Publishing and installation
 ---------------------------
 
-### TypeScript (`@diskd/sdk`)
+### TypeScript (`@diskd-ai/sdk`)
 
 Registry: GitLab npm Package Registry (existing).
-Install: `npm install @diskd/sdk --registry=https://gitlab.iosya.com/api/v4/projects/80/packages/npm/`
+Install: `npm install @diskd-ai/sdk --registry=https://gitlab.iosya.com/api/v4/projects/80/packages/npm/`
 (or configure `.npmrc` with `@diskd:registry=...`).
 
 CI trigger: version tag `v*.*.*` on push (existing pipeline, unchanged).
@@ -522,7 +522,7 @@ publish:python:
 
 ### Version alignment
 
-Both packages share the same version number, bumped together. The version tag `v0.2.0` publishes `@diskd/sdk@0.2.0` (npm) and `diskd-sdk==0.2.0` (PyPI) in the same pipeline.
+Both packages share the same version number, bumped together. The version tag `v0.2.0` publishes `@diskd-ai/sdk@0.2.0` (npm) and `diskd-sdk==0.2.0` (PyPI) in the same pipeline.
 
 Migration path for drive/clients/python/
 -----------------------------------------
@@ -625,7 +625,7 @@ Implementation outline
 **Phase 6: Consumer integration**
 22. Update `drive/requirements.txt` to add `diskd-sdk` dependency.
 23. Update Drive crontab execution module to use `diskd_sdk.routines.RoutinesClient`.
-24. Update app-service to import contract types from `@diskd/sdk/routines`.
+24. Update app-service to import contract types from `@diskd-ai/sdk/routines`.
 
 Testing approach
 ----------------
@@ -656,7 +656,7 @@ Acceptance criteria
 -------------------
 
 - Given a `pyproject.toml` in `platform-api/py/`, when `pip install -e .` runs, then `import diskd_sdk` succeeds and `diskd_sdk.__version__` matches `pyproject.toml`.
-- Given a version tag `v0.2.0` pushed to GitLab, when CI completes, then both `@diskd/sdk@0.2.0` (npm) and `diskd-sdk==0.2.0` (PyPI) are available in the GitLab package registry.
+- Given a version tag `v0.2.0` pushed to GitLab, when CI completes, then both `@diskd-ai/sdk@0.2.0` (npm) and `diskd-sdk==0.2.0` (PyPI) are available in the GitLab package registry.
 - Given `ExecuteRoutineParams` with valid fields, when `RoutinesClient.execute()` is called (TypeScript), then the HTTP request is `POST /api/internal/routines/execute` with `camelCase` JSON body and auth headers from `AuthModule.getHeaders()`.
 - Given `ExecuteRoutineParams` with valid fields, when `RoutinesClient.execute()` is called (Python), then the HTTP request is `POST /api/internal/routines/execute` with `camelCase` JSON body and `X-Api-Key` + `X-Workspace-Id` headers from `InternalAuth`.
 - Given app-service returns `{ "ok": true, "value": { ... } }`, when the Python client parses it, then the result is `Ok(RoutineExecutionResult(...))` with all fields correctly mapped from camelCase JSON to snake_case dataclass.

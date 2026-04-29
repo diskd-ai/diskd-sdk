@@ -23,8 +23,8 @@ import { unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import type { StoredMessage } from '@diskd/sdk';
-import { diskd } from '@diskd/sdk';
+import type { StoredMessage } from '@diskd-ai/sdk';
+import { diskd } from '@diskd-ai/sdk';
 
 // ---------------------------------------------------------------------------
 // Configuration

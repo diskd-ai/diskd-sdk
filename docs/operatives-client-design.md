@@ -1,4 +1,4 @@
-@diskd/sdk OperativesClient Design Doc
+@diskd-ai/sdk OperativesClient Design Doc
 =======================================
 
 Context and motivation
@@ -6,7 +6,7 @@ Context and motivation
 
 The operatives CRUD API is implemented in app-service (`/api/operatives`). Operatives are project-scoped platform domain entities representing AI agents with configurable brain models, orders (system prompts), intel sources, and equipment (skills + MCP tools). Cross-service callers (crontab execution runtime, agent-hub, routine runners) need to look up and manage operatives without raw HTTP calls.
 
-The `@diskd/sdk` needs a corresponding `OperativesClient` so these callers can work through the canonical `diskd.platform.operatives(...)` namespace, following the pattern established by `routines`, `sessions`, and `crontab`.
+The `@diskd-ai/sdk` needs a corresponding `OperativesClient` so these callers can work through the canonical `diskd.platform.operatives(...)` namespace, following the pattern established by `routines`, `sessions`, and `crontab`.
 
 Goals:
 - Typed SDK client covering core operative CRUD (list, get, create, update, delete)

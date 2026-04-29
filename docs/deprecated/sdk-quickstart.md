@@ -21,7 +21,7 @@ Prereqs:
 
 ```ts
 import path from 'node:path';
-import { diskd } from '@diskd/sdk';
+import { diskd } from '@diskd-ai/sdk';
 
 const SCOPES = ['openid'];
 const CREDENTIALS_PATH = path.resolve(process.cwd(), 'credentials.json');
@@ -49,7 +49,7 @@ Prereqs:
 In a bundler (Vite/Webpack/etc):
 
 ```ts
-import { diskd } from '@diskd/sdk/browser';
+import { diskd } from '@diskd-ai/sdk/browser';
 
 const auth = await diskd.auth.credentials({
   issuer: 'https://oauth2.upgraide.dev:8080',

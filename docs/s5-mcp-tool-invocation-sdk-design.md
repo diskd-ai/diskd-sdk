@@ -48,7 +48,7 @@ SDK usage
 ---------
 
 ```ts
-import { diskd, mcpToolName } from '@diskd/sdk';
+import { diskd, mcpToolName } from '@diskd-ai/sdk';
 
 const auth = diskd.auth.apiKey({ workspaceId });
 const tools = diskd.os.mcpTools({ auth });

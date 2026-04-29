@@ -11,7 +11,7 @@
  */
 import path from 'node:path';
 
-import { diskd } from '@diskd/sdk';
+import { diskd } from '@diskd-ai/sdk';
 
 const scopes = ['openid'];
 const credentialsPath =
@@ -51,7 +51,7 @@ const saveResult = await crontab.createJob({
       payload: {
         kind: 'json',
         value: {
-          message: 'hello from @diskd/sdk',
+          message: 'hello from @diskd-ai/sdk',
           source: 'example',
         },
       },

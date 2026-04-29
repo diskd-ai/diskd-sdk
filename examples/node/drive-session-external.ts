@@ -15,7 +15,7 @@
  */
 import path from 'node:path';
 
-import { diskd } from '@diskd/sdk';
+import { diskd } from '@diskd-ai/sdk';
 
 // ---------------------------------------------------------------------------
 // Configuration from environment

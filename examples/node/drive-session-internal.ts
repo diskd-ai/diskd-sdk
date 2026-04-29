@@ -14,7 +14,7 @@
  *   npm run examples:build && node dist-examples/node/drive-session-internal.js
  */
 
-import { diskd } from '@diskd/sdk';
+import { diskd } from '@diskd-ai/sdk';
 
 // ---------------------------------------------------------------------------
 // Configuration from environment

@@ -1,4 +1,4 @@
-Operative Drive Tools -- Migration to @diskd/sdk Design Doc
+Operative Drive Tools -- Migration to @diskd-ai/sdk Design Doc
 ============================================================
 
 Context and motivation
@@ -6,9 +6,9 @@ Context and motivation
 
 Operative drive tools in `agent-service` use a self-contained JSON-RPC transport
 layer (`createDriveAdapters()` in `@sdk/drive/driveAdapter.ts`) that duplicates
-what `@diskd/sdk` already provides through `DriveClient`.
+what `@diskd-ai/sdk` already provides through `DriveClient`.
 
-Calendar tools were migrated to `@diskd/sdk` previously (`calendarAdapter.ts`
+Calendar tools were migrated to `@diskd-ai/sdk` previously (`calendarAdapter.ts`
 uses `diskd.auth.apiKey -> diskd.platform.calendar`). Drive tools remain on the
 custom adapters, creating two parallel RPC layers for the same backend.
 
@@ -30,7 +30,7 @@ Goals:
 - Add missing tools to `DriveClient`: `biQuery`, `inodesQuery`, `tgSearch`,
   `excelWrite`
 - Migrate `agent-service` operative drive tools from `createDriveAdapters()` to
-  `@diskd/sdk` `DriveClient`
+  `@diskd-ai/sdk` `DriveClient`
 - Remove `DriveQueryAdapter`, `DriveOpsAdapter`, and `createDriveAdapters()`
   from `agent-service` internal SDK
 
@@ -50,7 +50,7 @@ Implementation considerations
 
 Key constraints:
 
-- `@diskd/sdk` uses JSON-RPC 2.0 via `jsonRpcCall()` with the same wire format
+- `@diskd-ai/sdk` uses JSON-RPC 2.0 via `jsonRpcCall()` with the same wire format
   as the custom adapters -- no backend changes needed.
 - The `diskd` namespace convention requires wiring through `diskd.os.drive()`,
   not standalone factory functions.
@@ -96,8 +96,8 @@ new BuiltInDriveToolClient({
 to:
 
 ```ts
-// After: @diskd/sdk
-import { diskd } from '@diskd/sdk';
+// After: @diskd-ai/sdk
+import { diskd } from '@diskd-ai/sdk';
 const auth = diskd.auth.apiKey({ apiKey, workspaceId: orgId, orgId });
 const drive = diskd.os.drive({ version: 'v1', auth, url: baseUrl });
 new BuiltInDriveToolClient({ drive, pathAccess });
@@ -252,7 +252,7 @@ agent-service changes
 Thin factory (same pattern as `calendarAdapter.ts`):
 
 ```ts
-import { diskd, type DriveClient } from '@diskd/sdk';
+import { diskd, type DriveClient } from '@diskd-ai/sdk';
 
 interface OperativeDriveConfig {
   readonly apiKey: string;
@@ -406,11 +406,11 @@ Verify:
 
 ### Stage 3: Create drive adapter in agent-service
 
-Scope: add `createOperativeDriveClient()` factory using `@diskd/sdk`. Additive
+Scope: add `createOperativeDriveClient()` factory using `@diskd-ai/sdk`. Additive
 only -- old adapters untouched, nothing uses the new factory yet.
 
 Files changed:
-- `agent-service/package.json` -- bump `@diskd/sdk` version
+- `agent-service/package.json` -- bump `@diskd-ai/sdk` version
 - `agent-service/packages/agent-upgraide/src/operativeDrive/driveAdapter.ts` --
   new file, thin factory: `diskd.auth.apiKey -> diskd.os.drive`
 

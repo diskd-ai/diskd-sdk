@@ -4,7 +4,7 @@ OAuth2 Credential Generation with workspace_id Claim
 Context and motivation
 ----------------------
 
-The `@diskd/sdk` allows external clients to access platform services (Drive, LLM, Agents)
+The `@diskd-ai/sdk` allows external clients to access platform services (Drive, LLM, Agents)
 through `apis.upgraide.dev` using OAuth2 bearer tokens. Authentication works, but every
 Drive API call fails with `"Missing workspace_id claim"` because the JWT access token
 does not contain the `workspace_id` claim.
@@ -24,7 +24,7 @@ claims.
 - Drive's `iam_auth.py:363` reads `workspace_id` from JWT claims and rejects tokens without it
 - The internal API key path works because it reads workspace from `X-Workspace-Id` header
 
-**Trigger:** Deploying apis-service to the dev k8s cluster and running `@diskd/sdk` external
+**Trigger:** Deploying apis-service to the dev k8s cluster and running `@diskd-ai/sdk` external
 validation scripts against `apis.upgraide.dev` exposed this gap.
 
 Goals:

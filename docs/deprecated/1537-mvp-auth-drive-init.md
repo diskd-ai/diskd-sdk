@@ -198,7 +198,7 @@ A runnable web quickstart is implemented as a Vite + TypeScript app:
 It uses the browser entrypoint:
 
 ```ts
-import { createAuth, diskd } from '@diskd/sdk/browser';
+import { createAuth, diskd } from '@diskd-ai/sdk/browser';
 ```
 
 Error handling and UX

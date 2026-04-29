@@ -15,7 +15,7 @@
 
 import { AbstractSqliteQueryRunner } from 'typeorm/driver/sqlite-abstract/AbstractSqliteQueryRunner';
 import { QueryResult } from 'typeorm';
-import type { DriveDbClient } from '@diskd/sdk';
+import type { DriveDbClient } from '@diskd-ai/sdk';
 import type { DriveDriver } from './DriveDriver';
 
 // ---------------------------------------------------------------------------

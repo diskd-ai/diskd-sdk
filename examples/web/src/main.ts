@@ -1,6 +1,6 @@
 import './style.css';
 
-import { diskd } from '@diskd/sdk/browser';
+import { diskd } from '@diskd-ai/sdk/browser';
 
 const env = import.meta.env;
 

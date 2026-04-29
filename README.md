@@ -1,4 +1,4 @@
-# @diskd/sdk
+# @diskd-ai/sdk
 
 Unified TypeScript SDK for the Upgraide platform APIs.
 
@@ -7,7 +7,7 @@ All services are accessible via the `diskd` factory, which provides a consistent
 and `diskd.utils.*`:
 
 ```ts
-import { diskd } from '@diskd/sdk';
+import { diskd } from '@diskd-ai/sdk';
 
 const auth = diskd.auth.apiKey({ workspaceId: '...' });
 
@@ -52,7 +52,7 @@ Installation
 3. Install:
 
    ```bash
-   bun add @diskd/sdk
+   bun add @diskd-ai/sdk
    ```
 
 Install / build (repo)
@@ -74,7 +74,7 @@ The SDK supports two authentication modes via the `AuthModule` interface.
 Use `diskd.auth.credentials()` for OAuth2 service-account or PKCE browser flows:
 
 ```ts
-import { diskd } from '@diskd/sdk';
+import { diskd } from '@diskd-ai/sdk';
 
 const auth = await diskd.auth.credentials({
   scopes: ['openid'],
@@ -97,7 +97,7 @@ const crontab = diskd.platform.crontab({
 Use `diskd.auth.apiKey()` for service-to-service communication within the cluster:
 
 ```ts
-import { diskd } from '@diskd/sdk';
+import { diskd } from '@diskd-ai/sdk';
 
 const auth = diskd.auth.apiKey({ workspaceId: process.env.WORKSPACE_ID! });
 
@@ -788,13 +788,13 @@ commit/rollback semantics. Requires `typeorm` as a peer dependency.
 ### Installation
 
 ```bash
-npm install @diskd/sdk typeorm
+npm install @diskd-ai/sdk typeorm
 ```
 
 ### Usage
 
 ```ts
-import { diskd } from '@diskd/sdk';
+import { diskd } from '@diskd-ai/sdk';
 import { Entity, PrimaryColumn, Column } from 'typeorm';
 
 // Define entities
@@ -890,7 +890,7 @@ Agent Hub API
 SSE streaming with `StreamProtocolHandler` + `StreamProtocolFetcher` for agent invocation:
 
 ```ts
-import { diskd, StreamProtocolHandler } from '@diskd/sdk';
+import { diskd, StreamProtocolHandler } from '@diskd-ai/sdk';
 
 const agents = diskd.os.agents({ auth, workspaceId: '...' });
 
@@ -1000,7 +1000,7 @@ See `examples/node/web-navigator-example.ts`.
 Web quickstart (Vite + PKCE)
 ----------------------------
 
-Use `@diskd/sdk/browser` and a standard OAuth2 Authorization Code + PKCE redirect.
+Use `@diskd-ai/sdk/browser` and a standard OAuth2 Authorization Code + PKCE redirect.
 
 Runnable example: `examples/web/` (see `examples/README.md`).
 

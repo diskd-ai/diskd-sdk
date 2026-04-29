@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@diskd/sdk": "file:../.."
+    "@diskd-ai/sdk": "file:../.."
   },
   "devDependencies": {
     "typescript": "^5.8.3",

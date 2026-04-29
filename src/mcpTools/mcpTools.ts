@@ -170,7 +170,7 @@ export const createMcpToolsClient = (params: {
     await sendJsonRpc('initialize', {
       protocolVersion: '2024-11-05',
       capabilities: {},
-      clientInfo: { name: '@diskd/sdk', version: '1.0.0' },
+      clientInfo: { name: '@diskd-ai/sdk', version: '1.0.0' },
     });
 
     initialized = true;

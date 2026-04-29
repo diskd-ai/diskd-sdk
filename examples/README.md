@@ -1,6 +1,6 @@
 # SDK Examples
 
-This folder contains runnable examples for `@diskd/sdk`.
+This folder contains runnable examples for `@diskd-ai/sdk`.
 
 Prereqs
 -------

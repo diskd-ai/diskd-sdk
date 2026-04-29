@@ -717,11 +717,11 @@ Phase 4 (Polish):
 
 ---
 
-## @diskd/sdk Readiness for Pipeline Implementation
+## @diskd-ai/sdk Readiness for Pipeline Implementation
 
 ### SDK Modules Available Today
 
-The `@diskd/sdk` provides typed clients for most services involved in this pipeline. Below is a mapping of pipeline operations to existing SDK capabilities and identified gaps.
+The `@diskd-ai/sdk` provides typed clients for most services involved in this pipeline. Below is a mapping of pipeline operations to existing SDK capabilities and identified gaps.
 
 ### What the SDK Already Covers
 

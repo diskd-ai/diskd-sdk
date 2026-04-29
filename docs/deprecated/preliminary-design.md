@@ -77,7 +77,7 @@ SDK architecture (TypeScript)
 
 ### Package shape
 
-- Single package: `@diskd/sdk` (name placeholder; align with publishing conventions)
+- Single package: `@diskd-ai/sdk` (name placeholder; align with publishing conventions)
 - Internal module layout:
   - `src/common/` (Result, error ADTs, transport interfaces, retry/backoff helpers)
   - `src/auth/` (OAuth2/OIDC)
@@ -367,7 +367,7 @@ Future-proofing
 Implementation outline
 ----------------------
 
-1. Define SDK package boundary and naming (`@diskd/sdk`), and establish common types:
+1. Define SDK package boundary and naming (`@diskd-ai/sdk`), and establish common types:
    - `Result`, `SdkError`, `HttpTransport`, `TokenProvider`
 2. Implement `auth` module:
    - OIDC discovery cache

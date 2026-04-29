@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { diskd } from '@diskd/sdk';
+import { diskd } from '@diskd-ai/sdk';
 
 const scopes = ['openid'];
 const credentialsPath =

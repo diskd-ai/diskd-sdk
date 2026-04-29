@@ -1,8 +1,8 @@
-# @diskd/sdk -- Agent Instructions
+# @diskd-ai/sdk -- Agent Instructions
 
 ## Overview
 
-This is `@diskd/sdk`, the unified TypeScript SDK for the Upgraide platform.
+This is `@diskd-ai/sdk`, the unified TypeScript SDK for the Upgraide platform.
 It provides typed clients for all platform services via a single `diskd` factory.
 
 ## Project structure
@@ -31,7 +31,7 @@ docs/             -- Design docs and quickstart guides
 Everything is accessed via the `diskd` namespace. No standalone `createX` imports.
 
 ```ts
-import { diskd } from '@diskd/sdk';
+import { diskd } from '@diskd-ai/sdk';
 
 // Auth
 const auth = diskd.auth.apiKey({ workspaceId });
@@ -124,8 +124,9 @@ npm run examples:build  # build examples
 
 ## Publishing / Releasing a New Version
 
-Semver tags trigger the GitLab CI `publish` stage which builds, tests, and
-publishes to the GitLab Package Registry (project 80).
+Semver `v*.*.*` tags trigger `.github/workflows/release.yml` which builds,
+typechecks, lints, tests, and publishes to npmjs.com under `@diskd-ai/sdk`
+with provenance attestation.
 
 ### Release checklist
 
@@ -135,19 +136,29 @@ publishes to the GitLab Package Registry (project 80).
    - **minor** (5.x.0): new modules, new client methods, new exports
    - **major** (x.0.0): breaking changes to existing types, removed exports, renamed fields
 3. **Commit**: `git add package.json && git commit -m "release: bump version to X.Y.Z"`
-4. **Push to main**: `git push origin main`
-5. **Tag and push**: `git tag vX.Y.Z && git push origin vX.Y.Z`
-6. **Wait for CI**: the `v*.*.*` tag triggers build -> test:unit -> test:typecheck -> publish.
-   Monitor with `glab ci list --per-page 3`. The `publish` job pushes to the GitLab npm registry.
-7. **Verify published**: `glab api "projects/80/packages?per_page=3&sort=desc&order_by=version"` --
-   confirm the new version appears.
-8. **Update consumers**: bump `@diskd/sdk` in each consumer's `package.json` to the exact
+4. **Push to main**: `git push github main`
+5. **Tag and push**: `git tag vX.Y.Z && git push github vX.Y.Z`
+6. **Wait for CI**: the `v*.*.*` tag triggers the *Release* workflow on GitHub
+   Actions. Monitor at https://github.com/diskd-ai/diskd-sdk/actions or via
+   `gh run list --workflow=release.yml --limit 3`.
+7. **Verify published**: `npm view @diskd-ai/sdk version` should show the new version.
+8. **Update consumers**: bump `@diskd-ai/sdk` in each consumer's `package.json` to the exact
    new version (no `^`/`~`), run `npm install`, and verify typecheck + tests pass.
-   Common consumers: `pi-agent-service`, `app-service`, `agent-hub`.
+   Common consumers: `pi-agent-service`, `email-client-mcp`, `app-service`, `agent-hub`.
+
+Alternative: open the *Release* workflow in the Actions tab and click *Run
+workflow* with `bump = patch | minor | major` -- the job bumps the version,
+commits, tags, pushes, and publishes in one step.
+
+### Required repo secrets
+
+| Secret | Purpose |
+| --- | --- |
+| `NPM_TOKEN` | npmjs.com granular token, scope `@diskd-ai/*`, **Bypass 2FA** enabled. |
 
 ### Rules
 
-- Do NOT update consumer repos until the GitLab Package Registry shows the exact version as published.
+- Do NOT update consumer repos until npmjs shows the exact version as published.
 - Use exact versions in consumers (e.g. `"5.0.5"` not `"^5.0.5"`).
 - One version bump per release commit. Do not combine version bumps with feature code.
 - If CI publish fails, fix the issue, do NOT re-tag. Bump to the next patch and re-release.

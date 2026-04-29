@@ -23,7 +23,7 @@ This task intentionally ships a minimal happy-path implementation: no typed erro
 Goals
 -----
 
-- Provide a TypeScript package `@diskd/sdk` with a Google-like usage shape:
+- Provide a TypeScript package `@diskd-ai/sdk` with a Google-like usage shape:
 
 ```ts
 const auth = await createAuth({ scopes: SCOPES, keyfilePath: CREDENTIALS_PATH });
@@ -156,7 +156,7 @@ export type DriveClient = {
 Implementation location (repo alignment)
 ----------------------------------------
 
-Implement `@diskd/sdk` in `mono/platform-api/` (this repo), keeping it self-contained and extractable:
+Implement `@diskd-ai/sdk` in `mono/platform-api/` (this repo), keeping it self-contained and extractable:
 
 - `platform-api/package.json` (package config + exports)
 - `platform-api/src/index.ts` (Node entrypoint)
@@ -170,7 +170,7 @@ Implement `@diskd/sdk` in `mono/platform-api/` (this repo), keeping it self-cont
 
 Rationale:
 - Keeps the SDK near the platform routing/auth assumptions it depends on (`apis.upgraide.dev` + `/drive` path prefix).
-- Agent-hub can later consume `@diskd/sdk` without duplicating auth/transport logic; `GradientSdk` remains unchanged (deprecated name).
+- Agent-hub can later consume `@diskd-ai/sdk` without duplicating auth/transport logic; `GradientSdk` remains unchanged (deprecated name).
 
 Testing approach
 ----------------

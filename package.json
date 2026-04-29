@@ -1,11 +1,15 @@
 {
-  "name": "@diskd/sdk",
+  "name": "@diskd-ai/sdk",
   "version": "5.1.2",
   "description": "SDK for DiskD platform APIs (Drive, LLM Router, Agent Hub, MCP Hub, Telegram Userbot, Web Navigator)",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://gitlab.iosya.com/upgraide-v2/platform-api.git"
+    "url": "https://github.com/diskd-ai/diskd-sdk.git"
+  },
+  "homepage": "https://github.com/diskd-ai/diskd-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/diskd-ai/diskd-sdk/issues"
   },
   "keywords": [
     "diskd",
@@ -34,8 +38,8 @@
     }
   },
   "publishConfig": {
-    "registry": "https://gitlab.iosya.com/api/v4/projects/80/packages/npm/",
-    "access": "restricted"
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
   },
   "scripts": {
     "clean": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('dist-examples',{recursive:true,force:true});\"",

@@ -13,8 +13,8 @@
  */
 
 import path from 'node:path';
-import type { DrivePathEntry } from '@diskd/sdk';
-import { diskd } from '@diskd/sdk';
+import type { DrivePathEntry } from '@diskd-ai/sdk';
+import { diskd } from '@diskd-ai/sdk';
 
 // ---------------------------------------------------------------------------
 // Config

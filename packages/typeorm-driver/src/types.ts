@@ -2,7 +2,7 @@
 // DriveDataSourceOptions -- configuration for the Drive DB TypeORM driver
 // ---------------------------------------------------------------------------
 
-import type { AuthModule, DriveDbType, DriveDbSchema } from '@diskd/sdk';
+import type { AuthModule, DriveDbType, DriveDbSchema } from '@diskd-ai/sdk';
 
 /**
  * Options for creating a Drive DB-backed TypeORM DataSource.

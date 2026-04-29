@@ -9,8 +9,8 @@
 
 import { AbstractSqliteDriver } from 'typeorm/driver/sqlite-abstract/AbstractSqliteDriver';
 import type { DataSource, QueryRunner, ReplicationMode } from 'typeorm';
-import { createDriveDbClient, jsonRpcCall } from '@diskd/sdk';
-import type { AuthModule, DriveDbClient, DriveDbType, DriveDbSchema } from '@diskd/sdk';
+import { createDriveDbClient, jsonRpcCall } from '@diskd-ai/sdk';
+import type { AuthModule, DriveDbClient, DriveDbType, DriveDbSchema } from '@diskd-ai/sdk';
 import { DriveQueryRunner } from './DriveQueryRunner';
 
 // ---------------------------------------------------------------------------

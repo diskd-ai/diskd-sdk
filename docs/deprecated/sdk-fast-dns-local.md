@@ -36,7 +36,7 @@ Implementation considerations
 High-level behavior
 -------------------
 
-1. On Node import of `@diskd/sdk`, the SDK evaluates whether fast DNS should be enabled.
+1. On Node import of `@diskd-ai/sdk`, the SDK evaluates whether fast DNS should be enabled.
 2. If enabled:
    - The SDK reads `/etc/hosts` and builds a map `hostname -> ip`.
    - The SDK installs an Undici global dispatcher (`setGlobalDispatcher`) with a connector `lookup(...)` that:

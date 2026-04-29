@@ -1,4 +1,4 @@
-# Tiltfile.tests - @diskd/sdk test and example runners
+# Tiltfile.tests - @diskd-ai/sdk test and example runners
 # All resources are manual-trigger only (no auto-init, no file watch).
 
 namespace = os.getenv('SERVICE_NAMESPACE', 'platform-api')

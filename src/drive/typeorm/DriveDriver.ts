@@ -61,7 +61,7 @@ export class DriveDriver extends AbstractSqliteDriver {
       | undefined;
     if (!opts) {
       throw new Error(
-        '@diskd/sdk: missing Drive options. Use diskd.os.datasource() to create the DataSource.'
+        '@diskd-ai/sdk: missing Drive options. Use diskd.os.datasource() to create the DataSource.'
       );
     }
 

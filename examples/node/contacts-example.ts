@@ -16,8 +16,8 @@
  */
 import path from 'node:path';
 
-import { diskd } from '@diskd/sdk';
-import type { Contact } from '@diskd/sdk';
+import { diskd } from '@diskd-ai/sdk';
+import type { Contact } from '@diskd-ai/sdk';
 
 const contactsUrl =
   process.env.CONTACTS_URL ??
