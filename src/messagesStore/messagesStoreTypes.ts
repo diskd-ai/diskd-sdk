@@ -150,11 +150,21 @@ export type AttachmentUploadStartParams = {
   readonly autoCommit?: boolean | null;
 };
 
-/** Intent envelope; passes through Drive's upload-intent contract. */
-export type AttachmentUploadStartResult = {
-  readonly intentId: string;
-  readonly uploadUrl: string;
-};
+/** Intent envelope for a new upload, or existing attachment ref for idempotent retry. */
+export type AttachmentUploadStartResult =
+  | {
+      readonly alreadyUploaded: false;
+      readonly intentId: string;
+      readonly uploadUrl: string;
+    }
+  | {
+      readonly alreadyUploaded: true;
+      readonly intentId: null;
+      readonly uploadUrl: null;
+      readonly attachmentId: string;
+      readonly sizeBytes: number;
+      readonly createdAt: string;
+    };
 
 /** Finalize an upload and register the attachment row. */
 export type AttachmentUploadCommitParams = {

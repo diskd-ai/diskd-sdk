@@ -226,7 +226,18 @@ const decodeGetMessage = (o: unknown): StoredMessage => {
 
 const decodeAttachmentUploadStart = (o: unknown): AttachmentUploadStartResult => {
   const r = raw(o);
+  if (bool(r, 'already_uploaded')) {
+    return {
+      alreadyUploaded: true,
+      intentId: null,
+      uploadUrl: null,
+      attachmentId: strRequired(r, 'attachment_id'),
+      sizeBytes: num(r, 'size_bytes'),
+      createdAt: strRequired(r, 'created_at'),
+    };
+  }
   return {
+    alreadyUploaded: false,
     intentId: strRequired(r, 'intent_id'),
     uploadUrl: strRequired(r, 'upload_url'),
   };
