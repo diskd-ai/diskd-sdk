@@ -64,6 +64,11 @@ const str = (obj: RawObject, key: string): string | null => {
   return typeof v === 'string' ? v : null;
 };
 
+const legacyStorageString = (obj: RawObject, key: string): string | null => {
+  const v = obj[key];
+  return typeof v === 'string' ? v : null;
+};
+
 const strRequired = (obj: RawObject, key: string): string => {
   const v = str(obj, key);
   if (v === null) {
@@ -106,8 +111,8 @@ const decodeCreateMailbox = (o: unknown): CreateMailboxResult => {
   const r = raw(o);
   return {
     mailboxId: strRequired(r, 'mailbox_id'),
-    dbInode: strRequired(r, 'db_inode'),
-    drivePath: strRequired(r, 'drive_path'),
+    dbInode: legacyStorageString(r, 'db_inode'),
+    drivePath: legacyStorageString(r, 'drive_path'),
   };
 };
 
@@ -116,7 +121,7 @@ const decodeMailboxSummary = (o: unknown): MailboxSummary => {
   return {
     mailboxId: strRequired(r, 'mailbox_id'),
     displayName: strRequired(r, 'display_name'),
-    dbInode: strRequired(r, 'db_inode'),
+    dbInode: legacyStorageString(r, 'db_inode'),
     recordCount: num(r, 'record_count'),
     sizeBytes: num(r, 'size_bytes'),
     updatedAt: strRequired(r, 'updated_at'),
@@ -503,6 +508,7 @@ export const createMessagesStoreClient = (params: {
         display_name: p.displayName,
         ...optional('metadata', p.metadata),
         ...optional('recreate', p.recreate),
+        ...optional('storage_version', p.storageVersion),
       });
       return decodeCreateMailbox(result);
     },

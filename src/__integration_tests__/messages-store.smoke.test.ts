@@ -46,7 +46,8 @@ test(
       metadata: { protocol: 'imap' },
     });
     assert.equal(created.mailboxId, mailboxId);
-    assert.ok(created.dbInode, 'createMailbox must return dbInode');
+    assert.ok(created.dbInode, 'sqlite createMailbox must return dbInode');
+    assert.ok(created.drivePath, 'sqlite createMailbox must return drivePath');
     assert.ok(created.drivePath.includes(mailboxId), 'drivePath should contain mailboxId');
 
     const mailbox = store.mailbox({ mailboxId });

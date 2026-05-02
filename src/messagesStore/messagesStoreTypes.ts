@@ -21,20 +21,21 @@ export type CreateMailboxParams = {
   readonly displayName: string;
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly recreate?: boolean;
+  readonly storageVersion?: 'sqlite-v1' | 'segments-v1';
 };
 
-/** Result of create_mailbox; carries the persisted Drive location. */
+/** Result of create_mailbox; legacy Drive location fields are null for segment-backed mailboxes. */
 export type CreateMailboxResult = {
   readonly mailboxId: string;
-  readonly dbInode: string;
-  readonly drivePath: string;
+  readonly dbInode: string | null;
+  readonly drivePath: string | null;
 };
 
 /** Compact mailbox row returned by listMailboxes. */
 export type MailboxSummary = {
   readonly mailboxId: string;
   readonly displayName: string;
-  readonly dbInode: string;
+  readonly dbInode: string | null;
   readonly recordCount: number;
   readonly sizeBytes: number;
   readonly updatedAt: string;
