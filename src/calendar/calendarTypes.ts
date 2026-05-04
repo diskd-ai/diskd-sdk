@@ -186,7 +186,11 @@ export type CalendarClient = {
     /** DELETE /api/calendar/events/:eventId/attendees/:attendeeId */
     readonly remove: (eventId: string, attendeeId: string) => Promise<void>;
     /** PUT /api/calendar/events/:eventId/attendees/:attendeeId/rsvp */
-    readonly updateRsvp: (eventId: string, attendeeId: string, rsvp: string) => Promise<EventAttendee>;
+    readonly updateRsvp: (
+      eventId: string,
+      attendeeId: string,
+      rsvp: string
+    ) => Promise<EventAttendee>;
   };
 
   /** Event note links sub-resource. */

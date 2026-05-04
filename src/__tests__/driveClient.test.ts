@@ -739,10 +739,10 @@ test('drive.tools.ls returns empty entries for empty result', async () => {
 
   const originalFetch = globalThis.fetch;
   const fetchMock = async (): Promise<Response> =>
-    new Response(
-      JSON.stringify({ jsonrpc: '2.0', result: { items: [] }, id: 1 }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+    new Response(JSON.stringify({ jsonrpc: '2.0', result: { items: [] }, id: 1 }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
 
   const auth: AuthModule = {
@@ -1119,7 +1119,9 @@ test('drive.tools.biQuery sends paths/tools/bi-query and returns typed tables', 
     assert.ok(table1, 'first table must exist');
     assert.deepEqual([...table1.headers], ['Name', 'Revenue', 'Active']);
     assert.equal(table1.rows.length, 2);
-    assert.deepEqual([...table1.rows[0]!], ['Alice', 50000, true]);
+    const firstRow = table1.rows[0];
+    assert.ok(firstRow, 'first row must exist');
+    assert.deepEqual([...firstRow], ['Alice', 50000, true]);
 
     const table2 = result.tables['inode-31'];
     assert.ok(table2, 'second table must exist');
@@ -1140,10 +1142,10 @@ test('drive.tools.biQuery returns empty tables for empty result', async () => {
 
   const originalFetch = globalThis.fetch;
   const fetchMock = async (): Promise<Response> =>
-    new Response(
-      JSON.stringify({ jsonrpc: '2.0', result: { tables: {} }, id: 1 }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+    new Response(JSON.stringify({ jsonrpc: '2.0', result: { tables: {} }, id: 1 }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
 
   const auth: AuthModule = {
@@ -1297,7 +1299,7 @@ test('drive.tools.tgSearch sends paths/tools/tg-search and returns typed message
                 channel_username: 'devops-alerts',
                 origin_url: null,
               },
-              score: 0.80,
+              score: 0.8,
               reply_context: {
                 message_id: 98,
                 text: 'Approve deploy?',
@@ -1438,7 +1440,10 @@ test('drive.tools.excelWrite sends paths/tools/excel-write and returns write res
     assert.equal(body.method, 'paths/tools/excel-write');
     assert.equal(body.params.path, '/reports/q4.xlsx');
     assert.deepEqual(body.params.headers, ['Name', 'Revenue']);
-    assert.deepEqual(body.params.rows, [['Alice', 50000], ['Bob', 30000]]);
+    assert.deepEqual(body.params.rows, [
+      ['Alice', 50000],
+      ['Bob', 30000],
+    ]);
     assert.equal(body.params.sheet_name, 'Q4 Data');
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;

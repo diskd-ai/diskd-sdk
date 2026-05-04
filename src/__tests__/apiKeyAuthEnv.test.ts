@@ -42,28 +42,27 @@ const withGatewayEnv = (
 
 test('createApiKeyAuth rejects missing APIS_API_KEY', () => {
   withGatewayEnv({ baseUrl: 'https://apis.example' }, () => {
-    assert.throws(
-      () => createApiKeyAuth({ workspaceId: 'ws-test' }),
-      /APIS_API_KEY is not set\./
-    );
+    assert.throws(() => createApiKeyAuth({ workspaceId: 'ws-test' }), /APIS_API_KEY is not set\./);
   });
 });
 
 test('createApiKeyAuth rejects missing APIS_BASE_URL', () => {
   withGatewayEnv({ apiKey: 'gateway-key' }, () => {
-    assert.throws(
-      () => createApiKeyAuth({ workspaceId: 'ws-test' }),
-      /APIS_BASE_URL is not set\./
-    );
+    assert.throws(() => createApiKeyAuth({ workspaceId: 'ws-test' }), /APIS_BASE_URL is not set\./);
   });
 });
 
 test('createApiKeyAuth reads APIS_API_KEY from env for request headers', async () => {
   await new Promise<void>((resolve, reject) => {
     withGatewayEnv({ apiKey: 'gateway-key', baseUrl: 'https://apis.example' }, () => {
-      const auth = createApiKeyAuth({ workspaceId: 'ws-test', orgId: 'org-test', userId: 'user-test' });
+      const auth = createApiKeyAuth({
+        workspaceId: 'ws-test',
+        orgId: 'org-test',
+        userId: 'user-test',
+      });
 
-      auth.getRequestHeaders?.()
+      auth
+        .getRequestHeaders?.()
         .then((headers) => {
           assert.deepEqual(headers, {
             'X-Api-Key': 'gateway-key',

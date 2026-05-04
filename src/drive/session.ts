@@ -58,14 +58,6 @@ const readRequiredNonEmptyString = (
   return value;
 };
 
-const readRequiredString = (obj: UnknownObject, snakeKey: string, camelKey: string): string => {
-  const value = readField(obj, snakeKey, camelKey);
-  if (typeof value !== 'string') {
-    throw new Error(`Invalid Drive Session payload: '${snakeKey}' must be a string`);
-  }
-  return value;
-};
-
 const readNullableString = (
   obj: UnknownObject,
   snakeKey: string,

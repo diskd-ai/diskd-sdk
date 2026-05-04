@@ -28,10 +28,7 @@ export const createRoutineRunsClient = (params: {
   readonly auth: AuthModule;
   readonly url?: string;
 }): RoutineRunsClient => {
-  const baseUrl = (params.url ?? resolveDiskdGatewayUrl('platform/routines')).replace(
-    /\/+$/,
-    ''
-  );
+  const baseUrl = (params.url ?? resolveDiskdGatewayUrl('platform/routines')).replace(/\/+$/, '');
 
   const request = async <T>(
     method: HttpMethod,

@@ -79,7 +79,10 @@ test('contacts.projectLinks.add posts to the nested REST route', async () => {
           });
 
           assert.deepEqual(result, wireContact);
-          assert.equal(calls[0]?.url, 'http://app-service:3000/api/contacts/contact-1/project-links');
+          assert.equal(
+            calls[0]?.url,
+            'http://app-service:3000/api/contacts/contact-1/project-links'
+          );
           assert.equal(calls[0]?.init?.method, 'POST');
           const body = JSON.parse(String(calls[0]?.init?.body)) as {
             readonly projectId: string;

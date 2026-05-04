@@ -1,10 +1,6 @@
 import type { AuthModule } from '../auth/types.js';
 import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
-import {
-  type HttpMethod,
-  httpRequest,
-  resolveAuthHeaders,
-} from '../sdk/http.js';
+import { type HttpMethod, httpRequest, resolveAuthHeaders } from '../sdk/http.js';
 import type {
   AddContactMethodParams,
   Contact,
@@ -19,9 +15,7 @@ import type {
 /**
  * buildQuery renders optional Contacts query params using the standard platform client pattern.
  */
-const buildQuery = (
-  entries: readonly (readonly [string, string | undefined])[]
-): string => {
+const buildQuery = (entries: readonly (readonly [string, string | undefined])[]): string => {
   const parts: string[] = [];
   for (const [key, value] of entries) {
     if (value !== undefined) {
@@ -69,7 +63,10 @@ export const createContactsClient = (params: {
     list: async (listParams?: ListContactsParams): Promise<readonly Contact[]> => {
       const query = buildQuery([
         ['source', listParams?.source],
-        ['isArchived', listParams?.isArchived !== undefined ? String(listParams.isArchived) : undefined],
+        [
+          'isArchived',
+          listParams?.isArchived !== undefined ? String(listParams.isArchived) : undefined,
+        ],
         ['projectId', listParams?.projectId],
       ]);
       return request<readonly Contact[]>('GET', `/api/contacts${query}`);
@@ -90,10 +87,7 @@ export const createContactsClient = (params: {
       });
     },
 
-    update: async (
-      contactId: string,
-      updateParams: UpdateContactParams
-    ): Promise<Contact> => {
+    update: async (contactId: string, updateParams: UpdateContactParams): Promise<Contact> => {
       return request<Contact>('PATCH', `/api/contacts/${encId(contactId)}`, {
         body: updateParams,
       });
@@ -108,15 +102,10 @@ export const createContactsClient = (params: {
     },
 
     methods: {
-      add: async (
-        contactId: string,
-        methodParams: AddContactMethodParams
-      ): Promise<Contact> => {
-        return request<Contact>(
-          'POST',
-          `/api/contacts/${encId(contactId)}/methods`,
-          { body: methodParams }
-        );
+      add: async (contactId: string, methodParams: AddContactMethodParams): Promise<Contact> => {
+        return request<Contact>('POST', `/api/contacts/${encId(contactId)}/methods`, {
+          body: methodParams,
+        });
       },
 
       remove: async (contactId: string, methodId: string): Promise<void> => {
@@ -128,15 +117,10 @@ export const createContactsClient = (params: {
     },
 
     projectLinks: {
-      add: async (
-        contactId: string,
-        linkParams: LinkContactToProjectParams
-      ): Promise<Contact> => {
-        return request<Contact>(
-          'POST',
-          `/api/contacts/${encId(contactId)}/project-links`,
-          { body: linkParams }
-        );
+      add: async (contactId: string, linkParams: LinkContactToProjectParams): Promise<Contact> => {
+        return request<Contact>('POST', `/api/contacts/${encId(contactId)}/project-links`, {
+          body: linkParams,
+        });
       },
 
       remove: async (contactId: string, projectId: string): Promise<void> => {

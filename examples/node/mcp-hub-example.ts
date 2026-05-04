@@ -19,7 +19,10 @@ import { diskd } from '../../src/sdk/diskd.js';
 // Configuration from environment
 // ---------------------------------------------------------------------------
 
-const APIS_BASE_URL = (process.env.APIS_BASE_URL ?? 'https://apis.diskd.local:8080').replace(/\/+$/, '');
+const APIS_BASE_URL = (process.env.APIS_BASE_URL ?? 'https://apis.diskd.local:8080').replace(
+  /\/+$/,
+  ''
+);
 const APIS_API_KEY = process.env.APIS_API_KEY ?? 'key-dev-1234567890';
 const WORKSPACE_ID = process.env.WORKSPACE_ID ?? 'dev-user-id';
 process.env.APIS_BASE_URL = APIS_BASE_URL;

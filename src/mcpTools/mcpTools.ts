@@ -180,7 +180,9 @@ export const createMcpToolsClient = (params: {
 
   const list = async (): Promise<readonly McpGatewayTool[]> => {
     await ensureInitialized();
-    const result = (await sendJsonRpc('tools/list')) as { readonly tools: readonly McpGatewayTool[] };
+    const result = (await sendJsonRpc('tools/list')) as {
+      readonly tools: readonly McpGatewayTool[];
+    };
     return result.tools;
   };
 

@@ -97,7 +97,10 @@ export const createCalendarClient = (params: {
       return request<CalendarEvent>('POST', '/api/calendar/events', { body: createParams });
     },
 
-    updateEvent: async (eventId: string, updateParams: UpdateEventParams): Promise<CalendarEvent> => {
+    updateEvent: async (
+      eventId: string,
+      updateParams: UpdateEventParams
+    ): Promise<CalendarEvent> => {
       return request<CalendarEvent>('PUT', `/api/calendar/events/${encId(eventId)}`, {
         body: updateParams,
       });
@@ -117,11 +120,9 @@ export const createCalendarClient = (params: {
 
     attendees: {
       add: async (eventId: string, attendeeParams: AddAttendeeParams): Promise<EventAttendee> => {
-        return request<EventAttendee>(
-          'POST',
-          `/api/calendar/events/${encId(eventId)}/attendees`,
-          { body: attendeeParams }
-        );
+        return request<EventAttendee>('POST', `/api/calendar/events/${encId(eventId)}/attendees`, {
+          body: attendeeParams,
+        });
       },
 
       remove: async (eventId: string, attendeeId: string): Promise<void> => {
@@ -131,7 +132,11 @@ export const createCalendarClient = (params: {
         );
       },
 
-      updateRsvp: async (eventId: string, attendeeId: string, rsvp: string): Promise<EventAttendee> => {
+      updateRsvp: async (
+        eventId: string,
+        attendeeId: string,
+        rsvp: string
+      ): Promise<EventAttendee> => {
         return request<EventAttendee>(
           'PUT',
           `/api/calendar/events/${encId(eventId)}/attendees/${encId(attendeeId)}/rsvp`,
@@ -142,11 +147,9 @@ export const createCalendarClient = (params: {
 
     noteLinks: {
       add: async (eventId: string, noteParams: LinkNoteParams): Promise<EventNoteLink> => {
-        return request<EventNoteLink>(
-          'POST',
-          `/api/calendar/events/${encId(eventId)}/note-links`,
-          { body: noteParams }
-        );
+        return request<EventNoteLink>('POST', `/api/calendar/events/${encId(eventId)}/note-links`, {
+          body: noteParams,
+        });
       },
 
       remove: async (eventId: string, linkId: string): Promise<void> => {
@@ -158,7 +161,10 @@ export const createCalendarClient = (params: {
     },
 
     attachments: {
-      add: async (eventId: string, attachmentParams: AddAttachmentParams): Promise<EventAttachment> => {
+      add: async (
+        eventId: string,
+        attachmentParams: AddAttachmentParams
+      ): Promise<EventAttachment> => {
         return request<EventAttachment>(
           'POST',
           `/api/calendar/events/${encId(eventId)}/attachments`,

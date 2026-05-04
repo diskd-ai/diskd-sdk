@@ -97,7 +97,9 @@ export type DriveClient = {
     readonly writeFile: (params: DriveToolsWriteFileParams) => Promise<DriveToolsWriteResult>;
     readonly applyPatch: (params: DriveToolsApplyPatchParams) => Promise<DriveToolsWriteResult>;
     readonly biQuery: (params: DriveToolsBiQueryParams) => Promise<DriveToolsBiQueryResult>;
-    readonly inodesQuery: (params: DriveToolsInodesQueryParams) => Promise<DriveToolsInodesQueryResult>;
+    readonly inodesQuery: (
+      params: DriveToolsInodesQueryParams
+    ) => Promise<DriveToolsInodesQueryResult>;
     readonly tgSearch: (params: DriveToolsTgSearchParams) => Promise<DriveToolsTgSearchResult>;
     readonly excelWrite: (params: DriveToolsExcelWriteParams) => Promise<DriveToolsWriteResult>;
   };

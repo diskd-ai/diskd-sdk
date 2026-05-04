@@ -2,8 +2,8 @@ export { createAuth } from '../auth/createAuthBrowser.js';
 export type { AuthModule, SdkCreateParams } from '../auth/types.js';
 export type {
   DriveCrontabClient,
-  DriveCrontabCreateWorkspaceJobParams,
   DriveCrontabCreateProjectJobParams,
+  DriveCrontabCreateWorkspaceJobParams,
   DriveCrontabDocument,
   DriveCrontabGetParams,
   DriveCrontabGetResult,
@@ -19,7 +19,6 @@ export type {
   DriveCrontabPathPayload,
   DriveCrontabPayload,
   DriveCrontabPayloadKind,
-  DriveCrontabWorkspaceScopeRef,
   DriveCrontabProjectScopeRef,
   DriveCrontabRequest,
   DriveCrontabRunJobParams,
@@ -29,6 +28,7 @@ export type {
   DriveCrontabSchedule,
   DriveCrontabScopeRef,
   DriveCrontabUriPayload,
+  DriveCrontabWorkspaceScopeRef,
   DriveScopedCrontabClient,
   DriveScopedCrontabCreateJobParams,
   DriveScopedCrontabSaveParams,

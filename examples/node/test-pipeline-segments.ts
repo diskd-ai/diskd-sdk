@@ -14,7 +14,7 @@
  *   DISKD_MCP_URL      - direct MCP Hub URL override (e.g., http://localhost:3000)
  */
 
-import type { AuthModule } from '@diskd-ai/sdk';
+import type { AuthModule, Operative } from '@diskd-ai/sdk';
 import { diskd } from '@diskd-ai/sdk';
 
 // ---------------------------------------------------------------------------
@@ -93,7 +93,7 @@ const testS3ProjectsCrud = async (auth: AuthModule): Promise<TestResult> => {
 
     // Create operative
     const opSlug = 'segment-test-op';
-    let operative;
+    let operative: Operative;
     try {
       operative = await operatives.getBySlug({ projectId, slug: opSlug });
     } catch {

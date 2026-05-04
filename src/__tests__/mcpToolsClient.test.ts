@@ -68,10 +68,10 @@ const jsonRpcResponse = (result: unknown, sessionId?: string): Response => {
 };
 
 const jsonRpcError = (code: number, message: string): Response =>
-  new Response(
-    JSON.stringify({ jsonrpc: '2.0', id: 1, error: { code, message } }),
-    { status: 200, headers: { 'Content-Type': 'application/json' } }
-  );
+  new Response(JSON.stringify({ jsonrpc: '2.0', id: 1, error: { code, message } }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
 
 const parseBody = (init?: RequestInit): Record<string, unknown> =>
   JSON.parse(typeof init?.body === 'string' ? init.body : '{}') as Record<string, unknown>;
@@ -172,9 +172,7 @@ test('list() second call reuses session (no re-initialize)', async () => {
 
       // The third call (second list) should have session header
       const lastCall = calls[calls.length - 1];
-      const sessionHeader = (lastCall?.init?.headers as Record<string, string>)?.[
-        'mcp-session-id'
-      ];
+      const sessionHeader = (lastCall?.init?.headers as Record<string, string>)?.['mcp-session-id'];
       assert.equal(sessionHeader, 'session-abc');
 
       // And should be tools/list, not initialize

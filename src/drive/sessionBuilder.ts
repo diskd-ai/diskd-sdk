@@ -35,7 +35,7 @@ const encodeTime = (ms: number, length: number): string => {
   let value = ms;
   const chars: string[] = [];
   for (let i = 0; i < length; i += 1) {
-    chars.unshift(CROCKFORD[value % 32]!);
+    chars.unshift(CROCKFORD.charAt(value % 32));
     value = Math.floor(value / 32);
   }
   return chars.join('');
@@ -44,7 +44,7 @@ const encodeTime = (ms: number, length: number): string => {
 const encodeRandom = (length: number): string => {
   const bytes = new Uint8Array(length);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => CROCKFORD[b % 32]!).join('');
+  return Array.from(bytes, (b) => CROCKFORD.charAt(b % 32)).join('');
 };
 
 export const generateUlid = (): string => encodeTime(Date.now(), 10) + encodeRandom(16);

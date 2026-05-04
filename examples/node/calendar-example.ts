@@ -9,9 +9,8 @@
  *   CALENDAR_URL             - Override calendar base URL
  */
 import path from 'node:path';
-
-import { diskd } from '@diskd-ai/sdk';
 import type { CalendarEvent } from '@diskd-ai/sdk';
+import { diskd } from '@diskd-ai/sdk';
 
 const scopes = ['openid'];
 const credentialsPath =
@@ -42,7 +41,9 @@ if (accounts.length === 0) {
 for (const account of accounts) {
   console.log(`  Account: ${account.email} (${account.provider}, status=${account.status})`);
   for (const cal of account.calendars) {
-    console.log(`    Calendar: ${cal.id} "${cal.name}" color=${cal.color} visible=${cal.isVisible}`);
+    console.log(
+      `    Calendar: ${cal.id} "${cal.name}" color=${cal.color} visible=${cal.isVisible}`
+    );
   }
 }
 
@@ -87,7 +88,8 @@ for (const event of events) {
 // -- Step 4: Update the event with a description --
 console.log('\n--- Update event with description ---');
 const updated: CalendarEvent = await calendar.updateEvent(created.id, {
-  description: 'Kick off the v2.4 production deployment. Review rollback plan and monitoring dashboards before proceeding.',
+  description:
+    'Kick off the v2.4 production deployment. Review rollback plan and monitoring dashboards before proceeding.',
 });
 
 console.log(`[ok] Updated event:`);

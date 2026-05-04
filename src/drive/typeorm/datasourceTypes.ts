@@ -9,6 +9,8 @@ import type { DriveDbSchema, DriveDbType } from '../driveDbTypes.js';
 // Input params
 // ---------------------------------------------------------------------------
 
+export type DriveDataSourceEntity = (abstract new (...args: never[]) => unknown) | string;
+
 export type DriveDataSourceParams = {
   /** Auth module for Drive API requests. */
   readonly auth: AuthModule;
@@ -26,7 +28,7 @@ export type DriveDataSourceParams = {
   readonly url: string;
 
   /** TypeORM entity classes to register. */
-  readonly entities?: ReadonlyArray<Function | string>;
+  readonly entities?: ReadonlyArray<DriveDataSourceEntity>;
 
   /** Auto-synchronize schema on connect. */
   readonly synchronize?: boolean;

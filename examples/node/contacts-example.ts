@@ -15,9 +15,8 @@
  *   DISKD_WORKSPACE_ID      - Workspace ID (required with APIS_API_KEY)
  */
 import path from 'node:path';
-
+import type { AuthModule, Contact } from '@diskd-ai/sdk';
 import { diskd } from '@diskd-ai/sdk';
-import type { Contact } from '@diskd-ai/sdk';
 
 const contactsUrl =
   process.env.CONTACTS_URL ??
@@ -26,7 +25,7 @@ const contactsUrl =
 const apiKey = process.env.APIS_API_KEY;
 const workspaceId = process.env.DISKD_WORKSPACE_ID;
 
-let auth;
+let auth: AuthModule;
 if (apiKey && workspaceId) {
   console.log(`[auth] Using API key mode (workspace: ${workspaceId})`);
   auth = diskd.auth.apiKey({ workspaceId });

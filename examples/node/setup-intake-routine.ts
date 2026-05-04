@@ -19,7 +19,7 @@
  *   OPERATIVE_SLUG     - operative slug (default: "email-sorter")
  */
 
-import type { RoutineStep } from '@diskd-ai/sdk';
+import type { Operative, RoutineStep } from '@diskd-ai/sdk';
 import { diskd } from '@diskd-ai/sdk';
 
 // ---------------------------------------------------------------------------
@@ -208,7 +208,7 @@ const main = async (): Promise<void> => {
   // 3. Find or create operative
   console.log('[2/4] Setting up operative...');
   const operatives = diskd.platform.operatives({ auth });
-  let operative;
+  let operative: Operative;
   try {
     operative = await operatives.getBySlug({ projectId: project.id, slug: OPERATIVE_SLUG });
     console.log(`  Found existing operative: ${operative.name} (${operative.id})`);

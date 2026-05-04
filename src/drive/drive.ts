@@ -261,8 +261,7 @@ const decodeDocument = (o: unknown): DriveToolsDocument => {
   };
 };
 
-const isErrorResult = (o: unknown): boolean =>
-  isObject(o) && 'error' in o;
+const isErrorResult = (o: unknown): boolean => isObject(o) && 'error' in o;
 
 const decodeLsResult = (o: unknown): DriveToolsLsResult => {
   const r = raw(o);
@@ -302,7 +301,8 @@ const decodeTableData = (o: unknown): DriveToolsTableData => {
     ? r.rows.map((row) =>
         Array.isArray(row)
           ? row.map((cell) => {
-              if (typeof cell === 'string' || typeof cell === 'number' || typeof cell === 'boolean') return cell;
+              if (typeof cell === 'string' || typeof cell === 'number' || typeof cell === 'boolean')
+                return cell;
               return null;
             })
           : []
