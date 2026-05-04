@@ -10,6 +10,7 @@ import { createDriveClient } from '../drive/drive.js';
 import { createScopedDriveSessionManager } from '../drive/sessionObject.js';
 import type { DriveDataSource, DriveDataSourceParams } from '../drive/typeorm/datasourceTypes.js';
 import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
+import { createInboxClient } from '../inbox/inbox.js';
 import { createLlmRouterClient } from '../llmRouter/llmRouter.js';
 import { createMcpHubClient } from '../mcpHub/mcpHub.js';
 import { createMcpToolsClient } from '../mcpTools/mcpTools.js';
@@ -149,6 +150,8 @@ export const diskd: DiskD = {
     calendar: ({ auth, url }) => createCalendarClient({ auth, url }),
 
     contacts: ({ auth, url }) => createContactsClient({ auth, url }),
+
+    inbox: ({ auth, driveUrl, mcpUrl }) => createInboxClient({ auth, driveUrl, mcpUrl }),
   },
 
   utils: {

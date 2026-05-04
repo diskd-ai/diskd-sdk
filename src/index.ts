@@ -264,8 +264,18 @@ export type {
   DriveDataSourceRepository,
 } from './drive/typeorm/datasourceTypes.js';
 export type { DriveClient, DrivePathEntry, DrivePathType } from './drive/types.js';
-// -- Inbox (stored email types) --
+// -- Inbox (stored email types + platform inbox client) --
+export { createInboxClient } from './inbox/inbox.js';
 export type {
+  InboxAccountItem,
+  InboxAccountList,
+  InboxClient,
+  InboxEmailEnvelope,
+  InboxListParams,
+  InboxMarkReadParams,
+  InboxPage,
+  InboxReadParams,
+  InboxSearchParams,
   StoredEmail,
   StoredEmailAttachment,
   StoredEmailContact,
