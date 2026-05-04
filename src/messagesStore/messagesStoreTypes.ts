@@ -189,6 +189,32 @@ export type AttachmentDownloadUrlResult = {
   readonly expiresAt: string;
 };
 
+/** Create a Drive file link for an existing attachment. */
+export type AttachmentSaveToDriveParams = {
+  readonly attachmentId: string;
+  /** Absolute target Drive path. Parent must already exist. */
+  readonly targetPath: string;
+};
+
+/** Target Drive entry created by attachment save-to-drive. */
+export type AttachmentSavedDriveEntry = {
+  readonly id: string;
+  readonly name: string;
+  readonly type: string;
+  readonly parentId: string | null;
+  readonly fileId: string | null;
+  readonly etag: string | null;
+  readonly size: number | null;
+  readonly mimeType: string | null;
+  readonly fullPath: string | null;
+};
+
+/** Reports the target Drive entry only; source driveInode is never exposed. */
+export type AttachmentSaveToDriveResult = {
+  readonly saved: boolean;
+  readonly entry: AttachmentSavedDriveEntry;
+};
+
 /** Identifier-only attachment delete; cascades the Drive file. */
 export type AttachmentDeleteParams = {
   readonly attachmentId: string;
@@ -243,6 +269,10 @@ export type MessageScopedClient = {
     readonly downloadUrl: (
       params: AttachmentDownloadUrlParams
     ) => Promise<AttachmentDownloadUrlResult>;
+    /** Create a Drive file link for an existing attachment without exposing source driveInode. */
+    readonly saveToDrive: (
+      params: AttachmentSaveToDriveParams
+    ) => Promise<AttachmentSaveToDriveResult>;
     /** Remove the attachment row and cascade-delete the Drive file. */
     readonly delete: (params: AttachmentDeleteParams) => Promise<AttachmentDeleteResult>;
   };

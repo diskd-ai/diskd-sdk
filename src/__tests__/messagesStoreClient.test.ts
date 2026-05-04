@@ -109,3 +109,61 @@ test('messagesStore.listMailboxes accepts null db_inode for segment-backed mailb
     }
   );
 });
+
+test('messagesStore attachment.saveToDrive encodes payload and decodes target entry only', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = parseBody(init);
+      assert.equal(request.method, 'messages_store/attachment/save-to-drive');
+      assert.deepEqual(request.params, {
+        mailbox_id: 'exchange-google-personal',
+        folder_id: 'INBOX',
+        external_id: '14:42',
+        attachment_id: 'part-1',
+        target_path: '/Projects/p/docs/invoice.pdf',
+      });
+      return jsonRpcResponse({
+        saved: true,
+        entry: {
+          inode: 'target-inode-1',
+          name: 'invoice.pdf',
+          type: 'file',
+          parent_inode: 'parent-1',
+          file_id: 'file-1',
+          etag: 'etag-1',
+          size: 123,
+          mime_type: 'application/pdf',
+          full_path: '/Projects/p/docs/invoice.pdf',
+        },
+      });
+    },
+    async () => {
+      const client = diskd.os.messagesStore({ auth: makeAuth(), url: 'http://drive:8000/api/v1' });
+
+      const result = await client
+        .mailbox({ mailboxId: 'exchange-google-personal' })
+        .folder({ folderId: 'INBOX' })
+        .message({ externalId: '14:42' })
+        .attachments.saveToDrive({
+          attachmentId: 'part-1',
+          targetPath: '/Projects/p/docs/invoice.pdf',
+        });
+
+      assert.deepEqual(result, {
+        saved: true,
+        entry: {
+          id: 'target-inode-1',
+          name: 'invoice.pdf',
+          type: 'file',
+          parentId: 'parent-1',
+          fileId: 'file-1',
+          etag: 'etag-1',
+          size: 123,
+          mimeType: 'application/pdf',
+          fullPath: '/Projects/p/docs/invoice.pdf',
+        },
+      });
+      assert.equal('driveInode' in result.entry, false);
+    }
+  );
+});

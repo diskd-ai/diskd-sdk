@@ -13,6 +13,8 @@ import type {
   InboxMarkReadParams,
   InboxPage,
   InboxReadParams,
+  InboxSaveAttachmentParams,
+  InboxSaveAttachmentResult,
   InboxSearchParams,
   StoredEmail,
   StoredEmailAttachment,
@@ -23,6 +25,7 @@ const MAIL_ROOT = '/.profile/mail';
 const DEFAULT_EXCHANGE_FOLDER = 'INBOX';
 const SEARCH_SCAN_LIMIT = 100;
 const SYSTEM_HYDRATE_EMAIL_BODIES_TOOL = 'system_hydrate_email_bodies';
+const SYSTEM_HYDRATE_EMAIL_ATTACHMENT_TOOL = 'system_hydrate_email_attachment';
 const REF_PREFIX = 'op-inbox:';
 
 type MessageRef =
@@ -291,14 +294,67 @@ const isNotFound = (error: unknown): boolean =>
   error instanceof Error &&
   /not.?found|MAILBOX_NOT_FOUND|FOLDER_NOT_FOUND|MESSAGE_NOT_FOUND/i.test(error.message);
 
-const findHydrationToolName = async (mcpTools: McpToolsClient): Promise<string> => {
+const findSystemToolName = async (
+  mcpTools: McpToolsClient,
+  systemToolName: string
+): Promise<string> => {
   const tools = await mcpTools.list();
-  const tool = tools.find((item) => item.name.endsWith(`__${SYSTEM_HYDRATE_EMAIL_BODIES_TOOL}`));
+  const tool = tools.find((item) => item.name.endsWith(`__${systemToolName}`));
   if (!tool) {
-    throw new Error(`${SYSTEM_HYDRATE_EMAIL_BODIES_TOOL} tool is not available`);
+    throw new Error(`${systemToolName} tool is not available`);
   }
   return tool.name;
 };
+
+const splitPath = (fullPath: string): { readonly parentPath: string; readonly name: string } => {
+  const normalized = fullPath.replace(/\/+$/, '');
+  if (normalized.length === 0 || normalized === '/') {
+    throw new Error('targetPath must include a filename');
+  }
+  const lastSlash = normalized.lastIndexOf('/');
+  if (lastSlash <= 0) {
+    return { parentPath: '/', name: normalized.replace(/^\//, '') };
+  }
+  return {
+    parentPath: normalized.slice(0, lastSlash),
+    name: normalized.slice(lastSlash + 1),
+  };
+};
+
+const findLegacyAttachment = (email: StoredEmail, filename: string): StoredEmailAttachment => {
+  const match = email.attachments.find((attachment) => attachment.filename === filename);
+  if (!match) throw new Error(`Attachment not found: ${filename}`);
+  if (!match.drivePath) throw new Error(`Attachment has no drivePath: ${filename}`);
+  return match;
+};
+
+const findAttachmentByHandle = (
+  email: StoredEmail,
+  attachmentId?: string,
+  filename?: string
+): StoredEmailAttachment => {
+  const resolvedAttachmentId = nonEmpty(attachmentId);
+  if (resolvedAttachmentId) {
+    const match = email.attachments.find(
+      (attachment) => attachment.attachmentId === resolvedAttachmentId
+    );
+    if (!match) throw new Error(`Attachment not found: ${resolvedAttachmentId}`);
+    return match;
+  }
+  const resolvedFilename = nonEmpty(filename);
+  if (!resolvedFilename) throw new Error('attachmentId or filename is required');
+  const matches = email.attachments.filter(
+    (attachment) => attachment.filename === resolvedFilename
+  );
+  if (matches.length === 0) throw new Error(`Attachment not found: ${resolvedFilename}`);
+  if (matches.length > 1) {
+    throw new Error(`Multiple attachments named ${resolvedFilename}; use attachmentId`);
+  }
+  return matches[0] as StoredEmailAttachment;
+};
+
+const shouldHydrateAttachment = (attachment: StoredEmailAttachment): boolean =>
+  attachment.storageState === 'not_loaded' || attachment.storageState === 'failed_retryable';
 
 export const createInboxClient = (params: {
   readonly auth: AuthModule;
@@ -315,7 +371,8 @@ export const createInboxClient = (params: {
     url: params.driveUrl,
   });
   const mcpTools = createMcpToolsClient({ auth: params.auth, url: params.mcpUrl });
-  let hydrateToolName: string | null = null;
+  let hydrateBodyToolName: string | null = null;
+  let hydrateAttachmentToolName: string | null = null;
 
   const listLegacyAccounts = async (): Promise<readonly string[]> => {
     try {
@@ -391,8 +448,8 @@ export const createInboxClient = (params: {
     folderId: string,
     externalId: string
   ): Promise<void> => {
-    hydrateToolName ??= await findHydrationToolName(mcpTools);
-    const result = await mcpTools.call(hydrateToolName, {
+    hydrateBodyToolName ??= await findSystemToolName(mcpTools, SYSTEM_HYDRATE_EMAIL_BODIES_TOOL);
+    const result = await mcpTools.call(hydrateBodyToolName, {
       messages: [{ mailboxId, folderId, externalId }],
       maxMessages: 1,
     });
@@ -466,6 +523,131 @@ export const createInboxClient = (params: {
       items: [{ externalId: row.externalId, payload: { ...row.payload, isRead } }],
     });
     return exchangeStoredEmail({ ...row, payload: { ...row.payload, isRead } }, account, folderId);
+  };
+
+  const readLegacyForSave = async (account: string, messageId: string): Promise<StoredEmail> => {
+    const directPath = `${inboxPath(account)}/${messageId}`;
+    try {
+      const email = await readLegacyFile(directPath);
+      if (email) return withLegacyRef(email, account);
+    } catch {
+      // Fall back to scanning by stored messageId for compatibility with read/list handles.
+    }
+    return readLegacy(account, messageId);
+  };
+
+  const saveLegacyAttachment = async (
+    account: string,
+    messageId: string,
+    filename: string,
+    targetPath: string
+  ): Promise<InboxSaveAttachmentResult> => {
+    const email = await readLegacyForSave(account, messageId);
+    const attachment = findLegacyAttachment(email, filename);
+    const sourceEntries = await drive.resolve({ paths: [attachment.drivePath] });
+    const sourceEntry = sourceEntries[0];
+    if (!sourceEntry?.fileId) {
+      throw new Error(`Cannot resolve fileId for attachment path: ${attachment.drivePath}`);
+    }
+    const target = splitPath(targetPath);
+    const created = await drive.create({
+      name: target.name,
+      type: 'file',
+      parentPath: target.parentPath,
+      fileId: sourceEntry.fileId,
+    });
+    return {
+      saved: true,
+      entry: {
+        id: created.id,
+        name: created.name,
+        path: targetPath,
+        fileId: created.fileId,
+      },
+    };
+  };
+
+  const hydrateAttachment = async (
+    mailboxId: string,
+    folderId: string,
+    externalId: string,
+    attachmentId: string
+  ): Promise<void> => {
+    hydrateAttachmentToolName ??= await findSystemToolName(
+      mcpTools,
+      SYSTEM_HYDRATE_EMAIL_ATTACHMENT_TOOL
+    );
+    const result = await mcpTools.call(hydrateAttachmentToolName, {
+      mailboxId,
+      folderId,
+      externalId,
+      attachmentId,
+    });
+    if (result.isError) {
+      throw new Error(`${SYSTEM_HYDRATE_EMAIL_ATTACHMENT_TOOL} returned error`);
+    }
+  };
+
+  const ensureExchangeAttachmentLoaded = async (
+    mailboxId: string,
+    folderId: string,
+    externalId: string,
+    attachment: StoredEmailAttachment
+  ): Promise<string> => {
+    const attachmentId = nonEmpty(attachment.attachmentId);
+    if (!attachmentId) throw new Error(`Attachment has no attachmentId: ${attachment.filename}`);
+    const scopedMessage = messagesStore
+      .mailbox({ mailboxId })
+      .folder({ folderId })
+      .message({ externalId });
+    const hasStoredRow = async (): Promise<boolean> => {
+      const rows = await scopedMessage.attachments.list();
+      return rows.some((row) => row.attachmentId === attachmentId);
+    };
+    if (shouldHydrateAttachment(attachment) || !(await hasStoredRow())) {
+      await hydrateAttachment(mailboxId, folderId, externalId, attachmentId);
+      if (!(await hasStoredRow())) {
+        throw new Error(`Attachment not hydrated: ${attachmentId}`);
+      }
+    }
+    return attachmentId;
+  };
+
+  const saveExchangeAttachmentExact = async (
+    account: string,
+    folderId: string,
+    messageId: string,
+    attachmentId: string | undefined,
+    filename: string | undefined,
+    targetPath: string
+  ): Promise<InboxSaveAttachmentResult> => {
+    const mailboxId = exchangeMailboxId(account);
+    const row = await messagesStore
+      .mailbox({ mailboxId })
+      .folder({ folderId })
+      .getMessage({ externalId: messageId });
+    const email = exchangeStoredEmail(row, account, folderId);
+    const attachment = findAttachmentByHandle(email, attachmentId, filename);
+    const resolvedAttachmentId = await ensureExchangeAttachmentLoaded(
+      mailboxId,
+      folderId,
+      row.externalId,
+      attachment
+    );
+    const saved = await messagesStore
+      .mailbox({ mailboxId })
+      .folder({ folderId })
+      .message({ externalId: row.externalId })
+      .attachments.saveToDrive({ attachmentId: resolvedAttachmentId, targetPath });
+    return {
+      saved: true,
+      entry: {
+        id: saved.entry.id,
+        name: saved.entry.name,
+        path: saved.entry.fullPath ?? targetPath,
+        fileId: saved.entry.fileId,
+      },
+    };
   };
 
   return {
@@ -601,6 +783,58 @@ export const createInboxClient = (params: {
       } catch (error) {
         if (!isNotFound(error)) throw error;
         return markLegacyRead(resolvedAccount, resolvedMessageId, isRead);
+      }
+    },
+
+    saveAttachment: async ({
+      account,
+      messageId,
+      messageRef,
+      folderId,
+      attachmentId,
+      filename,
+      targetPath,
+    }: InboxSaveAttachmentParams): Promise<InboxSaveAttachmentResult> => {
+      const ref = messageRef ? decodeRef(messageRef) : messageId ? decodeRef(messageId) : null;
+      if (messageRef && !ref) throw new Error('Invalid messageRef');
+      const resolvedFilename = nonEmpty(filename);
+      if (ref?.source === 'legacy') {
+        if (!resolvedFilename) throw new Error('filename is required for legacy attachments');
+        return saveLegacyAttachment(ref.account, ref.messageId, resolvedFilename, targetPath);
+      }
+      if (ref?.source === 'exchange') {
+        return saveExchangeAttachmentExact(
+          ref.account,
+          ref.folderId,
+          ref.messageId,
+          attachmentId,
+          filename,
+          targetPath
+        );
+      }
+      const resolvedAccount = nonEmpty(account);
+      const resolvedMessageId = nonEmpty(messageId);
+      if (!resolvedAccount || !resolvedMessageId) {
+        throw new Error('Either messageRef, or account + messageId is required');
+      }
+      try {
+        return await saveExchangeAttachmentExact(
+          resolvedAccount,
+          nonEmpty(folderId) ?? DEFAULT_EXCHANGE_FOLDER,
+          resolvedMessageId,
+          attachmentId,
+          filename,
+          targetPath
+        );
+      } catch (error) {
+        if (!isNotFound(error)) throw error;
+        if (!resolvedFilename) throw new Error('filename is required for legacy attachments');
+        return saveLegacyAttachment(
+          resolvedAccount,
+          resolvedMessageId,
+          resolvedFilename,
+          targetPath
+        );
       }
     },
   };

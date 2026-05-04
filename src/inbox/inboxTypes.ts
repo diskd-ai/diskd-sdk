@@ -116,6 +116,25 @@ export type InboxMarkReadParams = InboxReadParams & {
   readonly isRead: boolean;
 };
 
+export type InboxSaveAttachmentParams = InboxReadParams & {
+  /** Preferred Exchange attachment handle returned by read(). */
+  readonly attachmentId?: string;
+  /** Legacy filename fallback. Required for legacy JSON mail. */
+  readonly filename?: string;
+  /** Absolute Drive path resolved by caller policy/chroot. */
+  readonly targetPath: string;
+};
+
+export type InboxSaveAttachmentResult = {
+  readonly saved: true;
+  readonly entry: {
+    readonly id: string;
+    readonly name: string;
+    readonly path: string;
+    readonly fileId: string | null;
+  };
+};
+
 export type InboxClient = {
   readonly listAccounts: () => Promise<InboxAccountList>;
   readonly list: (params: InboxListParams) => Promise<InboxPage>;
@@ -124,4 +143,7 @@ export type InboxClient = {
     params: InboxSearchParams
   ) => Promise<{ readonly results: readonly InboxEmailEnvelope[] }>;
   readonly markRead: (params: InboxMarkReadParams) => Promise<StoredEmail>;
+  readonly saveAttachment: (
+    params: InboxSaveAttachmentParams
+  ) => Promise<InboxSaveAttachmentResult>;
 };

@@ -186,3 +186,318 @@ test('platform.inbox.markRead updates only isRead for Exchange payload', async (
     }
   );
 });
+
+const exchangeRef = (
+  account = 'exchange-google-personal',
+  folderId = 'INBOX',
+  messageId = '14:42'
+): string =>
+  `op-inbox:${Buffer.from(
+    JSON.stringify({ source: 'exchange', account, folderId, messageId }),
+    'utf-8'
+  ).toString('base64url')}`;
+
+const legacyRef = (account = 'work', messageId = '002.json'): string =>
+  `op-inbox:${Buffer.from(
+    JSON.stringify({ source: 'legacy', account, messageId }),
+    'utf-8'
+  ).toString('base64url')}`;
+
+const attachmentMessageRow = (storageState: string) => ({
+  message: {
+    external_id: '14:42',
+    payload: {
+      accountId: 'google__personal',
+      mailbox: 'INBOX',
+      uid: 42,
+      from: { name: 'Alice', address: 'alice@example.com' },
+      to: [],
+      cc: [],
+      subject: 'Attachment',
+      date: '2026-05-04T10:00:00.000Z',
+      flags: [],
+      labels: [],
+      hasAttachments: true,
+      attachments: [
+        {
+          attachmentId: 'part-1',
+          filename: 'invoice.pdf',
+          contentType: 'application/pdf',
+          sizeBytes: 123,
+          storageState,
+        },
+      ],
+      snippet: 'Preview',
+      bodyText: 'Body',
+      bodyHtml: null,
+      bodyState: 'loaded',
+      fetchedAt: '2026-05-04T10:01:00.000Z',
+    },
+    created_at: '2026-05-04T10:00:00.000Z',
+    updated_at: '2026-05-04T10:00:00.000Z',
+  },
+});
+
+test('platform.inbox.saveAttachment saves Exchange attachment by messageRef and attachmentId', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/get')
+        return rpc(request.id, attachmentMessageRow('loaded'));
+      if (request.method === 'messages_store/attachment/list') {
+        return rpc(request.id, {
+          items: [
+            {
+              attachment_id: 'part-1',
+              filename: 'invoice.pdf',
+              content_type: 'application/pdf',
+              size_bytes: 123,
+              drive_inode: 'source-inode-1',
+              created_at: '2026-05-04T10:00:00.000Z',
+            },
+          ],
+        });
+      }
+      if (request.method === 'messages_store/attachment/save-to-drive') {
+        assert.deepEqual(request.params, {
+          mailbox_id: 'exchange-google-personal',
+          folder_id: 'INBOX',
+          external_id: '14:42',
+          attachment_id: 'part-1',
+          target_path: '/Projects/p/docs/invoice.pdf',
+        });
+        return rpc(request.id, {
+          saved: true,
+          entry: {
+            inode: 'target-inode-1',
+            name: 'invoice.pdf',
+            type: 'file',
+            parent_inode: 'parent-1',
+            file_id: 'file-1',
+            etag: null,
+            size: 123,
+            mime_type: 'application/pdf',
+            full_path: '/Projects/p/docs/invoice.pdf',
+          },
+        });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      const result = await inbox.saveAttachment({
+        messageRef: exchangeRef(),
+        attachmentId: 'part-1',
+        targetPath: '/Projects/p/docs/invoice.pdf',
+      });
+
+      assert.deepEqual(result, {
+        saved: true,
+        entry: {
+          id: 'target-inode-1',
+          name: 'invoice.pdf',
+          path: '/Projects/p/docs/invoice.pdf',
+          fileId: 'file-1',
+        },
+      });
+      assert.deepEqual(
+        calls.map((call) => body(call.init).method),
+        [
+          'messages_store/get',
+          'messages_store/attachment/list',
+          'messages_store/attachment/save-to-drive',
+        ]
+      );
+    }
+  );
+});
+
+test('platform.inbox.saveAttachment hydrates unloaded Exchange attachment before save', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/get')
+        return rpc(request.id, attachmentMessageRow('not_loaded'));
+      if (request.method === 'messages_store/attachment/list') {
+        return rpc(request.id, {
+          items: [
+            {
+              attachment_id: 'part-1',
+              filename: 'invoice.pdf',
+              content_type: 'application/pdf',
+              size_bytes: 123,
+              drive_inode: 'source-inode-1',
+              created_at: '2026-05-04T10:00:00.000Z',
+            },
+          ],
+        });
+      }
+      if (request.method === 'initialize') return rpc(request.id, {});
+      if (request.method === 'tools/list') {
+        return rpc(request.id, {
+          tools: [
+            {
+              name: 'email_client__system_hydrate_email_attachment',
+              description: '',
+              inputSchema: { type: 'object', properties: {} },
+            },
+          ],
+        });
+      }
+      if (request.method === 'tools/call') return rpc(request.id, { content: [], isError: false });
+      if (request.method === 'messages_store/attachment/save-to-drive') {
+        return rpc(request.id, {
+          saved: true,
+          entry: {
+            inode: 'target-inode-1',
+            name: 'invoice.pdf',
+            type: 'file',
+            parent_inode: 'parent-1',
+            file_id: 'file-1',
+            etag: null,
+            size: 123,
+            mime_type: 'application/pdf',
+            full_path: '/Projects/p/docs/invoice.pdf',
+          },
+        });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      await inbox.saveAttachment({
+        messageRef: exchangeRef(),
+        attachmentId: 'part-1',
+        targetPath: '/Projects/p/docs/invoice.pdf',
+      });
+
+      const hydrateCall = calls
+        .map((call) => body(call.init))
+        .find((item) => item.method === 'tools/call');
+      assert.deepEqual(hydrateCall?.params, {
+        name: 'email_client__system_hydrate_email_attachment',
+        arguments: {
+          mailboxId: 'exchange-google-personal',
+          folderId: 'INBOX',
+          externalId: '14:42',
+          attachmentId: 'part-1',
+        },
+      });
+    }
+  );
+});
+
+test('platform.inbox.saveAttachment saves legacy attachment by filename', async () => {
+  await withFetchMock(
+    (url, init) => {
+      if (url === 'https://download/legacy') {
+        return new Response(
+          JSON.stringify({
+            messageId: 'legacy-message-1',
+            account: 'work',
+            from: { name: '', address: '' },
+            to: [],
+            cc: [],
+            subject: 'Legacy',
+            date: '',
+            receivedAt: '',
+            snippet: '',
+            bodyText: '',
+            bodyHtml: '',
+            hasAttachments: true,
+            attachments: [
+              {
+                filename: 'invoice.pdf',
+                contentType: 'application/pdf',
+                size: 123,
+                drivePath: '/.profile/mail/work/attachments/invoice.pdf',
+              },
+            ],
+            labels: [],
+            isRead: false,
+            isFlagged: false,
+            priority: 'normal',
+            webhookEvent: '',
+            rule: null,
+          }),
+          { status: 200, headers: { 'content-type': 'application/json', 'content-length': '100' } }
+        );
+      }
+      const request = body(init);
+      if (request.method === 'drive/files/download-url') {
+        return rpc(request.id, { url: 'https://download/legacy', expires_in: 3600 });
+      }
+      if (request.method === 'drive/paths/resolve') {
+        return rpc(request.id, {
+          items: [
+            {
+              inode: 'source-inode-1',
+              name: 'invoice.pdf',
+              type: 'file',
+              parent_inode: 'attachments',
+              file_id: 'file-1',
+              etag: null,
+              size: 123,
+              metadata: {},
+              attributes: [],
+            },
+          ],
+        });
+      }
+      if (request.method === 'drive/paths/create') {
+        assert.deepEqual(request.params, {
+          name: 'invoice.pdf',
+          dir_name: 'invoice.pdf',
+          type: 'file',
+          parent_path: '/Projects/p/docs',
+          file_id: 'file-1',
+        });
+        return rpc(request.id, {
+          inode: 'target-inode-1',
+          name: 'invoice.pdf',
+          type: 'file',
+          parent_inode: 'parent-1',
+          file_id: 'file-1',
+          etag: null,
+          metadata: {},
+          attributes: [],
+          updated_at: 1710000000,
+        });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async () => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      const result = await inbox.saveAttachment({
+        messageRef: legacyRef(),
+        filename: 'invoice.pdf',
+        targetPath: '/Projects/p/docs/invoice.pdf',
+      });
+
+      assert.deepEqual(result, {
+        saved: true,
+        entry: {
+          id: 'target-inode-1',
+          name: 'invoice.pdf',
+          path: '/Projects/p/docs/invoice.pdf',
+          fileId: 'file-1',
+        },
+      });
+    }
+  );
+});

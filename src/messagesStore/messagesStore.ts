@@ -15,6 +15,9 @@ import type {
   AttachmentDeleteResult,
   AttachmentDownloadUrlParams,
   AttachmentDownloadUrlResult,
+  AttachmentSavedDriveEntry,
+  AttachmentSaveToDriveParams,
+  AttachmentSaveToDriveResult,
   AttachmentSummary,
   AttachmentUploadCommitParams,
   AttachmentUploadCommitResult,
@@ -258,6 +261,29 @@ const decodeAttachmentDownloadUrl = (o: unknown): AttachmentDownloadUrlResult =>
   };
 };
 
+const decodeAttachmentSavedDriveEntry = (o: unknown): AttachmentSavedDriveEntry => {
+  const r = raw(o);
+  return {
+    id: strRequired(r, 'inode'),
+    name: strRequired(r, 'name'),
+    type: strRequired(r, 'type'),
+    parentId: str(r, 'parent_inode'),
+    fileId: str(r, 'file_id'),
+    etag: str(r, 'etag'),
+    size: typeof r.size === 'number' ? r.size : null,
+    mimeType: str(r, 'mime_type'),
+    fullPath: str(r, 'full_path'),
+  };
+};
+
+const decodeAttachmentSaveToDrive = (o: unknown): AttachmentSaveToDriveResult => {
+  const r = raw(o);
+  return {
+    saved: bool(r, 'saved'),
+    entry: decodeAttachmentSavedDriveEntry(r.entry),
+  };
+};
+
 const decodeAttachmentDelete = (o: unknown): AttachmentDeleteResult => {
   const r = raw(o);
   return { deleted: bool(r, 'deleted') };
@@ -334,6 +360,17 @@ const makeMessageScoped = (
         attachment_id: p.attachmentId,
       });
       return decodeAttachmentDownloadUrl(result);
+    },
+
+    saveToDrive: async (p: AttachmentSaveToDriveParams) => {
+      const result = await call('messages_store/attachment/save-to-drive', {
+        mailbox_id: mailboxId,
+        folder_id: folderId,
+        external_id: externalId,
+        attachment_id: p.attachmentId,
+        target_path: p.targetPath,
+      });
+      return decodeAttachmentSaveToDrive(result);
     },
 
     delete: async (p: AttachmentDeleteParams) => {
