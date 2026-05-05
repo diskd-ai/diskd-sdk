@@ -116,10 +116,13 @@ export type DeleteBatchResult = {
   readonly deleted: number;
 };
 
+export type ListMessagesOrderBy = 'message_date_desc' | 'store_updated_desc';
+
 /** Cursor-paginated message-list parameters. */
 export type ListMessagesParams = {
   readonly limit?: number;
   readonly cursor?: string;
+  readonly orderBy?: ListMessagesOrderBy;
 };
 
 /** One stored message row, payload opaque. */

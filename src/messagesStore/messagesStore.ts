@@ -446,6 +446,7 @@ const makeFolderScoped = (
       folder_id: folderId,
       ...optional('limit', p?.limit),
       ...optional('cursor', p?.cursor),
+      ...optional('order_by', p?.orderBy),
     });
     return decodeListMessages(result);
   },

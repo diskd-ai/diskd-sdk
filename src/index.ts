@@ -365,6 +365,7 @@ export type {
   FolderSummary,
   IncomingMessage,
   InitMailboxResult,
+  ListMessagesOrderBy,
   ListMessagesParams,
   ListMessagesResult,
   MailboxScopedClient,

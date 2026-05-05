@@ -110,6 +110,37 @@ test('messagesStore.listMailboxes accepts null db_inode for segment-backed mailb
   );
 });
 
+test('messagesStore.folder.listMessages forwards orderBy as order_by', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = parseBody(init);
+      assert.equal(request.method, 'messages_store/list');
+      assert.deepEqual(request.params, {
+        mailbox_id: 'exchange-mail-w1upgraidefr',
+        folder_id: 'INBOX',
+        limit: 50,
+        cursor: 'cursor-1',
+        order_by: 'message_date_desc',
+      });
+      return jsonRpcResponse({ items: [], next_cursor: null });
+    },
+    async () => {
+      const client = diskd.os.messagesStore({ auth: makeAuth(), url: 'http://drive:8000/api/v1' });
+
+      const result = await client
+        .mailbox({ mailboxId: 'exchange-mail-w1upgraidefr' })
+        .folder({ folderId: 'INBOX' })
+        .listMessages({
+          limit: 50,
+          cursor: 'cursor-1',
+          orderBy: 'message_date_desc',
+        });
+
+      assert.deepEqual(result, { items: [], nextCursor: null });
+    }
+  );
+});
+
 test('messagesStore attachment.saveToDrive encodes payload and decodes target entry only', async () => {
   await withFetchMock(
     (_url, init) => {
