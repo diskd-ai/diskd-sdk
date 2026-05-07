@@ -613,19 +613,79 @@ export const createInboxClient = (params: {
     return attachmentId;
   };
 
-  const saveExchangeAttachmentExact = async (
-    account: string,
+  const findExchangeMessageByUid = async (
+    mailboxId: string,
     folderId: string,
+    messageId: string
+  ): Promise<StoredMessage> => {
+    let cursor: string | undefined;
+    do {
+      const page = await messagesStore
+        .mailbox({ mailboxId })
+        .folder({ folderId })
+        .listMessages({ limit: SEARCH_SCAN_LIMIT, ...(cursor ? { cursor } : {}) });
+      const match = page.items.find((row) => {
+        const payload = payloadObject(row);
+        return (
+          row.externalId === messageId ||
+          row.externalId.endsWith(`:${messageId}`) ||
+          (isNumber(payload.uid) && String(payload.uid) === messageId)
+        );
+      });
+      if (match) return match;
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+    throw new Error(`Email not found: ${messageId}`);
+  };
+
+  const resolveExchangeMessageForSave = async (
+    account: string,
     messageId: string,
+    folderId?: string
+  ): Promise<{
+    readonly mailboxId: string;
+    readonly folderId: string;
+    readonly row: StoredMessage;
+  }> => {
+    const mailboxId = exchangeMailboxId(account);
+    const folderIds = folderId ? [folderId] : await listExchangeFolderIds(account);
+    let lastError: unknown = null;
+
+    for (const candidateFolderId of folderIds) {
+      try {
+        const row = await messagesStore
+          .mailbox({ mailboxId })
+          .folder({ folderId: candidateFolderId })
+          .getMessage({ externalId: messageId });
+        return { mailboxId, folderId: candidateFolderId, row };
+      } catch (error) {
+        lastError = error;
+        if (!isNotFound(error)) throw error;
+      }
+    }
+
+    for (const candidateFolderId of folderIds) {
+      try {
+        const row = await findExchangeMessageByUid(mailboxId, candidateFolderId, messageId);
+        return { mailboxId, folderId: candidateFolderId, row };
+      } catch (error) {
+        lastError = error;
+        if (!isNotFound(error)) throw error;
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error(`Email not found: ${messageId}`);
+  };
+
+  const saveExchangeAttachmentFromRow = async (
+    account: string,
+    mailboxId: string,
+    folderId: string,
+    row: StoredMessage,
     attachmentId: string | undefined,
     filename: string | undefined,
     targetPath: string
   ): Promise<InboxSaveAttachmentResult> => {
-    const mailboxId = exchangeMailboxId(account);
-    const row = await messagesStore
-      .mailbox({ mailboxId })
-      .folder({ folderId })
-      .getMessage({ externalId: messageId });
     const email = exchangeStoredEmail(row, account, folderId);
     const attachment = findAttachmentByHandle(email, attachmentId, filename);
     const resolvedAttachmentId = await ensureExchangeAttachmentLoaded(
@@ -648,6 +708,30 @@ export const createInboxClient = (params: {
         fileId: saved.entry.fileId,
       },
     };
+  };
+
+  const saveExchangeAttachmentExact = async (
+    account: string,
+    folderId: string,
+    messageId: string,
+    attachmentId: string | undefined,
+    filename: string | undefined,
+    targetPath: string
+  ): Promise<InboxSaveAttachmentResult> => {
+    const mailboxId = exchangeMailboxId(account);
+    const row = await messagesStore
+      .mailbox({ mailboxId })
+      .folder({ folderId })
+      .getMessage({ externalId: messageId });
+    return saveExchangeAttachmentFromRow(
+      account,
+      mailboxId,
+      folderId,
+      row,
+      attachmentId,
+      filename,
+      targetPath
+    );
   };
 
   return {
@@ -817,25 +901,33 @@ export const createInboxClient = (params: {
       if (!resolvedAccount || !resolvedMessageId) {
         throw new Error('Either messageRef, or account + messageId is required');
       }
+      let exchangeMessage: {
+        readonly mailboxId: string;
+        readonly folderId: string;
+        readonly row: StoredMessage;
+      } | null = null;
       try {
-        return await saveExchangeAttachmentExact(
+        exchangeMessage = await resolveExchangeMessageForSave(
           resolvedAccount,
-          nonEmpty(folderId) ?? DEFAULT_EXCHANGE_FOLDER,
           resolvedMessageId,
+          nonEmpty(folderId) ?? undefined
+        );
+      } catch (error) {
+        if (!isNotFound(error)) throw error;
+      }
+      if (exchangeMessage) {
+        return saveExchangeAttachmentFromRow(
+          resolvedAccount,
+          exchangeMessage.mailboxId,
+          exchangeMessage.folderId,
+          exchangeMessage.row,
           attachmentId,
           filename,
           targetPath
         );
-      } catch (error) {
-        if (!isNotFound(error)) throw error;
-        if (!resolvedFilename) throw new Error('filename is required for legacy attachments');
-        return saveLegacyAttachment(
-          resolvedAccount,
-          resolvedMessageId,
-          resolvedFilename,
-          targetPath
-        );
       }
+      if (!resolvedFilename) throw new Error('filename is required for legacy attachments');
+      return saveLegacyAttachment(resolvedAccount, resolvedMessageId, resolvedFilename, targetPath);
     },
   };
 };

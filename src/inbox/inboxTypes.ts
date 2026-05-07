@@ -119,7 +119,7 @@ export type InboxMarkReadParams = InboxReadParams & {
 export type InboxSaveAttachmentParams = InboxReadParams & {
   /** Preferred Exchange attachment handle returned by read(). */
   readonly attachmentId?: string;
-  /** Legacy filename fallback. Required for legacy JSON mail. */
+  /** Attachment filename fallback. Required for legacy JSON mail; also supports Exchange UID lookup. */
   readonly filename?: string;
   /** Absolute Drive path resolved by caller policy/chroot. */
   readonly targetPath: string;

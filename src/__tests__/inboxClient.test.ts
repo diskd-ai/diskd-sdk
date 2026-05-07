@@ -39,6 +39,12 @@ const rpc = (id: unknown, result: unknown): Response =>
     headers: { 'Content-Type': 'application/json', 'mcp-session-id': 'mcp-session' },
   });
 
+const rpcError = (id: unknown, message: string, code = -32004): Response =>
+  new Response(JSON.stringify({ jsonrpc: '2.0', id, error: { code, message } }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json', 'mcp-session-id': 'mcp-session' },
+  });
+
 const body = (init?: RequestInit): Record<string, unknown> =>
   JSON.parse(typeof init?.body === 'string' ? init.body : '{}') as Record<string, unknown>;
 
@@ -312,6 +318,188 @@ test('platform.inbox.saveAttachment saves Exchange attachment by messageRef and 
           'messages_store/attachment/list',
           'messages_store/attachment/save-to-drive',
         ]
+      );
+    }
+  );
+});
+
+test('platform.inbox.saveAttachment saves Exchange attachment by account plus UID and filename', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/folder/list') {
+        return rpc(request.id, {
+          folders: [
+            {
+              folder_id: 'INBOX',
+              display_name: 'Inbox',
+              metadata: {},
+              message_count: 1,
+              updated_at: '2026-05-04T10:00:00.000Z',
+            },
+          ],
+        });
+      }
+      if (request.method === 'messages_store/get') {
+        assert.deepEqual(request.params, {
+          mailbox_id: 'exchange-mail-personal',
+          folder_id: 'INBOX',
+          external_id: '864',
+        });
+        return rpcError(request.id, 'MESSAGE_NOT_FOUND');
+      }
+      if (request.method === 'messages_store/list') {
+        assert.deepEqual(request.params, {
+          mailbox_id: 'exchange-mail-personal',
+          folder_id: 'INBOX',
+          limit: 100,
+        });
+        const row = attachmentMessageRow('loaded').message;
+        return rpc(request.id, {
+          items: [
+            {
+              ...row,
+              external_id: '1728649431:864',
+              payload: { ...row.payload, uid: 864 },
+            },
+          ],
+          next_cursor: null,
+        });
+      }
+      if (request.method === 'messages_store/attachment/list') {
+        return rpc(request.id, {
+          items: [
+            {
+              attachment_id: 'part-1',
+              filename: 'invoice.pdf',
+              content_type: 'application/pdf',
+              size_bytes: 123,
+              drive_inode: 'source-inode-1',
+              created_at: '2026-05-04T10:00:00.000Z',
+            },
+          ],
+        });
+      }
+      if (request.method === 'messages_store/attachment/save-to-drive') {
+        assert.deepEqual(request.params, {
+          mailbox_id: 'exchange-mail-personal',
+          folder_id: 'INBOX',
+          external_id: '1728649431:864',
+          attachment_id: 'part-1',
+          target_path: '/Projects/p/docs/invoice.pdf',
+        });
+        return rpc(request.id, {
+          saved: true,
+          entry: {
+            inode: 'target-inode-1',
+            name: 'invoice.pdf',
+            type: 'file',
+            parent_inode: 'parent-1',
+            file_id: 'file-1',
+            etag: null,
+            size: 123,
+            mime_type: 'application/pdf',
+            full_path: '/Projects/p/docs/invoice.pdf',
+          },
+        });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      const result = await inbox.saveAttachment({
+        account: 'mail__personal',
+        messageId: '864',
+        filename: 'invoice.pdf',
+        targetPath: '/Projects/p/docs/invoice.pdf',
+      });
+
+      assert.deepEqual(result, {
+        saved: true,
+        entry: {
+          id: 'target-inode-1',
+          name: 'invoice.pdf',
+          path: '/Projects/p/docs/invoice.pdf',
+          fileId: 'file-1',
+        },
+      });
+      assert.deepEqual(
+        calls.map((call) => body(call.init).method),
+        [
+          'messages_store/folder/list',
+          'messages_store/get',
+          'messages_store/list',
+          'messages_store/attachment/list',
+          'messages_store/attachment/save-to-drive',
+        ]
+      );
+    }
+  );
+});
+
+test('platform.inbox.saveAttachment does not fallback to legacy when Exchange target path is missing', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/folder/list') {
+        return rpc(request.id, {
+          folders: [
+            {
+              folder_id: 'INBOX',
+              display_name: 'Inbox',
+              metadata: {},
+              message_count: 1,
+              updated_at: '2026-05-04T10:00:00.000Z',
+            },
+          ],
+        });
+      }
+      if (request.method === 'messages_store/get')
+        return rpc(request.id, attachmentMessageRow('loaded'));
+      if (request.method === 'messages_store/attachment/list') {
+        return rpc(request.id, {
+          items: [
+            {
+              attachment_id: 'part-1',
+              filename: 'invoice.pdf',
+              content_type: 'application/pdf',
+              size_bytes: 123,
+              drive_inode: 'source-inode-1',
+              created_at: '2026-05-04T10:00:00.000Z',
+            },
+          ],
+        });
+      }
+      if (request.method === 'messages_store/attachment/save-to-drive') {
+        return rpcError(request.id, 'Drive target parent not found: /Projects/p/missing', -32004);
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      await assert.rejects(
+        () =>
+          inbox.saveAttachment({
+            account: 'mail__personal',
+            messageId: '14:42',
+            filename: 'invoice.pdf',
+            targetPath: '/Projects/p/missing/invoice.pdf',
+          }),
+        /Drive target parent not found/
+      );
+      assert.equal(
+        calls.some((call) => body(call.init).method === 'drive/paths/list'),
+        false
       );
     }
   );
