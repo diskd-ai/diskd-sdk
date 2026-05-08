@@ -26,16 +26,6 @@ const DEFAULT_EXCHANGE_FOLDER = 'INBOX';
 const SEARCH_SCAN_LIMIT = 100;
 const SYSTEM_HYDRATE_EMAIL_BODIES_TOOL = 'system_hydrate_email_bodies';
 const SYSTEM_HYDRATE_EMAIL_ATTACHMENT_TOOL = 'system_hydrate_email_attachment';
-const REF_PREFIX = 'op-inbox:';
-
-type MessageRef =
-  | { readonly source: 'legacy'; readonly account: string; readonly messageId: string }
-  | {
-      readonly source: 'exchange';
-      readonly account: string;
-      readonly folderId: string;
-      readonly messageId: string;
-    };
 
 type RawObject = { readonly [key: string]: unknown };
 
@@ -65,30 +55,6 @@ const isJsonFile = (entry: DrivePathEntry): boolean =>
   entry.type === 'file' && entry.name.endsWith('.json');
 
 const isDirectory = (entry: DrivePathEntry): boolean => entry.type === 'dir';
-
-const encodeRef = (ref: MessageRef): string =>
-  `${REF_PREFIX}${Buffer.from(JSON.stringify(ref), 'utf-8').toString('base64url')}`;
-
-const decodeRef = (value: string): MessageRef | null => {
-  if (!value.startsWith(REF_PREFIX)) return null;
-  try {
-    const decoded = JSON.parse(
-      Buffer.from(value.slice(REF_PREFIX.length), 'base64url').toString('utf-8')
-    ) as unknown;
-    if (!isObject(decoded)) return null;
-    const source = decoded.source;
-    const account = decoded.account;
-    const messageId = decoded.messageId;
-    if (!isString(account) || !isString(messageId)) return null;
-    if (source === 'legacy') return { source, account, messageId };
-    if (source === 'exchange' && isString(decoded.folderId)) {
-      return { source, account, folderId: decoded.folderId, messageId };
-    }
-    return null;
-  } catch {
-    return null;
-  }
-};
 
 const parseContact = (value: unknown): StoredEmailContact => {
   if (!isObject(value)) return { name: '', address: '' };
@@ -163,7 +129,6 @@ const legacyEnvelope = (
   account: string,
   drivePath: string
 ): InboxEmailEnvelope => ({
-  messageRef: encodeRef({ source: 'legacy', account, messageId: email.messageId }),
   folderId: email.folder || 'inbox',
   account: email.account || account,
   messageId: email.messageId,
@@ -179,9 +144,8 @@ const legacyEnvelope = (
   drivePath,
 });
 
-const withLegacyRef = (email: StoredEmail, account: string): StoredEmail => ({
+const withLegacyFolder = (email: StoredEmail): StoredEmail => ({
   ...email,
-  messageRef: encodeRef({ source: 'legacy', account, messageId: email.messageId }),
   folderId: email.folder || 'inbox',
 });
 
@@ -200,7 +164,6 @@ const exchangeStoredEmail = (
       ? payload.folderId
       : folderId;
   return {
-    messageRef: encodeRef({ source: 'exchange', account, folderId: folder, messageId }),
     folderId: folder,
     messageId,
     uid: isNumber(payload.uid) ? payload.uid : null,
@@ -241,7 +204,6 @@ const exchangeEnvelope = (
 ): InboxEmailEnvelope => {
   const email = exchangeStoredEmail(row, account, folderId);
   return {
-    messageRef: email.messageRef,
     folderId: email.folderId,
     account: email.account,
     messageId: email.messageId,
@@ -424,7 +386,7 @@ export const createInboxClient = (params: {
     const entries = await drive.list({ path: dirPath });
     for (const entry of entries.filter(isJsonFile)) {
       const email = await readLegacyFile(`${dirPath}/${entry.name}`);
-      if (email?.messageId === messageId) return withLegacyRef(email, account);
+      if (email?.messageId === messageId) return withLegacyFolder(email);
     }
     throw new Error(`Email not found: ${messageId}`);
   };
@@ -458,38 +420,21 @@ export const createInboxClient = (params: {
     }
   };
 
-  const readExchangeExact = async (
-    account: string,
-    folderId: string,
-    messageId: string
-  ): Promise<StoredEmail> => {
-    const mailboxId = exchangeMailboxId(account);
-    const folder = messagesStore.mailbox({ mailboxId }).folder({ folderId });
-    let row = await folder.getMessage({ externalId: messageId });
-    if (shouldHydrateBody(row)) {
-      await hydrateBody(mailboxId, folderId, row.externalId);
-      row = await folder.getMessage({ externalId: row.externalId });
-    }
-    return exchangeStoredEmail(row, account, folderId);
-  };
-
   const readExchange = async (
     account: string,
     messageId: string,
     folderId?: string
   ): Promise<StoredEmail> => {
-    if (folderId) return readExchangeExact(account, folderId, messageId);
-    const folders = await listExchangeFolderIds(account);
-    let lastError: unknown = null;
-    for (const candidate of folders) {
-      try {
-        return await readExchangeExact(account, candidate, messageId);
-      } catch (error) {
-        lastError = error;
-        if (!isNotFound(error)) throw error;
-      }
+    const resolved = await resolveExchangeMessage(account, messageId, folderId);
+    let row = resolved.row;
+    if (shouldHydrateBody(row)) {
+      await hydrateBody(resolved.mailboxId, resolved.folderId, row.externalId);
+      row = await messagesStore
+        .mailbox({ mailboxId: resolved.mailboxId })
+        .folder({ folderId: resolved.folderId })
+        .getMessage({ externalId: row.externalId });
     }
-    throw lastError instanceof Error ? lastError : new Error(`Email not found: ${messageId}`);
+    return exchangeStoredEmail(row, account, resolved.folderId);
   };
 
   const markLegacyRead = async (
@@ -505,31 +450,38 @@ export const createInboxClient = (params: {
       if (email?.messageId !== messageId) continue;
       const updated = { ...email, isRead };
       await drive.tools.writeFile({ path, content: JSON.stringify(updated, null, 2) });
-      return withLegacyRef(updated, account);
+      return withLegacyFolder(updated);
     }
     throw new Error(`Email not found: ${messageId}`);
   };
 
   const markExchangeRead = async (
     account: string,
-    folderId: string,
+    folderId: string | undefined,
     messageId: string,
     isRead: boolean
   ): Promise<StoredEmail> => {
-    const mailboxId = exchangeMailboxId(account);
-    const folder = messagesStore.mailbox({ mailboxId }).folder({ folderId });
-    const row = await folder.getMessage({ externalId: messageId });
+    const resolved = await resolveExchangeMessage(account, messageId, folderId);
+    const folder = messagesStore
+      .mailbox({ mailboxId: resolved.mailboxId })
+      .folder({ folderId: resolved.folderId });
     await folder.upsertBatch({
-      items: [{ externalId: row.externalId, payload: { ...row.payload, isRead } }],
+      items: [
+        { externalId: resolved.row.externalId, payload: { ...resolved.row.payload, isRead } },
+      ],
     });
-    return exchangeStoredEmail({ ...row, payload: { ...row.payload, isRead } }, account, folderId);
+    return exchangeStoredEmail(
+      { ...resolved.row, payload: { ...resolved.row.payload, isRead } },
+      account,
+      resolved.folderId
+    );
   };
 
   const readLegacyForSave = async (account: string, messageId: string): Promise<StoredEmail> => {
     const directPath = `${inboxPath(account)}/${messageId}`;
     try {
       const email = await readLegacyFile(directPath);
-      if (email) return withLegacyRef(email, account);
+      if (email) return withLegacyFolder(email);
     } catch {
       // Fall back to scanning by stored messageId for compatibility with read/list handles.
     }
@@ -638,7 +590,7 @@ export const createInboxClient = (params: {
     throw new Error(`Email not found: ${messageId}`);
   };
 
-  const resolveExchangeMessageForSave = async (
+  const resolveExchangeMessage = async (
     account: string,
     messageId: string,
     folderId?: string
@@ -710,30 +662,6 @@ export const createInboxClient = (params: {
     };
   };
 
-  const saveExchangeAttachmentExact = async (
-    account: string,
-    folderId: string,
-    messageId: string,
-    attachmentId: string | undefined,
-    filename: string | undefined,
-    targetPath: string
-  ): Promise<InboxSaveAttachmentResult> => {
-    const mailboxId = exchangeMailboxId(account);
-    const row = await messagesStore
-      .mailbox({ mailboxId })
-      .folder({ folderId })
-      .getMessage({ externalId: messageId });
-    return saveExchangeAttachmentFromRow(
-      account,
-      mailboxId,
-      folderId,
-      row,
-      attachmentId,
-      filename,
-      targetPath
-    );
-  };
-
   return {
     listAccounts: async (): Promise<InboxAccountList> => {
       const legacyAccounts = await listLegacyAccounts();
@@ -782,21 +710,11 @@ export const createInboxClient = (params: {
       }
     },
 
-    read: async ({
-      account,
-      messageId,
-      messageRef,
-      folderId,
-    }: InboxReadParams): Promise<StoredEmail> => {
-      const ref = messageRef ? decodeRef(messageRef) : messageId ? decodeRef(messageId) : null;
-      if (messageRef && !ref) throw new Error('Invalid messageRef');
-      if (ref?.source === 'legacy') return readLegacy(ref.account, ref.messageId);
-      if (ref?.source === 'exchange')
-        return readExchangeExact(ref.account, ref.folderId, ref.messageId);
+    read: async ({ account, messageId, folderId }: InboxReadParams): Promise<StoredEmail> => {
       const resolvedAccount = nonEmpty(account);
       const resolvedMessageId = nonEmpty(messageId);
       if (!resolvedAccount || !resolvedMessageId) {
-        throw new Error('Either messageRef, or account + messageId is required');
+        throw new Error('account + messageId is required');
       }
       try {
         return await readExchange(resolvedAccount, resolvedMessageId, folderId);
@@ -846,21 +764,16 @@ export const createInboxClient = (params: {
       return { results };
     },
 
-    markRead: async ({ account, messageId, messageRef, folderId, isRead }: InboxMarkReadParams) => {
-      const ref = messageRef ? decodeRef(messageRef) : messageId ? decodeRef(messageId) : null;
-      if (messageRef && !ref) throw new Error('Invalid messageRef');
-      if (ref?.source === 'legacy') return markLegacyRead(ref.account, ref.messageId, isRead);
-      if (ref?.source === 'exchange')
-        return markExchangeRead(ref.account, ref.folderId, ref.messageId, isRead);
+    markRead: async ({ account, messageId, folderId, isRead }: InboxMarkReadParams) => {
       const resolvedAccount = nonEmpty(account);
       const resolvedMessageId = nonEmpty(messageId);
       if (!resolvedAccount || !resolvedMessageId) {
-        throw new Error('Either messageRef, or account + messageId is required');
+        throw new Error('account + messageId is required');
       }
       try {
         return await markExchangeRead(
           resolvedAccount,
-          nonEmpty(folderId) ?? DEFAULT_EXCHANGE_FOLDER,
+          nonEmpty(folderId) ?? undefined,
           resolvedMessageId,
           isRead
         );
@@ -873,33 +786,16 @@ export const createInboxClient = (params: {
     saveAttachment: async ({
       account,
       messageId,
-      messageRef,
       folderId,
       attachmentId,
       filename,
       targetPath,
     }: InboxSaveAttachmentParams): Promise<InboxSaveAttachmentResult> => {
-      const ref = messageRef ? decodeRef(messageRef) : messageId ? decodeRef(messageId) : null;
-      if (messageRef && !ref) throw new Error('Invalid messageRef');
       const resolvedFilename = nonEmpty(filename);
-      if (ref?.source === 'legacy') {
-        if (!resolvedFilename) throw new Error('filename is required for legacy attachments');
-        return saveLegacyAttachment(ref.account, ref.messageId, resolvedFilename, targetPath);
-      }
-      if (ref?.source === 'exchange') {
-        return saveExchangeAttachmentExact(
-          ref.account,
-          ref.folderId,
-          ref.messageId,
-          attachmentId,
-          filename,
-          targetPath
-        );
-      }
       const resolvedAccount = nonEmpty(account);
       const resolvedMessageId = nonEmpty(messageId);
       if (!resolvedAccount || !resolvedMessageId) {
-        throw new Error('Either messageRef, or account + messageId is required');
+        throw new Error('account + messageId is required');
       }
       let exchangeMessage: {
         readonly mailboxId: string;
@@ -907,7 +803,7 @@ export const createInboxClient = (params: {
         readonly row: StoredMessage;
       } | null = null;
       try {
-        exchangeMessage = await resolveExchangeMessageForSave(
+        exchangeMessage = await resolveExchangeMessage(
           resolvedAccount,
           resolvedMessageId,
           nonEmpty(folderId) ?? undefined

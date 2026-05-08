@@ -28,8 +28,6 @@ export type StoredEmailAttachment = {
 // -- Full stored email --
 
 export type StoredEmail = {
-  /** Opaque handle returned by list/search; preferred input for read/mark-read. */
-  readonly messageRef?: string;
   readonly folderId?: string;
   readonly messageId: string;
   readonly uid: number | null;
@@ -55,7 +53,6 @@ export type StoredEmail = {
 };
 
 export type InboxEmailEnvelope = {
-  readonly messageRef?: string;
   readonly folderId?: string;
   readonly account: string;
   readonly messageId: string;
@@ -92,9 +89,8 @@ export type InboxAccountList = {
 };
 
 export type InboxReadParams = {
-  readonly account?: string;
-  readonly messageId?: string;
-  readonly messageRef?: string;
+  readonly account: string;
+  readonly messageId: string;
   readonly folderId?: string;
 };
 

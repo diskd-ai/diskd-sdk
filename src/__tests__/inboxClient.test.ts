@@ -128,7 +128,7 @@ test('platform.inbox.read hydrates unloaded Exchange body and rereads messagesSt
 
       assert.equal(result.messageId, '14:42');
       assert.equal(result.bodyText, 'Hydrated body');
-      assert.match(result.messageRef ?? '', /^op-inbox:/);
+      assert.equal('messageRef' in result, false);
       const methods = calls.map((call) => body(call.init).method);
       assert.deepEqual(methods, [
         'messages_store/folder/list',
@@ -154,6 +154,150 @@ test('platform.inbox.read hydrates unloaded Exchange body and rereads messagesSt
           maxMessages: 1,
         },
       });
+    }
+  );
+});
+
+test('platform.inbox.read resolves Exchange messages by account plus UID', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/folder/list') {
+        return rpc(request.id, {
+          folders: [
+            {
+              folder_id: 'INBOX',
+              display_name: 'Inbox',
+              metadata: {},
+              message_count: 1,
+              updated_at: '2026-05-04T10:00:00.000Z',
+            },
+          ],
+        });
+      }
+      if (request.method === 'messages_store/get') {
+        assert.deepEqual(request.params, {
+          mailbox_id: 'exchange-mail-personal',
+          folder_id: 'INBOX',
+          external_id: '864',
+        });
+        return rpcError(request.id, 'MESSAGE_NOT_FOUND');
+      }
+      if (request.method === 'messages_store/list') {
+        assert.deepEqual(request.params, {
+          mailbox_id: 'exchange-mail-personal',
+          folder_id: 'INBOX',
+          limit: 100,
+        });
+        const row = messageRow('loaded', 'Body by UID').message;
+        return rpc(request.id, {
+          items: [
+            {
+              ...row,
+              external_id: '1728649431:864',
+              payload: { ...row.payload, accountId: 'mail__personal', uid: 864 },
+            },
+          ],
+          next_cursor: null,
+        });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      const result = await inbox.read({ account: 'mail__personal', messageId: '864' });
+
+      assert.equal(result.messageId, '1728649431:864');
+      assert.equal(result.uid, 864);
+      assert.equal(result.bodyText, 'Body by UID');
+      assert.equal('messageRef' in result, false);
+      assert.deepEqual(
+        calls.map((call) => body(call.init).method),
+        ['messages_store/folder/list', 'messages_store/get', 'messages_store/list']
+      );
+    }
+  );
+});
+
+test('platform.inbox.markRead updates Exchange messages by account plus UID', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/folder/list') {
+        return rpc(request.id, {
+          folders: [
+            {
+              folder_id: 'INBOX',
+              display_name: 'Inbox',
+              metadata: {},
+              message_count: 1,
+              updated_at: '2026-05-04T10:00:00.000Z',
+            },
+          ],
+        });
+      }
+      if (request.method === 'messages_store/get') {
+        assert.deepEqual(request.params, {
+          mailbox_id: 'exchange-mail-personal',
+          folder_id: 'INBOX',
+          external_id: '864',
+        });
+        return rpcError(request.id, 'MESSAGE_NOT_FOUND');
+      }
+      if (request.method === 'messages_store/list') {
+        const row = messageRow('loaded', 'Body by UID').message;
+        return rpc(request.id, {
+          items: [
+            {
+              ...row,
+              external_id: '1728649431:864',
+              payload: { ...row.payload, accountId: 'mail__personal', uid: 864 },
+            },
+          ],
+          next_cursor: null,
+        });
+      }
+      if (request.method === 'messages_store/upsert-batch') {
+        assert.deepEqual(request.params, {
+          mailbox_id: 'exchange-mail-personal',
+          folder_id: 'INBOX',
+          items: [
+            {
+              external_id: '1728649431:864',
+              payload: {
+                ...messageRow('loaded', 'Body by UID').message.payload,
+                accountId: 'mail__personal',
+                uid: 864,
+                isRead: true,
+              },
+            },
+          ],
+        });
+        return rpc(request.id, { inserted: 0, updated: 1 });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async () => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      const result = await inbox.markRead({
+        account: 'mail__personal',
+        messageId: '864',
+        isRead: true,
+      });
+
+      assert.equal(result.messageId, '1728649431:864');
+      assert.equal(result.isRead, true);
+      assert.equal('messageRef' in result, false);
     }
   );
 });
@@ -193,22 +337,6 @@ test('platform.inbox.markRead updates only isRead for Exchange payload', async (
   );
 });
 
-const exchangeRef = (
-  account = 'exchange-google-personal',
-  folderId = 'INBOX',
-  messageId = '14:42'
-): string =>
-  `op-inbox:${Buffer.from(
-    JSON.stringify({ source: 'exchange', account, folderId, messageId }),
-    'utf-8'
-  ).toString('base64url')}`;
-
-const legacyRef = (account = 'work', messageId = '002.json'): string =>
-  `op-inbox:${Buffer.from(
-    JSON.stringify({ source: 'legacy', account, messageId }),
-    'utf-8'
-  ).toString('base64url')}`;
-
 const attachmentMessageRow = (storageState: string) => ({
   message: {
     external_id: '14:42',
@@ -244,7 +372,7 @@ const attachmentMessageRow = (storageState: string) => ({
   },
 });
 
-test('platform.inbox.saveAttachment saves Exchange attachment by messageRef and attachmentId', async () => {
+test('platform.inbox.saveAttachment saves Exchange attachment by account, messageId, and attachmentId', async () => {
   await withFetchMock(
     (_url, init) => {
       const request = body(init);
@@ -297,7 +425,9 @@ test('platform.inbox.saveAttachment saves Exchange attachment by messageRef and 
       });
 
       const result = await inbox.saveAttachment({
-        messageRef: exchangeRef(),
+        account: 'exchange-google-personal',
+        folderId: 'INBOX',
+        messageId: '14:42',
         attachmentId: 'part-1',
         targetPath: '/Projects/p/docs/invoice.pdf',
       });
@@ -564,7 +694,9 @@ test('platform.inbox.saveAttachment hydrates unloaded Exchange attachment before
       });
 
       await inbox.saveAttachment({
-        messageRef: exchangeRef(),
+        account: 'exchange-google-personal',
+        folderId: 'INBOX',
+        messageId: '14:42',
         attachmentId: 'part-1',
         targetPath: '/Projects/p/docs/invoice.pdf',
       });
@@ -622,6 +754,15 @@ test('platform.inbox.saveAttachment saves legacy attachment by filename', async 
         );
       }
       const request = body(init);
+      if (request.method === 'messages_store/folder/list') {
+        return rpcError(request.id, 'MAILBOX_NOT_FOUND');
+      }
+      if (request.method === 'messages_store/get') {
+        return rpcError(request.id, 'MESSAGE_NOT_FOUND');
+      }
+      if (request.method === 'messages_store/list') {
+        return rpcError(request.id, 'MESSAGE_NOT_FOUND');
+      }
       if (request.method === 'drive/files/download-url') {
         return rpc(request.id, { url: 'https://download/legacy', expires_in: 3600 });
       }
@@ -672,7 +813,8 @@ test('platform.inbox.saveAttachment saves legacy attachment by filename', async 
       });
 
       const result = await inbox.saveAttachment({
-        messageRef: legacyRef(),
+        account: 'work',
+        messageId: 'legacy-message-1',
         filename: 'invoice.pdf',
         targetPath: '/Projects/p/docs/invoice.pdf',
       });
