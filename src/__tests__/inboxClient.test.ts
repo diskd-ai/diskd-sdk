@@ -287,6 +287,48 @@ test('platform.inbox.read resolves Exchange messages by account plus UID', async
   );
 });
 
+test('platform.inbox.read does not fallback to legacy Drive mail storage', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/folder/list') {
+        return rpc(request.id, {
+          folders: [
+            {
+              folder_id: 'INBOX',
+              display_name: 'Inbox',
+              metadata: {},
+              message_count: 0,
+              updated_at: '2026-05-04T10:00:00.000Z',
+            },
+          ],
+        });
+      }
+      if (request.method === 'messages_store/get') return rpcError(request.id, 'MESSAGE_NOT_FOUND');
+      if (request.method === 'messages_store/list') {
+        return rpc(request.id, { items: [], next_cursor: null });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      await assert.rejects(
+        () => inbox.read({ account: 'google__test', messageId: 'missing-message' }),
+        /Email not found|MESSAGE_NOT_FOUND/
+      );
+      assert.equal(
+        calls.some((call) => String(body(call.init).method).startsWith('drive/')),
+        false
+      );
+    }
+  );
+});
+
 test('platform.inbox.markRead updates Exchange messages by account plus UID', async () => {
   await withFetchMock(
     (_url, init) => {
@@ -890,42 +932,9 @@ test('platform.inbox.saveAttachment hydrates unloaded Exchange attachment before
   );
 });
 
-test('platform.inbox.saveAttachment saves legacy attachment by filename', async () => {
+test('platform.inbox.saveAttachment does not fallback to legacy Drive mail storage', async () => {
   await withFetchMock(
-    (url, init) => {
-      if (url === 'https://download/legacy') {
-        return new Response(
-          JSON.stringify({
-            messageId: 'legacy-message-1',
-            account: 'work',
-            from: { name: '', address: '' },
-            to: [],
-            cc: [],
-            subject: 'Legacy',
-            date: '',
-            receivedAt: '',
-            snippet: '',
-            bodyText: '',
-            bodyHtml: '',
-            hasAttachments: true,
-            attachments: [
-              {
-                filename: 'invoice.pdf',
-                contentType: 'application/pdf',
-                size: 123,
-                drivePath: '/.profile/mail/work/attachments/invoice.pdf',
-              },
-            ],
-            labels: [],
-            isRead: false,
-            isFlagged: false,
-            priority: 'normal',
-            webhookEvent: '',
-            rule: null,
-          }),
-          { status: 200, headers: { 'content-type': 'application/json', 'content-length': '100' } }
-        );
-      }
+    (_url, init) => {
       const request = body(init);
       if (request.method === 'messages_store/folder/list') {
         return rpcError(request.id, 'MAILBOX_NOT_FOUND');
@@ -936,71 +945,29 @@ test('platform.inbox.saveAttachment saves legacy attachment by filename', async 
       if (request.method === 'messages_store/list') {
         return rpcError(request.id, 'MESSAGE_NOT_FOUND');
       }
-      if (request.method === 'drive/files/download-url') {
-        return rpc(request.id, { url: 'https://download/legacy', expires_in: 3600 });
-      }
-      if (request.method === 'drive/paths/resolve') {
-        return rpc(request.id, {
-          items: [
-            {
-              inode: 'source-inode-1',
-              name: 'invoice.pdf',
-              type: 'file',
-              parent_inode: 'attachments',
-              file_id: 'file-1',
-              etag: null,
-              size: 123,
-              metadata: {},
-              attributes: [],
-            },
-          ],
-        });
-      }
-      if (request.method === 'drive/paths/create') {
-        assert.deepEqual(request.params, {
-          name: 'invoice.pdf',
-          dir_name: 'invoice.pdf',
-          type: 'file',
-          parent_path: '/Projects/p/docs',
-          file_id: 'file-1',
-        });
-        return rpc(request.id, {
-          inode: 'target-inode-1',
-          name: 'invoice.pdf',
-          type: 'file',
-          parent_inode: 'parent-1',
-          file_id: 'file-1',
-          etag: null,
-          metadata: {},
-          attributes: [],
-          updated_at: 1710000000,
-        });
-      }
       throw new Error(`unexpected method ${String(request.method)}`);
     },
-    async () => {
+    async (calls) => {
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
         mcpUrl: 'http://mcp',
       });
 
-      const result = await inbox.saveAttachment({
-        account: 'work',
-        messageId: 'legacy-message-1',
-        filename: 'invoice.pdf',
-        targetPath: '/Projects/p/docs/invoice.pdf',
-      });
-
-      assert.deepEqual(result, {
-        saved: true,
-        entry: {
-          id: 'target-inode-1',
-          name: 'invoice.pdf',
-          path: '/Projects/p/docs/invoice.pdf',
-          fileId: 'file-1',
-        },
-      });
+      await assert.rejects(
+        () =>
+          inbox.saveAttachment({
+            account: 'work',
+            messageId: 'legacy-message-1',
+            filename: 'invoice.pdf',
+            targetPath: '/Projects/p/docs/invoice.pdf',
+          }),
+        /MESSAGE_NOT_FOUND|MAILBOX_NOT_FOUND|Email not found/
+      );
+      assert.equal(
+        calls.some((call) => String(body(call.init).method).startsWith('drive/')),
+        false
+      );
     }
   );
 });

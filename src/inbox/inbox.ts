@@ -1,6 +1,4 @@
 import type { AuthModule } from '../auth/types.js';
-import { createDriveClient } from '../drive/drive.js';
-import type { DriveClient, DrivePathEntry } from '../drive/types.js';
 import { createMcpToolsClient } from '../mcpTools/mcpTools.js';
 import type { McpToolsClient } from '../mcpTools/mcpToolsTypes.js';
 import { createMessagesStoreClient } from '../messagesStore/messagesStore.js';
@@ -21,7 +19,6 @@ import type {
   StoredEmailContact,
 } from './inboxTypes.js';
 
-const MAIL_ROOT = '/.profile/mail';
 const DEFAULT_EXCHANGE_FOLDER = 'INBOX';
 const SEARCH_SCAN_LIMIT = 100;
 const SYSTEM_HYDRATE_EMAIL_BODIES_TOOL = 'system_hydrate_email_bodies';
@@ -48,13 +45,6 @@ const exchangeMailboxId = (account: string): string => {
   if (slug.startsWith('exchange-')) return slug.slice(0, 64);
   return `exchange-${slug.slice(0, 55)}`;
 };
-
-const inboxPath = (account: string): string => `${MAIL_ROOT}/${account}/inbox`;
-
-const isJsonFile = (entry: DrivePathEntry): boolean =>
-  entry.type === 'file' && entry.name.endsWith('.json');
-
-const isDirectory = (entry: DrivePathEntry): boolean => entry.type === 'dir';
 
 const parseContact = (value: unknown): StoredEmailContact => {
   if (!isObject(value)) return { name: '', address: '' };
@@ -109,60 +99,6 @@ const parseAttachment = (value: unknown, attachmentId?: string | null): StoredEm
     ...(isString(value.lastLoadError) ? { lastLoadError: value.lastLoadError } : {}),
   };
 };
-
-const parseStoredEmail = (value: unknown): StoredEmail | null => {
-  if (!isObject(value) || !isString(value.messageId)) return null;
-  return {
-    messageId: value.messageId,
-    uid: isNumber(value.uid) ? value.uid : null,
-    account: isString(value.account) ? value.account : '',
-    folder: isString(value.folder) ? value.folder : 'inbox',
-    from: parseContact(value.from),
-    to: parseContactList(value.to),
-    cc: parseContactList(value.cc),
-    subject: isString(value.subject) ? value.subject : '',
-    date: isString(value.date) ? value.date : '',
-    receivedAt: isString(value.receivedAt) ? value.receivedAt : '',
-    snippet: isString(value.snippet) ? value.snippet : '',
-    bodyText: isString(value.bodyText) ? value.bodyText : '',
-    bodyHtml: isString(value.bodyHtml) ? value.bodyHtml : '',
-    hasAttachments: isBool(value.hasAttachments) ? value.hasAttachments : false,
-    attachments: Array.isArray(value.attachments)
-      ? value.attachments.map((attachment) => parseAttachment(attachment))
-      : [],
-    labels: stringArray(value.labels),
-    isRead: isBool(value.isRead) ? value.isRead : false,
-    isFlagged: isBool(value.isFlagged) ? value.isFlagged : false,
-    priority: isString(value.priority) ? value.priority : 'normal',
-    webhookEvent: isString(value.webhookEvent) ? value.webhookEvent : '',
-    rule: isString(value.rule) ? value.rule : null,
-  };
-};
-
-const legacyEnvelope = (
-  email: StoredEmail,
-  account: string,
-  drivePath: string
-): InboxEmailEnvelope => ({
-  folderId: email.folder || 'inbox',
-  account: email.account || account,
-  messageId: email.messageId,
-  from: email.from,
-  subject: email.subject,
-  snippet: email.snippet,
-  date: email.date,
-  hasAttachments: email.hasAttachments,
-  isRead: email.isRead,
-  isFlagged: email.isFlagged,
-  priority: email.priority,
-  labels: email.labels,
-  drivePath,
-});
-
-const withLegacyFolder = (email: StoredEmail): StoredEmail => ({
-  ...email,
-  folderId: email.folder || 'inbox',
-});
 
 const payloadObject = (row: StoredMessage): RawObject => (isObject(row.payload) ? row.payload : {});
 
@@ -259,21 +195,6 @@ const shouldHydrateBody = (row: StoredMessage): boolean => {
   );
 };
 
-const readStreamToBuffer = async (stream: ReadableStream<Uint8Array>): Promise<Buffer> => {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value) chunks.push(value);
-    }
-  } finally {
-    reader.releaseLock();
-  }
-  return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)));
-};
-
 const isNotFound = (error: unknown): boolean =>
   error instanceof Error &&
   /not.?found|MAILBOX_NOT_FOUND|FOLDER_NOT_FOUND|MESSAGE_NOT_FOUND/i.test(error.message);
@@ -288,28 +209,6 @@ const findSystemToolName = async (
     throw new Error(`${systemToolName} tool is not available`);
   }
   return tool.name;
-};
-
-const splitPath = (fullPath: string): { readonly parentPath: string; readonly name: string } => {
-  const normalized = fullPath.replace(/\/+$/, '');
-  if (normalized.length === 0 || normalized === '/') {
-    throw new Error('targetPath must include a filename');
-  }
-  const lastSlash = normalized.lastIndexOf('/');
-  if (lastSlash <= 0) {
-    return { parentPath: '/', name: normalized.replace(/^\//, '') };
-  }
-  return {
-    parentPath: normalized.slice(0, lastSlash),
-    name: normalized.slice(lastSlash + 1),
-  };
-};
-
-const findLegacyAttachment = (email: StoredEmail, filename: string): StoredEmailAttachment => {
-  const match = email.attachments.find((attachment) => attachment.filename === filename);
-  if (!match) throw new Error(`Attachment not found: ${filename}`);
-  if (!match.drivePath) throw new Error(`Attachment has no drivePath: ${filename}`);
-  return match;
 };
 
 const findAttachmentByHandle = (
@@ -345,11 +244,6 @@ export const createInboxClient = (params: {
   readonly driveUrl?: string;
   readonly mcpUrl?: string;
 }): InboxClient => {
-  const drive: DriveClient = createDriveClient({
-    version: 'v1',
-    auth: params.auth,
-    url: params.driveUrl,
-  });
   const messagesStore: MessagesStoreClient = createMessagesStoreClient({
     auth: params.auth,
     url: params.driveUrl,
@@ -357,61 +251,6 @@ export const createInboxClient = (params: {
   const mcpTools = createMcpToolsClient({ auth: params.auth, url: params.mcpUrl });
   let hydrateBodyToolName: string | null = null;
   let hydrateAttachmentToolName: string | null = null;
-
-  const listLegacyAccounts = async (): Promise<readonly string[]> => {
-    try {
-      const entries = await drive.list({ path: MAIL_ROOT });
-      return entries.filter(isDirectory).map((entry) => entry.name);
-    } catch {
-      return [];
-    }
-  };
-
-  const readLegacyFile = async (path: string): Promise<StoredEmail | null> => {
-    const result = await drive.download.file({ path });
-    const buffer = await readStreamToBuffer(result.stream);
-    return parseStoredEmail(JSON.parse(buffer.toString('utf-8')) as unknown);
-  };
-
-  const listLegacy = async (
-    account: string,
-    limit: number,
-    cursor?: string
-  ): Promise<InboxPage> => {
-    const dirPath = inboxPath(account);
-    const entries = await drive.list({ path: dirPath });
-    const jsonFiles = entries
-      .filter(isJsonFile)
-      .slice()
-      .sort((a, b) => b.name.localeCompare(a.name));
-    const total = jsonFiles.length;
-    const startIndex = cursor
-      ? Math.max(jsonFiles.findIndex((entry) => entry.id === cursor) + 1, 0)
-      : 0;
-    const page = jsonFiles.slice(startIndex, startIndex + limit);
-    const items: InboxEmailEnvelope[] = [];
-    for (const entry of page) {
-      const path = `${dirPath}/${entry.name}`;
-      const email = await readLegacyFile(path);
-      if (email) items.push(legacyEnvelope(email, account, path));
-    }
-    const last = page[page.length - 1];
-    return {
-      items,
-      nextCursor: startIndex + limit < total && last ? last.id : null,
-      total,
-    };
-  };
-
-  const readLegacy = async (account: string, messageId: string): Promise<StoredEmail> => {
-    const dirPath = inboxPath(account);
-    const entries = await drive.list({ path: dirPath });
-    for (const entry of entries.filter(isJsonFile)) {
-      const email = await readLegacyFile(`${dirPath}/${entry.name}`);
-      if (email?.messageId === messageId) return withLegacyFolder(email);
-    }
-    throw new Error(`Email not found: ${messageId}`);
-  };
 
   const listExchangeFolderIds = async (account: string): Promise<readonly string[]> => {
     try {
@@ -459,24 +298,6 @@ export const createInboxClient = (params: {
     return exchangeStoredEmail(row, account, resolved.folderId);
   };
 
-  const markLegacyRead = async (
-    account: string,
-    messageId: string,
-    isRead: boolean
-  ): Promise<StoredEmail> => {
-    const dirPath = inboxPath(account);
-    const entries = await drive.list({ path: dirPath });
-    for (const entry of entries.filter(isJsonFile)) {
-      const path = `${dirPath}/${entry.name}`;
-      const email = await readLegacyFile(path);
-      if (email?.messageId !== messageId) continue;
-      const updated = { ...email, isRead };
-      await drive.tools.writeFile({ path, content: JSON.stringify(updated, null, 2) });
-      return withLegacyFolder(updated);
-    }
-    throw new Error(`Email not found: ${messageId}`);
-  };
-
   const markExchangeRead = async (
     account: string,
     folderId: string | undefined,
@@ -497,48 +318,6 @@ export const createInboxClient = (params: {
       account,
       resolved.folderId
     );
-  };
-
-  const readLegacyForSave = async (account: string, messageId: string): Promise<StoredEmail> => {
-    const directPath = `${inboxPath(account)}/${messageId}`;
-    try {
-      const email = await readLegacyFile(directPath);
-      if (email) return withLegacyFolder(email);
-    } catch {
-      // Fall back to scanning by stored messageId for compatibility with read/list handles.
-    }
-    return readLegacy(account, messageId);
-  };
-
-  const saveLegacyAttachment = async (
-    account: string,
-    messageId: string,
-    filename: string,
-    targetPath: string
-  ): Promise<InboxSaveAttachmentResult> => {
-    const email = await readLegacyForSave(account, messageId);
-    const attachment = findLegacyAttachment(email, filename);
-    const sourceEntries = await drive.resolve({ paths: [attachment.drivePath] });
-    const sourceEntry = sourceEntries[0];
-    if (!sourceEntry?.fileId) {
-      throw new Error(`Cannot resolve fileId for attachment path: ${attachment.drivePath}`);
-    }
-    const target = splitPath(targetPath);
-    const created = await drive.create({
-      name: target.name,
-      type: 'file',
-      parentPath: target.parentPath,
-      fileId: sourceEntry.fileId,
-    });
-    return {
-      saved: true,
-      entry: {
-        id: created.id,
-        name: created.name,
-        path: targetPath,
-        fileId: created.fileId,
-      },
-    };
   };
 
   const hydrateAttachment = async (
@@ -686,26 +465,13 @@ export const createInboxClient = (params: {
 
   return {
     listAccounts: async (): Promise<InboxAccountList> => {
-      const legacyAccounts = await listLegacyAccounts();
-      const accountMap = new Map<string, { account: string; displayName: string }>();
-      for (const account of legacyAccounts)
-        accountMap.set(account, { account, displayName: account });
-      try {
-        const mailboxes = await messagesStore.listMailboxes();
-        for (const mailbox of mailboxes) {
-          if (!accountMap.has(mailbox.mailboxId)) {
-            accountMap.set(mailbox.mailboxId, {
-              account: mailbox.mailboxId,
-              displayName: mailbox.displayName,
-            });
-          }
-        }
-      } catch {
-        // Legacy-only workspaces remain valid.
-      }
-      const items = [...accountMap.values()].sort((a, b) =>
-        a.displayName.localeCompare(b.displayName)
-      );
+      const mailboxes = await messagesStore.listMailboxes();
+      const items = mailboxes
+        .map((mailbox) => ({
+          account: mailbox.mailboxId,
+          displayName: mailbox.displayName,
+        }))
+        .sort((a, b) => a.displayName.localeCompare(b.displayName));
       return { accounts: items.map((item) => item.account), items };
     },
 
@@ -716,20 +482,15 @@ export const createInboxClient = (params: {
       cursor,
     }: InboxListParams): Promise<InboxPage> => {
       const selectedFolder = nonEmpty(folderId) ?? DEFAULT_EXCHANGE_FOLDER;
-      try {
-        const page = await messagesStore
-          .mailbox({ mailboxId: exchangeMailboxId(account) })
-          .folder({ folderId: selectedFolder })
-          .listMessages({ limit, ...(cursor ? { cursor } : {}) });
-        return {
-          items: page.items.map((row) => exchangeEnvelope(row, account, selectedFolder)),
-          nextCursor: page.nextCursor,
-          total: page.items.length,
-        };
-      } catch (error) {
-        if (!isNotFound(error)) throw error;
-        return listLegacy(account, limit, cursor);
-      }
+      const page = await messagesStore
+        .mailbox({ mailboxId: exchangeMailboxId(account) })
+        .folder({ folderId: selectedFolder })
+        .listMessages({ limit, ...(cursor ? { cursor } : {}) });
+      return {
+        items: page.items.map((row) => exchangeEnvelope(row, account, selectedFolder)),
+        nextCursor: page.nextCursor,
+        total: page.items.length,
+      };
     },
 
     read: async ({ account, messageId, folderId }: InboxReadParams): Promise<StoredEmail> => {
@@ -738,12 +499,7 @@ export const createInboxClient = (params: {
       if (!resolvedAccount || !resolvedMessageId) {
         throw new Error('account + messageId is required');
       }
-      try {
-        return await readExchange(resolvedAccount, resolvedMessageId, folderId);
-      } catch (error) {
-        if (!isNotFound(error)) throw error;
-        return readLegacy(resolvedAccount, resolvedMessageId);
-      }
+      return readExchange(resolvedAccount, resolvedMessageId, folderId);
     },
 
     search: async ({ account, query, folderId, limit = 10 }: InboxSearchParams) => {
@@ -769,20 +525,6 @@ export const createInboxClient = (params: {
           if (!isNotFound(error)) throw error;
         }
       }
-      if (results.length < limit) {
-        try {
-          const legacy = await listLegacy(account, SEARCH_SCAN_LIMIT);
-          for (const item of legacy.items) {
-            if (results.length >= limit) break;
-            const searchable = [item.subject, item.from.name, item.from.address, item.snippet]
-              .join(' ')
-              .toLowerCase();
-            if (searchable.includes(lower)) results.push(item);
-          }
-        } catch {
-          // Exchange-only accounts remain valid.
-        }
-      }
       return { results };
     },
 
@@ -792,17 +534,12 @@ export const createInboxClient = (params: {
       if (!resolvedAccount || !resolvedMessageId) {
         throw new Error('account + messageId is required');
       }
-      try {
-        return await markExchangeRead(
-          resolvedAccount,
-          nonEmpty(folderId) ?? undefined,
-          resolvedMessageId,
-          isRead
-        );
-      } catch (error) {
-        if (!isNotFound(error)) throw error;
-        return markLegacyRead(resolvedAccount, resolvedMessageId, isRead);
-      }
+      return markExchangeRead(
+        resolvedAccount,
+        nonEmpty(folderId) ?? undefined,
+        resolvedMessageId,
+        isRead
+      );
     },
 
     saveAttachment: async ({
@@ -813,39 +550,25 @@ export const createInboxClient = (params: {
       filename,
       targetPath,
     }: InboxSaveAttachmentParams): Promise<InboxSaveAttachmentResult> => {
-      const resolvedFilename = nonEmpty(filename);
       const resolvedAccount = nonEmpty(account);
       const resolvedMessageId = nonEmpty(messageId);
       if (!resolvedAccount || !resolvedMessageId) {
         throw new Error('account + messageId is required');
       }
-      let exchangeMessage: {
-        readonly mailboxId: string;
-        readonly folderId: string;
-        readonly row: StoredMessage;
-      } | null = null;
-      try {
-        exchangeMessage = await resolveExchangeMessage(
-          resolvedAccount,
-          resolvedMessageId,
-          nonEmpty(folderId) ?? undefined
-        );
-      } catch (error) {
-        if (!isNotFound(error)) throw error;
-      }
-      if (exchangeMessage) {
-        return saveExchangeAttachmentFromRow(
-          resolvedAccount,
-          exchangeMessage.mailboxId,
-          exchangeMessage.folderId,
-          exchangeMessage.row,
-          attachmentId,
-          filename,
-          targetPath
-        );
-      }
-      if (!resolvedFilename) throw new Error('filename is required for legacy attachments');
-      return saveLegacyAttachment(resolvedAccount, resolvedMessageId, resolvedFilename, targetPath);
+      const exchangeMessage = await resolveExchangeMessage(
+        resolvedAccount,
+        resolvedMessageId,
+        nonEmpty(folderId) ?? undefined
+      );
+      return saveExchangeAttachmentFromRow(
+        resolvedAccount,
+        exchangeMessage.mailboxId,
+        exchangeMessage.folderId,
+        exchangeMessage.row,
+        attachmentId,
+        filename,
+        targetPath
+      );
     },
   };
 };

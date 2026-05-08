@@ -1,6 +1,5 @@
 // Stored email types and platform inbox client contracts.
-// Legacy JSON mail lives at /.profile/mail/<account>/inbox/.
-// Exchange mail lives in Drive messagesStore mailboxes named exchange-<account-slug>.
+// Mail lives in Drive messagesStore mailboxes named exchange-<account-slug>.
 
 // -- Contact --
 
@@ -17,7 +16,7 @@ export type StoredEmailAttachment = {
   readonly size: number;
   /** Legacy Drive path. Empty for messagesStore attachments; use attachmentId there. */
   readonly drivePath: string;
-  /** Messages Store public attachment handle. Always present for Exchange/messagesStore; legacy mail may omit it. Never exposes driveInode. */
+  /** Messages Store public attachment handle. Never exposes driveInode. */
   readonly attachmentId?: string;
   readonly storageState?: string;
   readonly storedSizeBytes?: number;
@@ -115,7 +114,7 @@ export type InboxMarkReadParams = InboxReadParams & {
 export type InboxSaveAttachmentParams = InboxReadParams & {
   /** Preferred Exchange attachment handle returned by read(). */
   readonly attachmentId?: string;
-  /** Attachment filename fallback. Required for legacy JSON mail; also supports Exchange UID lookup. */
+  /** Attachment filename fallback. Prefer attachmentId from read(); filename is accepted when unique. */
   readonly filename?: string;
   /** Absolute Drive path resolved by caller policy/chroot. */
   readonly targetPath: string;
