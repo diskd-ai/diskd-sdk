@@ -74,10 +74,23 @@ const hasFlag = (payload: RawObject, flag: string): boolean =>
   Array.isArray(payload.flags) &&
   payload.flags.some((item) => isString(item) && item.toLowerCase() === flag.toLowerCase());
 
-const parseAttachment = (value: unknown): StoredEmailAttachment => {
+const exchangeAttachmentId = (payload: RawObject, attachment: RawObject): string | null => {
+  if (isString(attachment.attachmentId) && attachment.attachmentId.trim().length > 0) {
+    return attachment.attachmentId;
+  }
+  if (!isNumber(payload.uidValidity) || !isNumber(payload.uid) || !isString(attachment.partId)) {
+    return null;
+  }
+  const partId = attachment.partId.trim();
+  return partId.length > 0 ? `${payload.uidValidity}:${payload.uid}:${partId}` : null;
+};
+
+const parseAttachment = (value: unknown, attachmentId?: string | null): StoredEmailAttachment => {
   if (!isObject(value)) {
     return { filename: '', contentType: '', size: 0, drivePath: '' };
   }
+  const resolvedAttachmentId =
+    attachmentId ?? (isString(value.attachmentId) ? value.attachmentId : null);
   return {
     filename: isString(value.filename) ? value.filename : '',
     contentType: isString(value.contentType) ? value.contentType : '',
@@ -89,7 +102,7 @@ const parseAttachment = (value: unknown): StoredEmailAttachment => {
           ? value.storedSizeBytes
           : 0,
     drivePath: isString(value.drivePath) ? value.drivePath : '',
-    ...(isString(value.attachmentId) ? { attachmentId: value.attachmentId } : {}),
+    ...(resolvedAttachmentId ? { attachmentId: resolvedAttachmentId } : {}),
     ...(isString(value.storageState) ? { storageState: value.storageState } : {}),
     ...(isNumber(value.storedSizeBytes) ? { storedSizeBytes: value.storedSizeBytes } : {}),
     ...(isString(value.storedAt) ? { storedAt: value.storedAt } : {}),
@@ -114,7 +127,9 @@ const parseStoredEmail = (value: unknown): StoredEmail | null => {
     bodyText: isString(value.bodyText) ? value.bodyText : '',
     bodyHtml: isString(value.bodyHtml) ? value.bodyHtml : '',
     hasAttachments: isBool(value.hasAttachments) ? value.hasAttachments : false,
-    attachments: Array.isArray(value.attachments) ? value.attachments.map(parseAttachment) : [],
+    attachments: Array.isArray(value.attachments)
+      ? value.attachments.map((attachment) => parseAttachment(attachment))
+      : [],
     labels: stringArray(value.labels),
     isRead: isBool(value.isRead) ? value.isRead : false,
     isFlagged: isBool(value.isFlagged) ? value.isFlagged : false,
@@ -187,7 +202,14 @@ const exchangeStoredEmail = (
     bodyText: isString(payload.bodyText) ? payload.bodyText : '',
     bodyHtml: isString(payload.bodyHtml) ? payload.bodyHtml : '',
     hasAttachments: isBool(payload.hasAttachments) ? payload.hasAttachments : false,
-    attachments: Array.isArray(payload.attachments) ? payload.attachments.map(parseAttachment) : [],
+    attachments: Array.isArray(payload.attachments)
+      ? payload.attachments.map((attachment) =>
+          parseAttachment(
+            attachment,
+            isObject(attachment) ? exchangeAttachmentId(payload, attachment) : null
+          )
+        )
+      : [],
     labels: stringArray(payload.labels),
     isRead: isBool(payload.isRead) ? payload.isRead : hasFlag(payload, '\\Seen'),
     isFlagged: isBool(payload.isFlagged) ? payload.isFlagged : hasFlag(payload, '\\Flagged'),

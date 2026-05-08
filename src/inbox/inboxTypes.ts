@@ -17,7 +17,7 @@ export type StoredEmailAttachment = {
   readonly size: number;
   /** Legacy Drive path. Empty for messagesStore attachments; use attachmentId there. */
   readonly drivePath: string;
-  /** Messages Store public attachment handle. Never exposes driveInode. */
+  /** Messages Store public attachment handle. Always present for Exchange/messagesStore; legacy mail may omit it. Never exposes driveInode. */
   readonly attachmentId?: string;
   readonly storageState?: string;
   readonly storedSizeBytes?: number;

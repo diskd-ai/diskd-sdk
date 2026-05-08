@@ -158,6 +158,69 @@ test('platform.inbox.read hydrates unloaded Exchange body and rereads messagesSt
   );
 });
 
+test('platform.inbox.read returns synthesized attachmentId for unloaded Exchange attachments', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/get') {
+        return rpc(request.id, {
+          message: {
+            external_id: '1728649431:864',
+            payload: {
+              accountId: 'mail__personal',
+              mailbox: 'INBOX',
+              uid: 864,
+              uidValidity: 1728649431,
+              from: { name: 'Alice', address: 'alice@example.com' },
+              to: [],
+              cc: [],
+              subject: 'With attachment',
+              date: '2026-05-04T10:00:00.000Z',
+              flags: [],
+              labels: [],
+              hasAttachments: true,
+              attachments: [
+                {
+                  filename: 'ged__2.PDF',
+                  contentType: 'application/pdf',
+                  sizeBytes: 123,
+                  partId: '2',
+                  storageState: 'not_loaded',
+                },
+              ],
+              snippet: 'Preview',
+              bodyText: 'Body',
+              bodyHtml: null,
+              bodyState: 'loaded',
+              fetchedAt: '2026-05-04T10:01:00.000Z',
+            },
+            created_at: '2026-05-04T10:00:00.000Z',
+            updated_at: '2026-05-04T10:00:00.000Z',
+          },
+        });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async () => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      const result = await inbox.read({
+        account: 'mail__personal',
+        folderId: 'INBOX',
+        messageId: '1728649431:864',
+      });
+
+      assert.equal(result.attachments[0]?.filename, 'ged__2.PDF');
+      assert.equal(result.attachments[0]?.storageState, 'not_loaded');
+      assert.equal(result.attachments[0]?.attachmentId, '1728649431:864:2');
+    }
+  );
+});
+
 test('platform.inbox.read resolves Exchange messages by account plus UID', async () => {
   await withFetchMock(
     (_url, init) => {
@@ -370,6 +433,116 @@ const attachmentMessageRow = (storageState: string) => ({
     created_at: '2026-05-04T10:00:00.000Z',
     updated_at: '2026-05-04T10:00:00.000Z',
   },
+});
+
+test('platform.inbox.saveAttachment uses synthesized attachmentId for old unloaded Exchange payloads', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/get') {
+        const row = attachmentMessageRow('not_loaded').message;
+        return rpc(request.id, {
+          message: {
+            ...row,
+            external_id: '1728649431:864',
+            payload: {
+              ...row.payload,
+              uid: 864,
+              uidValidity: 1728649431,
+              attachments: [
+                {
+                  filename: 'ged__2.PDF',
+                  contentType: 'application/pdf',
+                  sizeBytes: 123,
+                  partId: '2',
+                  storageState: 'not_loaded',
+                },
+              ],
+            },
+          },
+        });
+      }
+      if (request.method === 'messages_store/attachment/list') {
+        return rpc(request.id, {
+          items: [
+            {
+              attachment_id: '1728649431:864:2',
+              filename: 'ged__2.PDF',
+              content_type: 'application/pdf',
+              size_bytes: 123,
+              drive_inode: 'source-inode-1',
+              created_at: '2026-05-04T10:00:00.000Z',
+            },
+          ],
+        });
+      }
+      if (request.method === 'initialize') return rpc(request.id, {});
+      if (request.method === 'tools/list') {
+        return rpc(request.id, {
+          tools: [
+            {
+              name: 'email_client__system_hydrate_email_attachment',
+              description: '',
+              inputSchema: { type: 'object', properties: {} },
+            },
+          ],
+        });
+      }
+      if (request.method === 'tools/call') {
+        assert.deepEqual(request.params, {
+          name: 'email_client__system_hydrate_email_attachment',
+          arguments: {
+            mailboxId: 'exchange-mail-personal',
+            folderId: 'INBOX',
+            externalId: '1728649431:864',
+            attachmentId: '1728649431:864:2',
+          },
+        });
+        return rpc(request.id, { content: [], isError: false });
+      }
+      if (request.method === 'messages_store/attachment/save-to-drive') {
+        assert.deepEqual(request.params, {
+          mailbox_id: 'exchange-mail-personal',
+          folder_id: 'INBOX',
+          external_id: '1728649431:864',
+          attachment_id: '1728649431:864:2',
+          target_path: '/Projects/p/docs/ged__2.PDF',
+        });
+        return rpc(request.id, {
+          saved: true,
+          entry: {
+            inode: 'target-inode-1',
+            name: 'ged__2.PDF',
+            type: 'file',
+            parent_inode: 'parent-1',
+            file_id: 'file-1',
+            etag: null,
+            size: 123,
+            mime_type: 'application/pdf',
+            full_path: '/Projects/p/docs/ged__2.PDF',
+          },
+        });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async () => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      const result = await inbox.saveAttachment({
+        account: 'mail__personal',
+        folderId: 'INBOX',
+        messageId: '1728649431:864',
+        attachmentId: '1728649431:864:2',
+        targetPath: '/Projects/p/docs/ged__2.PDF',
+      });
+
+      assert.equal(result.entry.path, '/Projects/p/docs/ged__2.PDF');
+    }
+  );
 });
 
 test('platform.inbox.saveAttachment saves Exchange attachment by account, messageId, and attachmentId', async () => {
