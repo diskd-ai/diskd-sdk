@@ -528,6 +528,10 @@ test('drive.tools.readFile sends paths/tools/read and decodes parts', async () =
               confidence: 0.95,
             },
           ],
+          total_parts: 3,
+          parts_offset: 0,
+          next_offset: 1,
+          eof: false,
         },
         id: 1,
       }),
@@ -562,6 +566,10 @@ test('drive.tools.readFile sends paths/tools/read and decodes parts', async () =
     assert.equal(result.parts[0]?.title, 'Main heading');
     assert.equal(result.parts[0]?.pageNumber, 1);
     assert.equal(result.parts[0]?.confidence, 0.95);
+    assert.equal(result.totalParts, 3);
+    assert.equal(result.partsOffset, 0);
+    assert.equal(result.nextOffset, 1);
+    assert.equal(result.eof, false);
 
     const body = JSON.parse(String(calls[0]?.init?.body));
     assert.ok(body.method === 'paths/tools/read');

@@ -71,6 +71,11 @@ const bool = (obj: RawObject, key: string, fallback: boolean): boolean => {
   return typeof v === 'boolean' ? v : fallback;
 };
 
+const boolOptional = (obj: RawObject, key: string): boolean | undefined => {
+  const v = obj[key];
+  return typeof v === 'boolean' ? v : undefined;
+};
+
 const metadata = (obj: RawObject, key: string): Readonly<Record<string, unknown>> => {
   const v = obj[key];
   if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
@@ -226,7 +231,13 @@ const decodeReadFileResult = (o: unknown): DriveReadFileResult => {
   const r = raw(o);
   const arr = r.parts;
   if (!Array.isArray(arr)) throw new Error('Invalid Drive response: parts must be array');
-  return { parts: arr.map(decodeReadFilePart) };
+  return {
+    parts: arr.map(decodeReadFilePart),
+    totalParts: num(r, 'total_parts') ?? num(r, 'totalParts') ?? undefined,
+    partsOffset: num(r, 'parts_offset') ?? num(r, 'partsOffset') ?? undefined,
+    nextOffset: num(r, 'next_offset') ?? num(r, 'nextOffset') ?? undefined,
+    eof: boolOptional(r, 'eof'),
+  };
 };
 
 const decodeWriteResult = (o: unknown): DriveToolsWriteResult => {

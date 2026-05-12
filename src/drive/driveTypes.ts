@@ -212,6 +212,10 @@ export type DriveReadFilePart = {
 
 export type DriveReadFileResult = {
   readonly parts: readonly DriveReadFilePart[];
+  readonly totalParts?: number;
+  readonly partsOffset?: number;
+  readonly nextOffset?: number;
+  readonly eof?: boolean;
 };
 
 export type DriveToolsWriteFileParams = {
