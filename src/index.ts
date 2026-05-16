@@ -378,6 +378,16 @@ export type {
   UpsertFolderParams,
   UpsertFolderResult,
 } from './messagesStore/messagesStoreTypes.js';
+// -- Notes --
+export { createProjectNotesClient } from './notes/notes.js';
+export type {
+  CreateProjectNoteParams,
+  ProjectNote,
+  ProjectNoteMetadata,
+  ProjectNoteParams,
+  ProjectNotesClient,
+  ProjectNotesScopeRef,
+} from './notes/notesTypes.js';
 // -- Operatives --
 export { createOperativesClient } from './operatives/operatives.js';
 export type {

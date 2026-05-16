@@ -71,5 +71,13 @@ export type {
 } from '../drive/sessionTypes.js';
 
 export type { DriveClient, DrivePathEntry, DrivePathType } from '../drive/types.js';
+export type {
+  CreateProjectNoteParams,
+  ProjectNote,
+  ProjectNoteMetadata,
+  ProjectNoteParams,
+  ProjectNotesClient,
+  ProjectNotesScopeRef,
+} from '../notes/notesTypes.js';
 export { diskd } from '../sdk/diskd.js';
 export type { DiskD } from '../sdk/types.js';

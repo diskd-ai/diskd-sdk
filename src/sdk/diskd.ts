@@ -16,6 +16,7 @@ import { createMcpHubClient } from '../mcpHub/mcpHub.js';
 import { createMcpToolsClient } from '../mcpTools/mcpTools.js';
 import { createMessagesStoreClient } from '../messagesStore/messagesStore.js';
 import { createOperativesClient } from '../operatives/operatives.js';
+import { createProjectNotesClient } from '../notes/notes.js';
 import { createPlatformEventsClient } from '../platformEvents/platformEvents.js';
 import { createProjectsClient } from '../projects/projects.js';
 import { createRoutineRunsClient } from '../routineRuns/routineRuns.js';
@@ -141,6 +142,9 @@ export const diskd: DiskD = {
     operatives: ({ auth, url }) => createOperativesClient({ auth, url }),
 
     projects: ({ auth, url }) => createProjectsClient({ auth, url }),
+
+    notes: ({ auth, scope, url }) =>
+      createProjectNotesClient({ auth, projectId: scope.projectId, url }),
 
     events: ({ auth, url }) => {
       const eventsUrl = url ?? resolveDiskdGatewayUrl('platform/events');
