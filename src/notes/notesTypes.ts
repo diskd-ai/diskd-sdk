@@ -27,6 +27,16 @@ export type ProjectNote = {
   readonly updatedAt: string;
 };
 
+export type ProjectNoteHeader = {
+  readonly id: string;
+  readonly projectId: string;
+  readonly name: string;
+  readonly contentPreview: string;
+  readonly params: ProjectNoteParams;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
 // -- Scope and params --
 
 export type ProjectNotesScopeRef = {
@@ -56,4 +66,6 @@ export type ProjectNotesClient = {
   readonly create: (params: CreateProjectNoteParams) => Promise<ProjectNote>;
   /** GET /api/project-notes/:noteId -- read a Drive-backed project note. */
   readonly read: (noteId: string) => Promise<ProjectNote>;
+  /** GET /api/project-notes -- list Drive-backed project note headers. */
+  readonly list: () => Promise<readonly ProjectNoteHeader[]>;
 };

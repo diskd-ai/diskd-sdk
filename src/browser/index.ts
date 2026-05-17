@@ -74,6 +74,7 @@ export type { DriveClient, DrivePathEntry, DrivePathType } from '../drive/types.
 export type {
   CreateProjectNoteParams,
   ProjectNote,
+  ProjectNoteHeader,
   ProjectNoteMetadata,
   ProjectNoteParams,
   ProjectNotesClient,

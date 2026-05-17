@@ -383,6 +383,7 @@ export { createProjectNotesClient } from './notes/notes.js';
 export type {
   CreateProjectNoteParams,
   ProjectNote,
+  ProjectNoteHeader,
   ProjectNoteMetadata,
   ProjectNoteParams,
   ProjectNotesClient,

@@ -1,7 +1,12 @@
 import type { AuthModule } from '../auth/types.js';
 import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import { buildQuery, type HttpMethod, httpRequest, resolveAuthHeaders } from '../sdk/http.js';
-import type { CreateProjectNoteParams, ProjectNote, ProjectNotesClient } from './notesTypes.js';
+import type {
+  CreateProjectNoteParams,
+  ProjectNote,
+  ProjectNoteHeader,
+  ProjectNotesClient,
+} from './notesTypes.js';
 
 // ---------------------------------------------------------------------------
 // Client factory
@@ -57,6 +62,13 @@ export const createProjectNotesClient = (params: {
       return request<ProjectNote>(
         'GET',
         `/api/project-notes/${encId(noteId)}${buildQuery([['projectId', params.projectId]])}`
+      );
+    },
+
+    list: async (): Promise<readonly ProjectNoteHeader[]> => {
+      return request<readonly ProjectNoteHeader[]>(
+        'GET',
+        `/api/project-notes${buildQuery([['projectId', params.projectId]])}`
       );
     },
   };

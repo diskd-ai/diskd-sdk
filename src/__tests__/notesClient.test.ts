@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { AuthModule } from '../auth/types.js';
-import type { ProjectNote } from '../notes/notesTypes.js';
+import type { ProjectNote, ProjectNoteHeader } from '../notes/notesTypes.js';
 import { diskd } from '../sdk/diskd.js';
 
 type FetchCall = { readonly url: string; readonly init?: RequestInit };
@@ -20,6 +20,16 @@ const stubNote: ProjectNote = {
   params: { pin: false, order: 0 },
   metadata: null,
   version: 1,
+  createdAt: '2026-05-16T10:00:00.000Z',
+  updatedAt: '2026-05-16T10:00:00.000Z',
+};
+
+const stubHeader: ProjectNoteHeader = {
+  id: NOTE_ID,
+  projectId: PROJECT_ID,
+  name: 'Architecture note',
+  contentPreview: '# Architecture',
+  params: { pin: false, order: 0 },
   createdAt: '2026-05-16T10:00:00.000Z',
   updatedAt: '2026-05-16T10:00:00.000Z',
 };
@@ -112,6 +122,34 @@ test('notes.read sends GET with noteId path param and bound projectId query', as
       assert.equal(
         calls[0]?.url,
         `http://app-service:3000/api/project-notes/${NOTE_ID}?projectId=${PROJECT_ID}`
+      );
+      assert.equal(calls[0]?.init?.method, 'GET');
+    }
+  );
+});
+
+test('notes.list sends GET with bound projectId query and returns headers', async () => {
+  /* REQUIREMENT enabling:dev/platform-api/sdk -- Notes list uses the project-scoped project-notes API. */
+  const url = 'http://app-service:3000';
+
+  await withFetchMock(
+    () =>
+      new Response(JSON.stringify([stubHeader]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    async (calls) => {
+      const client = diskd.platform.notes({
+        auth: makeAuth(),
+        scope: { scopeType: 'project', projectId: PROJECT_ID },
+        url,
+      });
+      const result = await client.list();
+
+      assert.deepEqual(result, [stubHeader]);
+      assert.equal(
+        calls[0]?.url,
+        `http://app-service:3000/api/project-notes?projectId=${PROJECT_ID}`
       );
       assert.equal(calls[0]?.init?.method, 'GET');
     }
