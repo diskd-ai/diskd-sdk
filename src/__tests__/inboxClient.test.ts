@@ -329,6 +329,121 @@ test('platform.inbox.read does not fallback to legacy Drive mail storage', async
   );
 });
 
+/* REQUIREMENT REQ enabling:dev/platform-api/sdk/inbox: InboxClient.search filters normalized envelopes by Gmail-style criteria. */
+test('platform.inbox.search filters Exchange messages with Gmail-style syntax', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/list') {
+        return rpc(request.id, {
+          items: [
+            {
+              external_id: 'gmail-new-invoice',
+              payload: {
+                accountId: 'google__personal',
+                mailbox: 'INBOX',
+                from: { name: 'Alice', address: 'alice@gmail.com' },
+                subject: 'Invoice ready',
+                date: '2025-05-18T10:00:00.000Z',
+                flags: [],
+                labels: [],
+                hasAttachments: false,
+                attachments: [],
+                snippet: 'May billing statement',
+              },
+              created_at: '2025-05-18T10:00:00.000Z',
+              updated_at: '2025-05-18T10:00:00.000Z',
+            },
+            {
+              external_id: 'gmail-old-invoice',
+              payload: {
+                accountId: 'google__personal',
+                mailbox: 'INBOX',
+                from: { name: 'Bob', address: 'bob@gmail.com' },
+                subject: 'Invoice old',
+                date: '2025-05-16T23:59:59.000Z',
+                flags: [],
+                labels: [],
+                hasAttachments: false,
+                attachments: [],
+                snippet: 'Old billing statement',
+              },
+              created_at: '2025-05-16T23:59:59.000Z',
+              updated_at: '2025-05-16T23:59:59.000Z',
+            },
+            {
+              external_id: 'example-new-invoice',
+              payload: {
+                accountId: 'google__personal',
+                mailbox: 'INBOX',
+                from: { name: 'Carol', address: 'carol@example.com' },
+                subject: 'Invoice ready',
+                date: '2025-05-18T10:00:00.000Z',
+                flags: [],
+                labels: [],
+                hasAttachments: false,
+                attachments: [],
+                snippet: 'May billing statement',
+              },
+              created_at: '2025-05-18T10:00:00.000Z',
+              updated_at: '2025-05-18T10:00:00.000Z',
+            },
+          ],
+          next_cursor: null,
+        });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async () => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      const result = await inbox.search({
+        account: 'google__personal',
+        folderId: 'INBOX',
+        query: 'invoice from:gmail.com after:2025-05-17',
+        limit: 10,
+      });
+
+      assert.deepEqual(
+        result.results.map((item) => item.messageId),
+        ['gmail-new-invoice']
+      );
+    }
+  );
+});
+
+/* REQUIREMENT REQ enabling:dev/platform-api/sdk/inbox: InboxClient.search surfaces invalid Gmail-style syntax instead of returning empty results. */
+test('platform.inbox.search rejects unsupported Gmail-style operators before scanning', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async () => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      await assert.rejects(
+        () =>
+          inbox.search({
+            account: 'google__personal',
+            folderId: 'INBOX',
+            query: 'before:2025-05-17',
+            limit: 10,
+          }),
+        /INVALID_INBOX_SEARCH_QUERY/
+      );
+    }
+  );
+});
+
 test('platform.inbox.markRead updates Exchange messages by account plus UID', async () => {
   await withFetchMock(
     (_url, init) => {

@@ -3,6 +3,11 @@ import { createMcpToolsClient } from '../mcpTools/mcpTools.js';
 import type { McpToolsClient } from '../mcpTools/mcpToolsTypes.js';
 import { createMessagesStoreClient } from '../messagesStore/messagesStore.js';
 import type { MessagesStoreClient, StoredMessage } from '../messagesStore/messagesStoreTypes.js';
+import {
+  formatInboxSearchQueryError,
+  matchesInboxSearchQuery,
+  parseInboxSearchQuery,
+} from './inboxSearchQuery.js';
 import type {
   InboxAccountList,
   InboxClient,
@@ -503,7 +508,10 @@ export const createInboxClient = (params: {
     },
 
     search: async ({ account, query, folderId, limit = 10 }: InboxSearchParams) => {
-      const lower = query.toLowerCase();
+      const parsedQuery = parseInboxSearchQuery(query);
+      if (parsedQuery.tag === 'Err') {
+        throw new Error(formatInboxSearchQueryError(parsedQuery.error));
+      }
       const results: InboxEmailEnvelope[] = [];
       const exchangeFolders = folderId ? [folderId] : await listExchangeFolderIds(account);
       for (const exchangeFolderId of exchangeFolders) {
@@ -516,10 +524,7 @@ export const createInboxClient = (params: {
           for (const row of page.items) {
             if (results.length >= limit) break;
             const item = exchangeEnvelope(row, account, exchangeFolderId);
-            const searchable = [item.subject, item.from.name, item.from.address, item.snippet]
-              .join(' ')
-              .toLowerCase();
-            if (searchable.includes(lower)) results.push(item);
+            if (matchesInboxSearchQuery(item, parsedQuery.value)) results.push(item);
           }
         } catch (error) {
           if (!isNotFound(error)) throw error;
