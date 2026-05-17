@@ -139,6 +139,40 @@ export type ListMessagesResult = {
   readonly nextCursor: string | null;
 };
 
+// -- Boundary 3b: single review box --
+
+/** One message waiting for review before send. */
+export type ReviewItem = {
+  readonly reviewId: string;
+  readonly payload: Readonly<Record<string, unknown>>;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+/** Create one item in the single workspace review box. */
+export type CreateReviewItemParams = {
+  readonly reviewId: string;
+  readonly payload: Readonly<Record<string, unknown>>;
+};
+
+/** Cursor-paginated review box listing parameters. */
+export type ListReviewItemsParams = {
+  readonly limit?: number;
+  readonly cursor?: string;
+};
+
+/** One page of review items from the single workspace review box. */
+export type ListReviewItemsResult = {
+  readonly items: readonly ReviewItem[];
+  readonly nextCursor: string | null;
+};
+
+/** Delete one review item from the review box. */
+export type DeleteReviewItemResult = {
+  readonly reviewId: string;
+  readonly deleted: boolean;
+};
+
 // -- Boundary 4: attachments --
 
 /** Begin per-attachment upload; mirrors drive/upload/start. */
@@ -412,6 +446,17 @@ export type MessagesStoreClient = {
   readonly createMailbox: (params: CreateMailboxParams) => Promise<CreateMailboxResult>;
   /** Workspace-scoped mailbox enumeration. Read-only. */
   readonly listMailboxes: () => Promise<readonly MailboxSummary[]>;
+  /** Single workspace review box for outbound messages awaiting manual review. */
+  readonly review: {
+    /** Create one review item. */
+    readonly create: (params: CreateReviewItemParams) => Promise<ReviewItem>;
+    /** Cursor-paginated listing of review items. */
+    readonly list: (params?: ListReviewItemsParams) => Promise<ListReviewItemsResult>;
+    /** Read one review item by reviewId. */
+    readonly get: (params: { readonly reviewId: string }) => Promise<ReviewItem>;
+    /** Delete one review item by reviewId. */
+    readonly delete: (params: { readonly reviewId: string }) => Promise<DeleteReviewItemResult>;
+  };
   /**
    * Bind a mailbox-scoped client over `mailboxId`. The returned
    * client exposes mailbox CRUD plus folder/message operations.

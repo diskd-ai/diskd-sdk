@@ -35,10 +35,13 @@ import type {
   InitMailboxResult,
   ListMessagesParams,
   ListMessagesResult,
+  ListReviewItemsParams,
+  ListReviewItemsResult,
   MailboxScopedClient,
   MailboxSummary,
   MessageScopedClient,
   MessagesStoreClient,
+  ReviewItem,
   StoredMessage,
   UpsertBatchParams,
   UpsertBatchResult,
@@ -224,6 +227,43 @@ const decodeGetMessage = (o: unknown): StoredMessage => {
   return decodeStoredMessage(message);
 };
 
+const decodeReviewItem = (o: unknown): ReviewItem => {
+  const r = raw(o);
+  return {
+    reviewId: strRequired(r, 'review_id'),
+    payload: payloadObj(r, 'payload'),
+    createdAt: strRequired(r, 'created_at'),
+    updatedAt: strRequired(r, 'updated_at'),
+  };
+};
+
+const decodeReviewEnvelope = (o: unknown): ReviewItem => {
+  const r = raw(o);
+  const item = r.item;
+  if (!isObject(item)) {
+    throw new Error("Invalid messages_store response: 'item' must be an object");
+  }
+  return decodeReviewItem(item);
+};
+
+const decodeReviewList = (o: unknown): ListReviewItemsResult => {
+  const r = raw(o);
+  return {
+    items: arr(r, 'items').map(decodeReviewItem),
+    nextCursor: str(r, 'next_cursor'),
+  };
+};
+
+const decodeReviewDelete = (
+  o: unknown
+): { readonly reviewId: string; readonly deleted: boolean } => {
+  const r = raw(o);
+  return {
+    reviewId: strRequired(r, 'review_id'),
+    deleted: bool(r, 'deleted'),
+  };
+};
+
 const decodeAttachmentUploadStart = (o: unknown): AttachmentUploadStartResult => {
   const r = raw(o);
   if (bool(r, 'already_uploaded')) {
@@ -317,6 +357,39 @@ const encodeIncomingMessage = (m: IncomingMessage): Record<string, unknown> => (
 // ---------------------------------------------------------------------------
 
 type CallFn = (method: string, params: unknown) => Promise<unknown>;
+
+/** Build the single workspace review box client. */
+const makeReviewScoped = (call: CallFn): MessagesStoreClient['review'] => ({
+  create: async (p) => {
+    const result = await call('messages_store/review/create', {
+      review_id: p.reviewId,
+      payload: p.payload,
+    });
+    return decodeReviewEnvelope(result);
+  },
+
+  list: async (p?: ListReviewItemsParams) => {
+    const result = await call('messages_store/review/list', {
+      ...optional('limit', p?.limit),
+      ...optional('cursor', p?.cursor),
+    });
+    return decodeReviewList(result);
+  },
+
+  get: async (p) => {
+    const result = await call('messages_store/review/get', {
+      review_id: p.reviewId,
+    });
+    return decodeReviewEnvelope(result);
+  },
+
+  delete: async (p) => {
+    const result = await call('messages_store/review/delete', {
+      review_id: p.reviewId,
+    });
+    return decodeReviewDelete(result);
+  },
+});
 
 /** Build the message-scoped client (attachments only). */
 const makeMessageScoped = (
@@ -567,6 +640,8 @@ export const createMessagesStoreClient = (params: {
       const items = arr(raw(result), 'mailboxes');
       return items.map(decodeMailboxSummary);
     },
+
+    review: makeReviewScoped(call),
 
     mailbox: ({ mailboxId }) => makeMailboxScoped(call, mailboxId),
   };

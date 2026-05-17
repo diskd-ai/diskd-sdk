@@ -198,3 +198,91 @@ test('messagesStore attachment.saveToDrive encodes payload and decodes target en
     }
   );
 });
+
+test('messagesStore.review create/list/get/delete use the single workspace review box', async () => {
+  /* REQUIREMENT REVIEW-BOX-SDK-01: SDK forwards single review box create/list/get/delete with snake_case review item params */
+  const seenMethods: string[] = [];
+  await withFetchMock(
+    (_url, init) => {
+      const request = parseBody(init);
+      seenMethods.push(String(request.method));
+      if (request.method === 'messages_store/review/create') {
+        assert.deepEqual(request.params, {
+          review_id: 'draft-1',
+          payload: {
+            subject: 'Draft',
+            sendAccountId: 'work@example.com',
+          },
+        });
+        return jsonRpcResponse({
+          item: {
+            review_id: 'draft-1',
+            payload: {
+              subject: 'Draft',
+              sendAccountId: 'work@example.com',
+            },
+            created_at: '2026-05-17T20:00:00+00:00',
+            updated_at: '2026-05-17T20:00:00+00:00',
+          },
+        });
+      }
+      if (request.method === 'messages_store/review/list') {
+        assert.deepEqual(request.params, { limit: 20 });
+        return jsonRpcResponse({
+          items: [
+            {
+              review_id: 'draft-1',
+              payload: { subject: 'Draft' },
+              created_at: '2026-05-17T20:00:00+00:00',
+              updated_at: '2026-05-17T20:00:00+00:00',
+            },
+          ],
+          next_cursor: null,
+        });
+      }
+      if (request.method === 'messages_store/review/get') {
+        assert.deepEqual(request.params, { review_id: 'draft-1' });
+        return jsonRpcResponse({
+          item: {
+            review_id: 'draft-1',
+            payload: { subject: 'Draft' },
+            created_at: '2026-05-17T20:00:00+00:00',
+            updated_at: '2026-05-17T20:00:00+00:00',
+          },
+        });
+      }
+      if (request.method === 'messages_store/review/delete') {
+        assert.deepEqual(request.params, { review_id: 'draft-1' });
+        return jsonRpcResponse({ review_id: 'draft-1', deleted: true });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async () => {
+      const client = diskd.os.messagesStore({ auth: makeAuth(), url: 'http://drive:8000/api/v1' });
+
+      const created = await client.review.create({
+        reviewId: 'draft-1',
+        payload: {
+          subject: 'Draft',
+          sendAccountId: 'work@example.com',
+        },
+      });
+      const listed = await client.review.list({ limit: 20 });
+      const got = await client.review.get({ reviewId: 'draft-1' });
+      const deleted = await client.review.delete({ reviewId: 'draft-1' });
+
+      assert.equal(created.reviewId, 'draft-1');
+      assert.equal(created.payload.sendAccountId, 'work@example.com');
+      assert.equal(listed.items[0]?.reviewId, 'draft-1');
+      assert.equal(listed.nextCursor, null);
+      assert.equal(got.reviewId, 'draft-1');
+      assert.deepEqual(deleted, { reviewId: 'draft-1', deleted: true });
+      assert.deepEqual(seenMethods, [
+        'messages_store/review/create',
+        'messages_store/review/list',
+        'messages_store/review/get',
+        'messages_store/review/delete',
+      ]);
+    }
+  );
+});
