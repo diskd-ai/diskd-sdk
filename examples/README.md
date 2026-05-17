@@ -70,6 +70,21 @@ See `examples/node/drive-session-external.ts` and
 `examples/node/drive-session-internal.ts` for `diskd.platform.sessions()` flows with
 project scope bound in the constructor.
 
+Messages Store Review example
+-----------------------------
+
+See `examples/node/messages-store-review-example.ts` for a singleton Review box
+flow using `diskd.os.messagesStore({ auth }).review.create/list/get/delete`.
+By default it reads `.agents/credentials-dev.json` and uses the `apisUrl` from
+that keyfile.
+
+Run it against the dev APIS gateway:
+
+```bash
+bun run build
+NODE_TLS_REJECT_UNAUTHORIZED=0 bun examples/node/messages-store-review-example.ts
+```
+
 Web quickstart (Vite, real OAuth client)
 ----------------------------------------
 
