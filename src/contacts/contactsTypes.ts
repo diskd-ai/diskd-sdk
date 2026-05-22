@@ -47,6 +47,7 @@ export type CreateContactParams = {
   readonly title?: string | null;
   readonly tags?: readonly string[];
   readonly source?: ContactSource;
+  readonly methods?: readonly AddContactMethodParams[];
 };
 
 export type UpdateContactParams = {

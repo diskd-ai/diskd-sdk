@@ -56,6 +56,55 @@ test('diskd.platform.contacts uses the versioned gateway path and forwards API-k
   );
 });
 
+test('contacts.create forwards initial contact methods in the request body', async () => {
+  await withEnv(
+    {
+      APIS_BASE_URL: 'https://apis.example',
+      APIS_API_KEY: 'gateway-key',
+    },
+    async () => {
+      await withFetchMock(
+        () =>
+          new Response(JSON.stringify(wireContact), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        async (calls) => {
+          const auth = createApiKeyAuth({ workspaceId: 'ws-1' });
+          const client = diskd.platform.contacts({ auth, url: 'http://app-service:3000' });
+
+          const result = await client.create({
+            displayName: 'Alice Example',
+            methods: [
+              { type: 'email', value: 'alice@example.com', isPrimary: true },
+              { type: 'phone', value: '+1 555 0100' },
+            ],
+          });
+
+          assert.deepEqual(result, wireContact);
+          assert.equal(calls[0]?.url, 'http://app-service:3000/api/contacts');
+          assert.equal(calls[0]?.init?.method, 'POST');
+          const body = JSON.parse(String(calls[0]?.init?.body)) as {
+            readonly displayName: string;
+            readonly methods: readonly {
+              readonly type: string;
+              readonly value: string;
+              readonly isPrimary?: boolean;
+            }[];
+          };
+          assert.deepEqual(body, {
+            displayName: 'Alice Example',
+            methods: [
+              { type: 'email', value: 'alice@example.com', isPrimary: true },
+              { type: 'phone', value: '+1 555 0100' },
+            ],
+          });
+        }
+      );
+    }
+  );
+});
+
 test('contacts.projectLinks.add posts to the nested REST route', async () => {
   await withEnv(
     {
