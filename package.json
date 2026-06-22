@@ -1,6 +1,6 @@
 {
   "name": "@diskd-ai/sdk",
-  "version": "5.1.14",
+  "version": "5.2.0",
   "description": "SDK for DiskD platform APIs (Drive, LLM Router, Agent Hub, MCP Hub, Telegram Userbot, Web Navigator)",
   "license": "Apache-2.0",
   "repository": {
