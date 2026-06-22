@@ -435,11 +435,95 @@ test('platform.inbox.search rejects unsupported Gmail-style operators before sca
           inbox.search({
             account: 'google__personal',
             folderId: 'INBOX',
-            query: 'before:2025-05-17',
+            query: 'category:promotions',
             limit: 10,
           }),
         /INVALID_INBOX_SEARCH_QUERY/
       );
+    }
+  );
+});
+
+/* REQUIREMENT REQ enabling:dev/platform-api/sdk/inbox: InboxClient.search paginates folder pages so operator filters reach older mail. */
+test('platform.inbox.search paginates folder pages to reach older mail', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/list') {
+        const params = request.params as { readonly cursor?: string };
+        if (!params.cursor) {
+          return rpc(request.id, {
+            items: [
+              {
+                external_id: 'recent-other',
+                payload: {
+                  accountId: 'google__personal',
+                  mailbox: 'INBOX',
+                  from: { name: 'Carol', address: 'carol@example.com' },
+                  to: [{ name: 'Someone Else', address: 'else@example.com' }],
+                  cc: [],
+                  subject: 'Unrelated',
+                  date: '2026-05-04T10:00:00.000Z',
+                  flags: [],
+                  labels: [],
+                  hasAttachments: false,
+                  attachments: [],
+                  snippet: 'Nothing here',
+                },
+                created_at: '2026-05-04T10:00:00.000Z',
+                updated_at: '2026-05-04T10:00:00.000Z',
+              },
+            ],
+            next_cursor: 'cursor-2',
+          });
+        }
+        return rpc(request.id, {
+          items: [
+            {
+              external_id: 'old-to-estelle',
+              payload: {
+                accountId: 'google__personal',
+                mailbox: 'INBOX',
+                from: { name: 'Alice', address: 'alice@gmail.com' },
+                to: [{ name: 'Estelle Roy', address: 'estelle@aileron.fr' }],
+                cc: [],
+                subject: 'Bulletins de salaire',
+                date: '2026-01-04T10:00:00.000Z',
+                flags: [],
+                labels: [],
+                hasAttachments: false,
+                attachments: [],
+                snippet: 'Older thread',
+              },
+              created_at: '2026-01-04T10:00:00.000Z',
+              updated_at: '2026-01-04T10:00:00.000Z',
+            },
+          ],
+          next_cursor: null,
+        });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      const result = await inbox.search({
+        account: 'google__personal',
+        folderId: 'INBOX',
+        query: 'to:estelle',
+        limit: 10,
+      });
+
+      assert.deepEqual(
+        result.results.map((item) => item.messageId),
+        ['old-to-estelle']
+      );
+      const listCalls = calls.filter((call) => body(call.init).method === 'messages_store/list');
+      assert.equal(listCalls.length, 2);
     }
   );
 });

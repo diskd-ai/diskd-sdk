@@ -160,28 +160,27 @@ const exchangeStoredEmail = (
   };
 };
 
+const envelopeFromStoredEmail = (email: StoredEmail): InboxEmailEnvelope => ({
+  folderId: email.folderId,
+  account: email.account,
+  messageId: email.messageId,
+  from: email.from,
+  subject: email.subject,
+  snippet: email.snippet,
+  date: email.date,
+  hasAttachments: email.hasAttachments,
+  isRead: email.isRead,
+  isFlagged: email.isFlagged,
+  priority: email.priority,
+  labels: email.labels,
+  drivePath: '',
+});
+
 const exchangeEnvelope = (
   row: StoredMessage,
   account: string,
   folderId: string
-): InboxEmailEnvelope => {
-  const email = exchangeStoredEmail(row, account, folderId);
-  return {
-    folderId: email.folderId,
-    account: email.account,
-    messageId: email.messageId,
-    from: email.from,
-    subject: email.subject,
-    snippet: email.snippet,
-    date: email.date,
-    hasAttachments: email.hasAttachments,
-    isRead: email.isRead,
-    isFlagged: email.isFlagged,
-    priority: email.priority,
-    labels: email.labels,
-    drivePath: '',
-  };
-};
+): InboxEmailEnvelope => envelopeFromStoredEmail(exchangeStoredEmail(row, account, folderId));
 
 const shouldHydrateBody = (row: StoredMessage): boolean => {
   const payload = payloadObject(row);
@@ -517,15 +516,26 @@ export const createInboxClient = (params: {
       for (const exchangeFolderId of exchangeFolders) {
         if (results.length >= limit) break;
         try {
-          const page = await messagesStore
+          // Walk every page of the folder (not just the newest SEARCH_SCAN_LIMIT)
+          // so operator filters reach old mail; stop early once limit matches collected.
+          const folder = messagesStore
             .mailbox({ mailboxId: exchangeMailboxId(account) })
-            .folder({ folderId: exchangeFolderId })
-            .listMessages({ limit: SEARCH_SCAN_LIMIT });
-          for (const row of page.items) {
-            if (results.length >= limit) break;
-            const item = exchangeEnvelope(row, account, exchangeFolderId);
-            if (matchesInboxSearchQuery(item, parsedQuery.value)) results.push(item);
-          }
+            .folder({ folderId: exchangeFolderId });
+          let cursor: string | undefined;
+          do {
+            const page = await folder.listMessages({
+              limit: SEARCH_SCAN_LIMIT,
+              ...(cursor ? { cursor } : {}),
+            });
+            for (const row of page.items) {
+              if (results.length >= limit) break;
+              const email = exchangeStoredEmail(row, account, exchangeFolderId);
+              if (matchesInboxSearchQuery(email, parsedQuery.value)) {
+                results.push(envelopeFromStoredEmail(email));
+              }
+            }
+            cursor = page.nextCursor ?? undefined;
+          } while (cursor && results.length < limit);
         } catch (error) {
           if (!isNotFound(error)) throw error;
         }
