@@ -145,6 +145,12 @@ export type CompletionParams = {
   readonly tools?: readonly ToolDefinition[];
   readonly toolChoice?: ToolChoice;
   readonly responseFormat?: ResponseFormat;
+  /**
+   * Provider-passthrough chat-template kwargs (vLLM/Together convention).
+   * Use `{ enable_thinking: false }` to disable hybrid reasoning on models
+   * like Kimi/Qwen so structured outputs are not truncated by reasoning tokens.
+   */
+  readonly chatTemplateKwargs?: Readonly<Record<string, unknown>>;
 };
 
 /** Usage counters returned alongside a completion. */

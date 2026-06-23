@@ -369,6 +369,7 @@ const encodeCompletionParams = (params: CompletionParams): Record<string, unknow
   ...optional('tools', params.tools as unknown[] | undefined),
   ...optional('tool_choice', encodeToolChoice(params.toolChoice)),
   ...optional('response_format', encodeResponseFormat(params.responseFormat)),
+  ...optional('chat_template_kwargs', params.chatTemplateKwargs),
 });
 
 const encodeOcrDocument = (doc: OcrDocument): unknown => {
