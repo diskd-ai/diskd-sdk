@@ -25,6 +25,7 @@ import type {
   DriveToolsTgSearchResult,
   DriveToolsTgTopic,
   DriveToolsVsearchResult,
+  DriveToolsWarning,
   DriveToolsWriteResult,
   DriveUploadCommitResult,
   DriveUploadFileResult,
@@ -295,8 +296,28 @@ const decodeDocumentResults = (o: unknown): readonly DriveToolsDocument[] => {
   return arr.filter((item) => !isErrorResult(item)).map(decodeDocument);
 };
 
+// Decode non-fatal Drive tool notices so callers can render partial-result warnings.
+const decodeToolWarning = (o: unknown): DriveToolsWarning => {
+  const r = raw(o);
+  const inodes = Array.isArray(r.inodes)
+    ? r.inodes.filter((inode): inode is string => typeof inode === 'string')
+    : [];
+  return {
+    code: strRequired(r, 'code'),
+    message: str(r, 'message') ?? '',
+    inodes,
+  };
+};
+
+// Keep warning decoding local to tool results because the JSON-RPC envelope stays unchanged.
+const decodeToolWarnings = (o: unknown): readonly DriveToolsWarning[] => {
+  const r = raw(o);
+  return Array.isArray(r.warnings) ? r.warnings.map(decodeToolWarning) : [];
+};
+
 const decodeGrepResult = (o: unknown): DriveToolsGrepResult => ({
   documents: decodeDocumentResults(o),
+  warnings: decodeToolWarnings(o),
 });
 
 const decodeVsearchResult = (o: unknown): DriveToolsVsearchResult => ({

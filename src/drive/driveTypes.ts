@@ -315,8 +315,15 @@ export type DriveToolsDocument = {
   readonly parts: readonly DriveToolsDocumentPart[];
 };
 
+export type DriveToolsWarning = {
+  readonly code: string;
+  readonly message: string;
+  readonly inodes: readonly string[];
+};
+
 export type DriveToolsGrepResult = {
   readonly documents: readonly DriveToolsDocument[];
+  readonly warnings?: readonly DriveToolsWarning[];
 };
 
 export type DriveToolsVsearchResult = {

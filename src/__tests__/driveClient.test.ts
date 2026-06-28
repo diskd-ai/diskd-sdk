@@ -843,7 +843,8 @@ test('drive.tools.glob returns DriveToolsGlobResult with typed entries', async (
   }
 });
 
-test('drive.tools.grep returns DriveToolsGrepResult with typed documents', async () => {
+/* REQ-sdk-grep-warnings-001: drive.tools.grep must expose server warnings so callers can notify users about skipped not-indexed files. */
+test('drive.tools.grep returns DriveToolsGrepResult with typed documents and warnings', async () => {
   process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
@@ -895,6 +896,13 @@ test('drive.tools.grep returns DriveToolsGrepResult with typed documents', async
             // Error result -- must be filtered out
             { error: 'File not found', code: 404 },
           ],
+          warnings: [
+            {
+              code: 'NOT_INDEXED',
+              message: 'Some files were skipped because they are not indexed yet.',
+              inodes: ['inode-12'],
+            },
+          ],
         },
         id: 1,
       }),
@@ -945,6 +953,13 @@ test('drive.tools.grep returns DriveToolsGrepResult with typed documents', async
     assert.equal(doc2?.id, 'inode-11');
     assert.equal(doc2?.parts.length, 1);
     assert.equal(doc2?.parts[0]?.title, 'Summary');
+    assert.deepEqual(result.warnings, [
+      {
+        code: 'NOT_INDEXED',
+        message: 'Some files were skipped because they are not indexed yet.',
+        inodes: ['inode-12'],
+      },
+    ]);
 
     // Verify RPC call
     const body = JSON.parse(String(calls[0]?.init?.body));
