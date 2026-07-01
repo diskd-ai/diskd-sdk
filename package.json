@@ -35,6 +35,10 @@
     "./browser": {
       "types": "./dist/browser/index.d.ts",
       "default": "./dist/browser/index.js"
+    },
+    "./context": {
+      "types": "./dist/context/index.d.ts",
+      "default": "./dist/context/index.js"
     }
   },
   "publishConfig": {
@@ -75,6 +79,9 @@
   },
   "dependencies": {
     "undici": "^7.21.0"
+  },
+  "optionalDependencies": {
+    "tiktoken": "^1.0.22"
   },
   "peerDependencies": {
     "typeorm": "^0.3.28"
