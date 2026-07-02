@@ -283,7 +283,7 @@ export type {
   StoredEmailContact,
 } from './inbox/inboxTypes.js';
 // -- LLM Router --
-export { createLlmRouterClient } from './llmRouter/llmRouter.js';
+export { ContextTooLargeError, createLlmRouterClient } from './llmRouter/llmRouter.js';
 export type {
   ChatCompletionMessage,
   CompletionChoice,

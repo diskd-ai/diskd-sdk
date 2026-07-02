@@ -25,6 +25,31 @@ import type {
 } from './llmRouterTypes.js';
 
 // ---------------------------------------------------------------------------
+// Typed errors
+// ---------------------------------------------------------------------------
+
+/**
+ * Thrown when the LLM Router rejects a request because the input exceeds the
+ * model context window. The Router signals this on the streaming endpoint as an
+ * HTTP 413 whose body carries `code: "context_too_large"`; this typed error lets
+ * callers discriminate it (e.g. trim history and retry) instead of matching on a
+ * message string.
+ *
+ * TODO: carry structured fields (contextWindow, estimatedTokens,
+ * requestedOutputTokens) once the Router advertises them on the wire -- tracked
+ * with the invoke-path `reason` follow-up -- so callers can trim precisely
+ * instead of parsing the numbers out of `message`.
+ */
+export class ContextTooLargeError extends Error {
+  readonly reason = 'context_too_large';
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'ContextTooLargeError';
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Decode helpers (wire snake_case -> domain camelCase)
 // ---------------------------------------------------------------------------
 
@@ -32,6 +57,22 @@ type RawObject = { readonly [key: string]: unknown };
 
 const isObject = (value: unknown): value is RawObject =>
   typeof value === 'object' && value !== null;
+
+/**
+ * If `bodyText` is the LLM Router's context-too-large error body
+ * (`{ error, code: "context_too_large" }`), return its human-readable message;
+ * otherwise null. Turns a 413 stream response into a typed ContextTooLargeError.
+ */
+const parseContextTooLargeMessage = (bodyText: string): string | null => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(bodyText);
+  } catch {
+    return null;
+  }
+  if (!isObject(parsed) || parsed.code !== 'context_too_large') return null;
+  return typeof parsed.error === 'string' ? parsed.error : 'Context too large for the model';
+};
 
 const str = (obj: RawObject, key: string): string | null => {
   const v = obj[key];
@@ -190,6 +231,7 @@ const decodeModelInfo = (o: unknown): ModelInfo => {
     supportedFeatures: arr(r, 'supportedFeatures')
       .concat(arr(r, 'supported_features'))
       .filter((v): v is string => typeof v === 'string'),
+    contextWindow: num(r, 'contextWindow') ?? num(r, 'context_window'),
   };
 };
 
@@ -542,6 +584,10 @@ export const createLlmRouterClient = (params: {
 
         if (!response.ok) {
           const text = await response.text();
+          const contextMessage = parseContextTooLargeMessage(text);
+          if (contextMessage !== null) {
+            throw new ContextTooLargeError(contextMessage);
+          }
           throw new Error(
             `LLM Router stream failed (HTTP ${response.status}): ${text.slice(0, 200)}`
           );
