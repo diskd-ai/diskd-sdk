@@ -246,6 +246,12 @@ export type ModelInfo = {
   readonly displayName: string;
   readonly description: string;
   readonly supportedFeatures: readonly string[];
+  /**
+   * Resolved context window (tokens) for this model, as reported by the LLM
+   * Router. `null` when an older router build does not advertise it -- consumers
+   * must then fall back to their own source rather than assume a window.
+   */
+  readonly contextWindow: number | null;
 };
 
 /** Result of listing all models across providers. */
