@@ -32,8 +32,11 @@ let encodingResolved = false;
  * BPE ranks) is expensive, so it is attempted once and the result reused.
  * Returns null when tiktoken (an optional dependency) is not installed or fails
  * to initialize, so callers silently degrade to a character-based estimate.
- * No logging: this is a pure counting primitive, and the optional dependency is
- * normally present -- observing its absence is the consumer's concern.
+ * This is a deterministic, memoized Node adapter (it loads and caches the
+ * encoder), not a pure function. The silent, unlogged degrade is deliberate:
+ * availability over accuracy, since the optional dependency is normally present
+ * in the services that use this subpath -- observing its absence (and any
+ * fail-fast policy) is the consumer's concern.
  */
 function getEncoding(): Encoding | null {
   if (encodingResolved) return encoding;

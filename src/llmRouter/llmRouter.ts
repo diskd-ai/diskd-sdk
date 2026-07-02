@@ -34,6 +34,11 @@ import type {
  * HTTP 413 whose body carries `code: "context_too_large"`; this typed error lets
  * callers discriminate it (e.g. trim history and retry) instead of matching on a
  * message string.
+ *
+ * TODO: carry structured fields (contextWindow, estimatedTokens,
+ * requestedOutputTokens) once the Router advertises them on the wire -- tracked
+ * with the invoke-path `reason` follow-up -- so callers can trim precisely
+ * instead of parsing the numbers out of `message`.
  */
 export class ContextTooLargeError extends Error {
   readonly reason = 'context_too_large';
