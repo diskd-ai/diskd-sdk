@@ -35,10 +35,6 @@
     "./browser": {
       "types": "./dist/browser/index.d.ts",
       "default": "./dist/browser/index.js"
-    },
-    "./context": {
-      "types": "./dist/context/index.d.ts",
-      "default": "./dist/context/index.js"
     }
   },
   "publishConfig": {
