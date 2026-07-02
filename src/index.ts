@@ -80,6 +80,8 @@ export type {
   SearchContactsParams,
   UpdateContactParams,
 } from './contacts/contactsTypes.js';
+// -- Token counting (Node-only; lazily uses the optional `tiktoken` dependency) --
+export { countTokensForString } from './context/index.js';
 export { createDriveCrontabClient } from './drive/crontab.js';
 export type {
   DriveCrontabClient,
@@ -483,7 +485,6 @@ export type {
   TgTaskListResult,
   TgUserbotClient,
 } from './tgUserbot/tgUserbotTypes.js';
-
 // -- Web Navigator --
 export { createWebNavigatorClient } from './webNavigator/webNavigator.js';
 export type {

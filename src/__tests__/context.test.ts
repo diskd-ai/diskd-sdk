@@ -1,11 +1,12 @@
-/* REQUIREMENT llm-router-glm-context-overflow Phase C1: @diskd-ai/sdk/context
-   exposes a single o200k token counter (countTokensForString) so llm-router and
-   pi-agent count string tokens identically. The counts must be the real tiktoken
-   o200k_base values (not the chars/4 fallback), and an empty string must be 0. */
+/* REQUIREMENT llm-router-glm-context-overflow Phase D: the SDK exposes a single
+   o200k token counter (countTokensForString) from its MAIN entry (not a subpath)
+   so CJS and ESM consumers import it the same way as every other SDK client.
+   Counts must be the real tiktoken o200k_base values (not the chars/4 fallback),
+   and an empty string must be 0. */
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { countTokensForString } from '../context/index.js';
+import { countTokensForString } from '../index.js';
 
 test('countTokensForString returns 0 for an empty string', () => {
   assert.equal(countTokensForString(''), 0);
