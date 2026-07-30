@@ -74,6 +74,7 @@ export type UserMessage = {
 export type AssistantMessage = {
   readonly role: 'assistant';
   readonly content: string | null;
+  readonly reasoning?: string;
   readonly toolCalls?: readonly ToolCall[];
 };
 
@@ -124,6 +125,11 @@ export type ResponseFormat =
       };
     };
 
+/** Controls provider-native reasoning for hybrid reasoning models. */
+export type ReasoningConfig = {
+  readonly enabled: boolean;
+};
+
 // -- Completion params & result --
 
 /**
@@ -145,6 +151,7 @@ export type CompletionParams = {
   readonly tools?: readonly ToolDefinition[];
   readonly toolChoice?: ToolChoice;
   readonly responseFormat?: ResponseFormat;
+  readonly reasoning?: ReasoningConfig;
   /**
    * Provider-passthrough chat-template kwargs (vLLM/Together convention).
    * Use `{ enable_thinking: false }` to disable hybrid reasoning on models
@@ -168,12 +175,14 @@ export type CompletionChoice = {
   readonly message: {
     readonly content: string | null;
     readonly role: string;
+    readonly reasoning: string | null;
     readonly toolCalls: readonly ToolCall[] | null;
   } | null;
   /** Present in streaming chunks. */
   readonly delta: {
     readonly content: string | null;
     readonly role: string | null;
+    readonly reasoning: string | null;
     readonly toolCalls: readonly ToolCall[] | null;
   } | null;
 };
@@ -252,6 +261,8 @@ export type ModelInfo = {
    * must then fall back to their own source rather than assume a window.
    */
   readonly contextWindow: number | null;
+  /** Resolved provider output cap, or null when the router does not advertise it. */
+  readonly maxOutputTokens: number | null;
 };
 
 /** Result of listing all models across providers. */

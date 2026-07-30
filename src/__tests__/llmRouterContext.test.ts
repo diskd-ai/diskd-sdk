@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { AuthModule } from '../auth/types.js';
 import { ContextTooLargeError, createLlmRouterClient } from '../llmRouter/llmRouter.js';
-import { withFetchMock } from '../testing/fetchMock.js';
+import { type FetchCall, withFetchMock } from '../testing/fetchMock.js';
 
 const auth: AuthModule = {
   signIn: async () => {},
@@ -23,6 +23,23 @@ const drain = async (stream: AsyncIterable<unknown>): Promise<void> => {
   for await (const chunk of stream) {
     void chunk;
   }
+};
+
+type RequestBody = {
+  readonly params?: {
+    readonly messages?: readonly unknown[];
+    readonly reasoning?: { readonly enabled?: boolean };
+  };
+  readonly messages?: readonly unknown[];
+  readonly reasoning?: { readonly enabled?: boolean };
+};
+
+/** Parse a captured JSON request body at the test boundary. */
+const parseRequestBody = (call: FetchCall | undefined): RequestBody => {
+  assert.ok(call?.init?.body);
+  const parsed: unknown = JSON.parse(String(call.init.body));
+  assert.ok(typeof parsed === 'object' && parsed !== null);
+  return parsed as RequestBody;
 };
 
 /* REQUIREMENT llm-router-glm-context-overflow Phase C2: the SDK ModelInfo decode
@@ -82,6 +99,155 @@ test('models.listAll reads snake_case context_window and yields null when absent
       const { models } = await client.models.listAll();
       assert.equal(models[0]?.contextWindow, 128000);
       assert.equal(models[1]?.contextWindow, null);
+    }
+  );
+});
+
+/* REQ-LLM-OUTPUT-BUDGET-005: SDK model metadata decodes the router-owned output cap so agent consumers can use one advertised budget. */
+test('models.listAll decodes maxOutputTokens from the wire', async () => {
+  const result = {
+    models: [
+      {
+        provider: 'together',
+        model: 'moonshotai/Kimi-K2.6',
+        displayName: 'Kimi K2.6',
+        description: '',
+        supportedFeatures: ['thinking'],
+        contextWindow: 262144,
+        maxOutputTokens: 32768,
+      },
+    ],
+  };
+
+  await withFetchMock(
+    () => jsonResponse({ jsonrpc: '2.0', result, id: 1 }),
+    async () => {
+      const client = createLlmRouterClient({ auth, url: 'https://apis.example' });
+      const { models } = await client.models.listAll();
+      assert.equal(models[0]?.maxOutputTokens, 32768);
+    }
+  );
+});
+
+/* REQ-SDK-LLM-REASONING-001: SDK completion requests preserve the canonical reasoning toggle and prior assistant reasoning exactly. */
+test('completions.create encodes reasoning request and assistant history', async () => {
+  await withFetchMock(
+    () =>
+      jsonResponse({
+        jsonrpc: '2.0',
+        result: {
+          id: 'completion-1',
+          choices: [],
+          created: 1,
+          model: 'moonshotai/Kimi-K2.6',
+        },
+        id: 1,
+      }),
+    async (calls) => {
+      const client = createLlmRouterClient({ auth, url: 'https://apis.example' });
+      await client.completions.create({
+        provider: 'together',
+        model: 'moonshotai/Kimi-K2.6',
+        messages: [
+          {
+            role: 'assistant',
+            content: '',
+            reasoning: 'load sources, then group totals',
+          },
+        ],
+        reasoning: { enabled: true },
+      });
+
+      const body = parseRequestBody(calls[0]);
+      assert.deepEqual(body.params?.reasoning, { enabled: true });
+      assert.deepEqual(body.params?.messages, [
+        {
+          role: 'assistant',
+          content: '',
+          reasoning: 'load sources, then group totals',
+        },
+      ]);
+    }
+  );
+});
+
+/* REQ-SDK-LLM-REASONING-002: SDK non-streaming decoding exposes reasoning separately from answer content without alteration. */
+test('completions.create decodes response reasoning', async () => {
+  await withFetchMock(
+    () =>
+      jsonResponse({
+        jsonrpc: '2.0',
+        result: {
+          id: 'completion-1',
+          choices: [
+            {
+              index: 0,
+              finish_reason: 'length',
+              message: {
+                role: 'assistant',
+                content: '',
+                reasoning: 'step one\nstep two',
+              },
+            },
+          ],
+          created: 1,
+          model: 'moonshotai/Kimi-K2.6',
+        },
+        id: 1,
+      }),
+    async () => {
+      const client = createLlmRouterClient({ auth, url: 'https://apis.example' });
+      const result = await client.completions.create({
+        provider: 'together',
+        model: 'moonshotai/Kimi-K2.6',
+        messages: [{ role: 'user', content: 'Analyze.' }],
+      });
+
+      assert.equal(result.choices[0]?.message?.reasoning, 'step one\nstep two');
+    }
+  );
+});
+
+/* REQ-SDK-LLM-REASONING-003: SDK streaming decoding exposes reasoning deltas separately from answer content without alteration. */
+test('completions.stream encodes the toggle and decodes reasoning deltas', async () => {
+  const chunk = {
+    id: 'completion-1',
+    choices: [
+      {
+        index: 0,
+        finish_reason: null,
+        delta: {
+          role: 'assistant',
+          content: null,
+          reasoning: 'step one\n',
+        },
+      },
+    ],
+    created: 1,
+    model: 'moonshotai/Kimi-K2.6',
+  };
+
+  await withFetchMock(
+    () =>
+      new Response(`${JSON.stringify(chunk)}\n`, {
+        status: 200,
+        headers: { 'Content-Type': 'application/x-ndjson' },
+      }),
+    async (calls) => {
+      const client = createLlmRouterClient({ auth, url: 'https://apis.example' });
+      const chunks = [];
+      for await (const current of client.completions.stream({
+        provider: 'together',
+        model: 'moonshotai/Kimi-K2.6',
+        messages: [{ role: 'user', content: 'Analyze.' }],
+        reasoning: { enabled: false },
+      })) {
+        chunks.push(current);
+      }
+
+      const body = parseRequestBody(calls[0]);
+      assert.deepEqual(body.reasoning, { enabled: false });
+      assert.equal(chunks[0]?.choices[0]?.delta?.reasoning, 'step one\n');
     }
   );
 });

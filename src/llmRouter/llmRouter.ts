@@ -154,6 +154,7 @@ const decodeCompletionResult = (result: unknown): CompletionResult => {
           ? {
               content: str(msg, 'content'),
               role: str(msg, 'role') ?? 'assistant',
+              reasoning: str(msg, 'reasoning'),
               toolCalls: Array.isArray(msg.tool_calls) ? msg.tool_calls.map(decodeToolCall) : null,
             }
           : null,
@@ -161,6 +162,7 @@ const decodeCompletionResult = (result: unknown): CompletionResult => {
           ? {
               content: str(dlt, 'content'),
               role: str(dlt, 'role'),
+              reasoning: str(dlt, 'reasoning'),
               toolCalls: Array.isArray(dlt.tool_calls) ? dlt.tool_calls.map(decodeToolCall) : null,
             }
           : null,
@@ -187,9 +189,10 @@ const decodeStreamChunk = (raw_: unknown): StreamChunk => {
           ? {
               content: str(dlt, 'content'),
               role: str(dlt, 'role'),
+              reasoning: str(dlt, 'reasoning'),
               toolCalls: Array.isArray(dlt.tool_calls) ? dlt.tool_calls.map(decodeToolCall) : null,
             }
-          : { content: null, role: null, toolCalls: null },
+          : { content: null, role: null, reasoning: null, toolCalls: null },
       };
     }),
   };
@@ -232,6 +235,7 @@ const decodeModelInfo = (o: unknown): ModelInfo => {
       .concat(arr(r, 'supported_features'))
       .filter((v): v is string => typeof v === 'string'),
     contextWindow: num(r, 'contextWindow') ?? num(r, 'context_window'),
+    maxOutputTokens: num(r, 'maxOutputTokens') ?? num(r, 'max_output_tokens'),
   };
 };
 
@@ -360,6 +364,7 @@ const encodeMessage = (msg: ChatCompletionMessage): unknown => {
       return {
         role: 'assistant',
         content: msg.content,
+        ...optional('reasoning', msg.reasoning),
         ...optional('tool_calls', msg.toolCalls?.map(encodeToolCall)),
       };
     case 'tool':
@@ -411,6 +416,7 @@ const encodeCompletionParams = (params: CompletionParams): Record<string, unknow
   ...optional('tools', params.tools as unknown[] | undefined),
   ...optional('tool_choice', encodeToolChoice(params.toolChoice)),
   ...optional('response_format', encodeResponseFormat(params.responseFormat)),
+  ...optional('reasoning', params.reasoning),
   ...optional('chat_template_kwargs', params.chatTemplateKwargs),
 });
 
