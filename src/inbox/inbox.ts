@@ -511,7 +511,9 @@ export const createInboxClient = (params: {
       if (parsedQuery.tag === 'Err') {
         throw new Error(formatInboxSearchQueryError(parsedQuery.error));
       }
+      const queryWithoutText = { ...parsedQuery.value, textTerms: [] };
       const results: InboxEmailEnvelope[] = [];
+      const mailboxId = exchangeMailboxId(account);
       const exchangeFolders = folderId ? [folderId] : await listExchangeFolderIds(account);
       for (const exchangeFolderId of exchangeFolders) {
         if (results.length >= limit) break;
@@ -519,7 +521,7 @@ export const createInboxClient = (params: {
           // Walk every page of the folder (not just the newest SEARCH_SCAN_LIMIT)
           // so operator filters reach old mail; stop early once limit matches collected.
           const folder = messagesStore
-            .mailbox({ mailboxId: exchangeMailboxId(account) })
+            .mailbox({ mailboxId })
             .folder({ folderId: exchangeFolderId });
           let cursor: string | undefined;
           do {
@@ -529,7 +531,21 @@ export const createInboxClient = (params: {
             });
             for (const row of page.items) {
               if (results.length >= limit) break;
-              const email = exchangeStoredEmail(row, account, exchangeFolderId);
+              let email = exchangeStoredEmail(row, account, exchangeFolderId);
+              if (!matchesInboxSearchQuery(email, parsedQuery.value)) {
+                if (
+                  parsedQuery.value.textTerms.length === 0 ||
+                  !matchesInboxSearchQuery(email, queryWithoutText)
+                ) {
+                  continue;
+                }
+                let fullRow = await folder.getMessage({ externalId: row.externalId });
+                if (shouldHydrateBody(fullRow)) {
+                  await hydrateBody(mailboxId, exchangeFolderId, row.externalId);
+                  fullRow = await folder.getMessage({ externalId: row.externalId });
+                }
+                email = exchangeStoredEmail(fullRow, account, exchangeFolderId);
+              }
               if (matchesInboxSearchQuery(email, parsedQuery.value)) {
                 results.push(envelopeFromStoredEmail(email));
               }

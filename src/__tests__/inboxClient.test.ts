@@ -416,6 +416,88 @@ test('platform.inbox.search filters Exchange messages with Gmail-style syntax', 
   );
 });
 
+/* REQ-2912-2: Free-text inbox search loads the full stored payload when the compact list row omits the matching body. */
+test('platform.inbox.search loads compact Exchange rows before evaluating body-only terms', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/list') {
+        return rpc(request.id, {
+          items: [
+            {
+              external_id: 'openai-luna',
+              payload: {
+                from: { name: 'OpenAI', address: 'team@openai.com' },
+                to: [],
+                cc: [],
+                subject: 'New pricing and Fast mode for Sol',
+                date: '2026-07-31T00:02:32.000Z',
+                flags: [],
+                labels: [],
+                hasAttachments: false,
+                snippet: 'Today, we are making GPT-5.6 more affordable and faster.',
+              },
+              created_at: '2026-07-31T00:02:32.000Z',
+              updated_at: '2026-07-31T00:02:32.000Z',
+            },
+          ],
+          next_cursor: null,
+        });
+      }
+      if (request.method === 'messages_store/get') {
+        return rpc(request.id, {
+          message: {
+            external_id: 'openai-luna',
+            payload: {
+              accountId: 'google__aileron',
+              mailbox: 'INBOX',
+              from: { name: 'OpenAI', address: 'team@openai.com' },
+              to: [],
+              cc: [],
+              subject: 'New pricing and Fast mode for Sol',
+              date: '2026-07-31T00:02:32.000Z',
+              flags: [],
+              labels: [],
+              hasAttachments: false,
+              attachments: [],
+              snippet: 'Today, we are making GPT-5.6 more affordable and faster.',
+              bodyText: 'GPT-5.6 Luna now costs 80% less',
+              bodyHtml: null,
+              bodyState: 'loaded',
+            },
+            created_at: '2026-07-31T00:02:32.000Z',
+            updated_at: '2026-07-31T00:02:32.000Z',
+          },
+        });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      const result = await inbox.search({
+        account: 'exchange-google-aileron',
+        folderId: 'INBOX',
+        query: 'Luna',
+        limit: 20,
+      });
+
+      assert.deepEqual(
+        result.results.map((item) => item.messageId),
+        ['openai-luna']
+      );
+      assert.equal(
+        calls.filter((call) => body(call.init).method === 'messages_store/get').length,
+        1
+      );
+    }
+  );
+});
+
 /* REQUIREMENT REQ enabling:dev/platform-api/sdk/inbox: InboxClient.search surfaces invalid Gmail-style syntax instead of returning empty results. */
 test('platform.inbox.search rejects unsupported Gmail-style operators before scanning', async () => {
   await withFetchMock(
