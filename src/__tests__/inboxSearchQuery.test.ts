@@ -13,6 +13,7 @@ const message: InboxSearchableMessage = {
   cc: [{ name: 'Bob Cc', address: 'bob@example.com' }],
   subject: 'Invoice ready',
   snippet: 'May invoice from finance',
+  bodyText: 'The May invoice is ready for review.',
   date: '2025-05-18T10:00:00.000Z',
   isRead: false,
   isFlagged: false,
@@ -133,11 +134,32 @@ test('inbox search query matcher requires all parsed criteria to match', () => {
   );
   assert.equal(
     matchesInboxSearchQuery(
-      { ...message, subject: 'Reminder', snippet: 'No billing here' },
+      {
+        ...message,
+        subject: 'Reminder',
+        snippet: 'No billing here',
+        bodyText: 'The quarterly report is ready for review.',
+      },
       parsed.value
     ),
     false
   );
+});
+
+/* REQ-2912-1: Free-text inbox search matches terms that occur only in the stored message body. */
+test('inbox search query matcher includes the stored message body in free-text search', () => {
+  const parsed = parseInboxSearchQuery('Luna');
+  const bodyOnlyMessage = {
+    ...message,
+    from: { name: 'OpenAI', address: 'noreply@email.openai.com' },
+    subject: 'New: Lower GPT-5.6 pricing and Fast mode for Sol',
+    snippet: 'Today, we are making GPT-5.6 more affordable and faster.',
+    bodyText: 'GPT-5.6 Luna now costs 80% less.',
+  };
+
+  assert.equal(parsed.tag, 'Ok');
+  if (parsed.tag !== 'Ok') return;
+  assert.equal(matchesInboxSearchQuery(bodyOnlyMessage, parsed.value), true);
 });
 
 /* REQUIREMENT REQ enabling:dev/platform-api/sdk/inbox: Inbox search matches recipients via to and cc. */

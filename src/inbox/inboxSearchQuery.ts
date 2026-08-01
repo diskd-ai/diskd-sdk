@@ -54,6 +54,7 @@ export type InboxSearchableMessage = {
   readonly cc: readonly StoredEmailContact[];
   readonly subject: string;
   readonly snippet: string;
+  readonly bodyText: string;
   readonly date: string;
   readonly isRead: boolean;
   readonly isFlagged: boolean;
@@ -249,7 +250,13 @@ export const matchesInboxSearchQuery = (
   if (search.hasAttachment.tag === 'Some' && message.hasAttachments !== search.hasAttachment.value)
     return false;
 
-  const searchable = [message.subject, message.from.name, message.from.address, message.snippet]
+  const searchable = [
+    message.subject,
+    message.from.name,
+    message.from.address,
+    message.snippet,
+    message.bodyText,
+  ]
     .join(' ')
     .toLowerCase();
   return search.textTerms.every((term) => searchable.includes(term));
