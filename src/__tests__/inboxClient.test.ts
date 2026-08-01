@@ -498,6 +498,85 @@ test('platform.inbox.search loads compact Exchange rows before evaluating body-o
   );
 });
 
+/* REQ-2912-4: Free-text inbox search must not hydrate every unloaded body while scanning a mailbox. */
+test('platform.inbox.search leaves unloaded body candidates unhydrated', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/list') {
+        return rpc(request.id, {
+          items: [
+            {
+              external_id: 'unloaded-message',
+              payload: {
+                from: { name: 'Alice', address: 'alice@example.com' },
+                to: [],
+                cc: [],
+                subject: 'Unrelated subject',
+                date: '2026-07-31T00:02:32.000Z',
+                flags: [],
+                labels: [],
+                hasAttachments: false,
+                snippet: 'Unrelated preview',
+              },
+              created_at: '2026-07-31T00:02:32.000Z',
+              updated_at: '2026-07-31T00:02:32.000Z',
+            },
+          ],
+          next_cursor: null,
+        });
+      }
+      if (request.method === 'messages_store/get') {
+        return rpc(request.id, {
+          message: {
+            external_id: 'unloaded-message',
+            payload: {
+              accountId: 'google__aileron',
+              mailbox: 'INBOX',
+              from: { name: 'Alice', address: 'alice@example.com' },
+              to: [],
+              cc: [],
+              subject: 'Unrelated subject',
+              date: '2026-07-31T00:02:32.000Z',
+              flags: [],
+              labels: [],
+              hasAttachments: false,
+              attachments: [],
+              snippet: 'Unrelated preview',
+              bodyText: null,
+              bodyHtml: null,
+              bodyState: 'not_loaded',
+            },
+            created_at: '2026-07-31T00:02:32.000Z',
+            updated_at: '2026-07-31T00:02:32.000Z',
+          },
+        });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      const result = await inbox.search({
+        account: 'exchange-google-aileron',
+        folderId: 'INBOX',
+        query: 'Luna',
+        limit: 20,
+      });
+
+      assert.deepEqual(result.results, []);
+      assert.deepEqual(
+        calls.map((call) => body(call.init).method),
+        ['messages_store/list', 'messages_store/get']
+      );
+    }
+  );
+});
+
 /* REQUIREMENT REQ enabling:dev/platform-api/sdk/inbox: InboxClient.search surfaces invalid Gmail-style syntax instead of returning empty results. */
 test('platform.inbox.search rejects unsupported Gmail-style operators before scanning', async () => {
   await withFetchMock(

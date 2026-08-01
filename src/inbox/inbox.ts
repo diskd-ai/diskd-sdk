@@ -26,6 +26,7 @@ import type {
 
 const DEFAULT_EXCHANGE_FOLDER = 'INBOX';
 const SEARCH_SCAN_LIMIT = 100;
+const SEARCH_BODY_LOAD_CONCURRENCY = 20;
 const SYSTEM_HYDRATE_EMAIL_BODIES_TOOL = 'system_hydrate_email_bodies';
 const SYSTEM_HYDRATE_EMAIL_ATTACHMENT_TOOL = 'system_hydrate_email_attachment';
 
@@ -529,25 +530,32 @@ export const createInboxClient = (params: {
               limit: SEARCH_SCAN_LIMIT,
               ...(cursor ? { cursor } : {}),
             });
-            for (const row of page.items) {
-              if (results.length >= limit) break;
-              let email = exchangeStoredEmail(row, account, exchangeFolderId);
-              if (!matchesInboxSearchQuery(email, parsedQuery.value)) {
-                if (
-                  parsedQuery.value.textTerms.length === 0 ||
-                  !matchesInboxSearchQuery(email, queryWithoutText)
-                ) {
-                  continue;
-                }
-                let fullRow = await folder.getMessage({ externalId: row.externalId });
-                if (shouldHydrateBody(fullRow)) {
-                  await hydrateBody(mailboxId, exchangeFolderId, row.externalId);
-                  fullRow = await folder.getMessage({ externalId: row.externalId });
-                }
-                email = exchangeStoredEmail(fullRow, account, exchangeFolderId);
-              }
-              if (matchesInboxSearchQuery(email, parsedQuery.value)) {
-                results.push(envelopeFromStoredEmail(email));
+            for (
+              let offset = 0;
+              offset < page.items.length && results.length < limit;
+              offset += SEARCH_BODY_LOAD_CONCURRENCY
+            ) {
+              const batch = page.items.slice(offset, offset + SEARCH_BODY_LOAD_CONCURRENCY);
+              // Compact list rows omit bodies. Load only plausible text candidates,
+              // with a fixed concurrency bound and without triggering IMAP hydration.
+              const matchingEmails = await Promise.all(
+                batch.map(async (row): Promise<StoredEmail | null> => {
+                  const listedEmail = exchangeStoredEmail(row, account, exchangeFolderId);
+                  if (matchesInboxSearchQuery(listedEmail, parsedQuery.value)) return listedEmail;
+                  if (
+                    parsedQuery.value.textTerms.length === 0 ||
+                    !matchesInboxSearchQuery(listedEmail, queryWithoutText)
+                  ) {
+                    return null;
+                  }
+                  const fullRow = await folder.getMessage({ externalId: row.externalId });
+                  const fullEmail = exchangeStoredEmail(fullRow, account, exchangeFolderId);
+                  return matchesInboxSearchQuery(fullEmail, parsedQuery.value) ? fullEmail : null;
+                })
+              );
+              for (const email of matchingEmails) {
+                if (email) results.push(envelopeFromStoredEmail(email));
+                if (results.length >= limit) break;
               }
             }
             cursor = page.nextCursor ?? undefined;
