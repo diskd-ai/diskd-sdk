@@ -155,7 +155,7 @@ export type ListSendersParams = {
 
 /** One unique sender summary computed from compact message metadata. */
 export type SenderSummary = {
-  readonly name: string;
+  readonly name: string | null;
   readonly address: string;
   readonly count: number;
   readonly firstDate: string | null;

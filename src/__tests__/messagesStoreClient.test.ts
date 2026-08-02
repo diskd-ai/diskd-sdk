@@ -160,7 +160,7 @@ test('messagesStore.mailbox.listSenders encodes cursor fields and decodes totals
         unique_sender_count: 1882,
         senders: [
           {
-            name: 'Alice',
+            name: null,
             address: 'alice@example.com',
             count: 3,
             first_date: '2026-05-01T00:00:00+00:00',
@@ -184,7 +184,7 @@ test('messagesStore.mailbox.listSenders encodes cursor fields and decodes totals
         uniqueSenderCount: 1882,
         senders: [
           {
-            name: 'Alice',
+            name: null,
             address: 'alice@example.com',
             count: 3,
             firstDate: '2026-05-01T00:00:00+00:00',
