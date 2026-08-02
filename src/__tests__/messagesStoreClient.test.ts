@@ -141,6 +141,62 @@ test('messagesStore.folder.listMessages forwards orderBy as order_by', async () 
   );
 });
 
+/* REQ-2917-SENDERS-009: the SDK exposes bounded sender aggregation pages without message reads. */
+test('messagesStore.mailbox.listSenders encodes cursor fields and decodes totals', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = parseBody(init);
+      assert.equal(request.method, 'messages_store/list_senders');
+      assert.deepEqual(request.params, {
+        mailbox_id: 'exchange-mail-w1upgraidefr',
+        folder_id: 'INBOX',
+        limit: 100,
+        cursor: 'cursor-1',
+      });
+      return jsonRpcResponse({
+        mailbox_id: 'exchange-mail-w1upgraidefr',
+        folder_id: 'INBOX',
+        total_messages: 6500,
+        unique_sender_count: 1882,
+        senders: [
+          {
+            name: 'Alice',
+            address: 'alice@example.com',
+            message_count: 3,
+            first_date: '2026-05-01T00:00:00+00:00',
+            last_date: '2026-05-03T00:00:00+00:00',
+          },
+        ],
+        next_cursor: 'cursor-2',
+      });
+    },
+    async () => {
+      const client = diskd.os.messagesStore({ auth: makeAuth(), url: 'http://drive:8000/api/v1' });
+
+      const result = await client
+        .mailbox({ mailboxId: 'exchange-mail-w1upgraidefr' })
+        .listSenders({ folderId: 'INBOX', limit: 100, cursor: 'cursor-1' });
+
+      assert.deepEqual(result, {
+        mailboxId: 'exchange-mail-w1upgraidefr',
+        folderId: 'INBOX',
+        totalMessages: 6500,
+        uniqueSenderCount: 1882,
+        senders: [
+          {
+            name: 'Alice',
+            address: 'alice@example.com',
+            messageCount: 3,
+            firstDate: '2026-05-01T00:00:00+00:00',
+            lastDate: '2026-05-03T00:00:00+00:00',
+          },
+        ],
+        nextCursor: 'cursor-2',
+      });
+    }
+  );
+});
+
 /* REQ-2912-SEARCH-013: Drive search receives query, bounded page size, and cursor. */
 test('messagesStore.folder.searchMessages uses the Drive search boundary', async () => {
   await withFetchMock(

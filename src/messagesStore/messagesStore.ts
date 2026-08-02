@@ -37,11 +37,14 @@ import type {
   ListMessagesResult,
   ListReviewItemsParams,
   ListReviewItemsResult,
+  ListSendersParams,
+  ListSendersResult,
   MailboxScopedClient,
   MailboxSummary,
   MessageScopedClient,
   MessagesStoreClient,
   ReviewItem,
+  SenderSummary,
   StoredMessage,
   UpsertBatchParams,
   UpsertBatchResult,
@@ -214,6 +217,31 @@ const decodeListMessages = (o: unknown): ListMessagesResult => {
   const r = raw(o);
   return {
     items: arr(r, 'items').map(decodeStoredMessage),
+    nextCursor: str(r, 'next_cursor'),
+  };
+};
+
+/** Decode one compact sender summary from Drive's snake_case wire format. */
+const decodeSenderSummary = (o: unknown): SenderSummary => {
+  const r = raw(o);
+  return {
+    name: str(r, 'name'),
+    address: str(r, 'address'),
+    messageCount: num(r, 'message_count'),
+    firstDate: str(r, 'first_date'),
+    lastDate: str(r, 'last_date'),
+  };
+};
+
+/** Decode one cursor-paginated sender aggregation response. */
+const decodeListSenders = (o: unknown): ListSendersResult => {
+  const r = raw(o);
+  return {
+    mailboxId: strRequired(r, 'mailbox_id'),
+    folderId: str(r, 'folder_id'),
+    totalMessages: num(r, 'total_messages'),
+    uniqueSenderCount: num(r, 'unique_sender_count'),
+    senders: arr(r, 'senders').map(decodeSenderSummary),
     nextCursor: str(r, 'next_cursor'),
   };
 };
@@ -592,6 +620,20 @@ const makeMailboxScoped = (call: CallFn, mailboxId: string): MailboxScopedClient
     const result = await call('messages_store/folder/list', { mailbox_id: mailboxId }, signal);
     const items = arr(raw(result), 'folders');
     return items.map(decodeFolderSummary);
+  },
+
+  listSenders: async (p?: ListSendersParams, signal?: AbortSignal) => {
+    const result = await call(
+      'messages_store/list_senders',
+      {
+        mailbox_id: mailboxId,
+        ...optional('folder_id', p?.folderId),
+        ...optional('limit', p?.limit),
+        ...optional('cursor', p?.cursor),
+      },
+      signal
+    );
+    return decodeListSenders(result);
   },
 
   folder: ({ folderId }) => makeFolderScoped(call, mailboxId, folderId),

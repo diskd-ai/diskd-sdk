@@ -146,6 +146,32 @@ export type ListMessagesResult = {
   readonly nextCursor: string | null;
 };
 
+/** Cursor-paginated mailbox sender aggregation parameters. */
+export type ListSendersParams = {
+  readonly folderId?: string;
+  readonly limit?: number;
+  readonly cursor?: string;
+};
+
+/** One unique sender summary computed from compact message metadata. */
+export type SenderSummary = {
+  readonly name: string | null;
+  readonly address: string | null;
+  readonly messageCount: number;
+  readonly firstDate: string | null;
+  readonly lastDate: string | null;
+};
+
+/** One bounded sender page with mailbox-wide aggregate counts. */
+export type ListSendersResult = {
+  readonly mailboxId: string;
+  readonly folderId: string | null;
+  readonly totalMessages: number;
+  readonly uniqueSenderCount: number;
+  readonly senders: readonly SenderSummary[];
+  readonly nextCursor: string | null;
+};
+
 // -- Boundary 3b: single review box --
 
 /** One message waiting for review before send. */
@@ -420,6 +446,11 @@ export type MailboxScopedClient = {
   readonly upsertFolder: (params: UpsertFolderParams) => Promise<UpsertFolderResult>;
   /** Enumerate all folders in this mailbox. */
   readonly listFolders: (signal?: AbortSignal) => Promise<readonly FolderSummary[]>;
+  /** Return one bounded page of unique senders without reading message bodies. */
+  readonly listSenders: (
+    params?: ListSendersParams,
+    signal?: AbortSignal
+  ) => Promise<ListSendersResult>;
   /**
    * Bind a folder-scoped client over `(mailboxId, folderId)`. The
    * returned client exposes folder CRUD plus message operations.
