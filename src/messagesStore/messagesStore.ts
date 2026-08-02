@@ -356,7 +356,7 @@ const encodeIncomingMessage = (m: IncomingMessage): Record<string, unknown> => (
 // Scoped factories (closures capture the path identifiers)
 // ---------------------------------------------------------------------------
 
-type CallFn = (method: string, params: unknown) => Promise<unknown>;
+type CallFn = (method: string, params: unknown, signal?: AbortSignal) => Promise<unknown>;
 
 /** Build the single workspace review box client. */
 const makeReviewScoped = (call: CallFn): MessagesStoreClient['review'] => ({
@@ -535,14 +535,18 @@ const makeFolderScoped = (
     return decodeListMessages(result);
   },
 
-  searchMessages: async (p) => {
-    const result = await call('messages_store/search', {
-      mailbox_id: mailboxId,
-      folder_id: folderId,
-      query: p.query,
-      page_size: p.pageSize,
-      ...optional('cursor', p.cursor),
-    });
+  searchMessages: async (p, signal) => {
+    const result = await call(
+      'messages_store/search',
+      {
+        mailbox_id: mailboxId,
+        folder_id: folderId,
+        query: p.query,
+        page_size: p.pageSize,
+        ...optional('cursor', p.cursor),
+      },
+      signal
+    );
     return decodeListMessages(result);
   },
 
@@ -584,8 +588,8 @@ const makeMailboxScoped = (call: CallFn, mailboxId: string): MailboxScopedClient
     return decodeUpsertFolder(result);
   },
 
-  listFolders: async () => {
-    const result = await call('messages_store/folder/list', { mailbox_id: mailboxId });
+  listFolders: async (signal) => {
+    const result = await call('messages_store/folder/list', { mailbox_id: mailboxId }, signal);
     const items = arr(raw(result), 'folders');
     return items.map(decodeFolderSummary);
   },
@@ -621,17 +625,17 @@ export const createMessagesStoreClient = (params: {
     : `${resolveDiskdGatewayUrl('os/drive')}/api/v1`;
   let nextId = 1;
 
-  const call: CallFn = async (method, rpcParams) => {
+  const call: CallFn = async (method, rpcParams, signal) => {
     const id = nextId;
     nextId += 1;
 
     if (params.auth.getRequestHeaders) {
       const headers = await params.auth.getRequestHeaders();
-      return jsonRpcCall({ url: rpcUrl, headers, method, rpcParams, id });
+      return jsonRpcCall({ url: rpcUrl, headers, method, rpcParams, id, signal });
     }
 
     const bearerToken = await params.auth.getAccessToken();
-    return jsonRpcCall({ url: rpcUrl, bearerToken, method, rpcParams, id });
+    return jsonRpcCall({ url: rpcUrl, bearerToken, method, rpcParams, id, signal });
   };
 
   return {

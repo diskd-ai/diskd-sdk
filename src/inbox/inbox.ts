@@ -262,18 +262,17 @@ export const createInboxClient = (params: {
   let hydrateBodyToolName: string | null = null;
   let hydrateAttachmentToolName: string | null = null;
 
-  const listExchangeFolderIds = async (account: string): Promise<readonly string[]> => {
-    try {
-      const folders = await messagesStore
-        .mailbox({ mailboxId: exchangeMailboxId(account) })
-        .listFolders();
-      const ids = folders.map((folder) => folder.folderId);
-      if (ids.length === 0) return [DEFAULT_EXCHANGE_FOLDER];
-      const rest = ids.filter((id) => id !== DEFAULT_EXCHANGE_FOLDER);
-      return ids.includes(DEFAULT_EXCHANGE_FOLDER) ? [DEFAULT_EXCHANGE_FOLDER, ...rest] : ids;
-    } catch {
-      return [DEFAULT_EXCHANGE_FOLDER];
-    }
+  const listExchangeFolderIds = async (
+    account: string,
+    signal?: AbortSignal
+  ): Promise<readonly string[]> => {
+    const folders = await messagesStore
+      .mailbox({ mailboxId: exchangeMailboxId(account) })
+      .listFolders(signal);
+    const ids = folders.map((folder) => folder.folderId);
+    if (ids.length === 0) return [DEFAULT_EXCHANGE_FOLDER];
+    const rest = ids.filter((id) => id !== DEFAULT_EXCHANGE_FOLDER);
+    return ids.includes(DEFAULT_EXCHANGE_FOLDER) ? [DEFAULT_EXCHANGE_FOLDER, ...rest] : ids;
   };
 
   const hydrateBody = async (
@@ -512,21 +511,27 @@ export const createInboxClient = (params: {
       return readExchange(resolvedAccount, resolvedMessageId, folderId);
     },
 
-    search: async ({ account, query, folderId, limit = 10, pageSize }: InboxSearchParams) => {
+    search: async (
+      { account, query, folderId, limit = 10, pageSize }: InboxSearchParams,
+      signal?: AbortSignal
+    ) => {
       const results: InboxEmailEnvelope[] = [];
       const mailboxId = exchangeMailboxId(account);
       const resolvedPageSize = resolveSearchPageSize(pageSize);
-      const exchangeFolders = folderId ? [folderId] : await listExchangeFolderIds(account);
+      const exchangeFolders = folderId ? [folderId] : await listExchangeFolderIds(account, signal);
       for (const exchangeFolderId of exchangeFolders) {
         if (results.length >= limit) break;
         const folder = messagesStore.mailbox({ mailboxId }).folder({ folderId: exchangeFolderId });
         let cursor: string | undefined;
         do {
-          const page = await folder.searchMessages({
-            query,
-            pageSize: resolvedPageSize,
-            ...(cursor ? { cursor } : {}),
-          });
+          const page = await folder.searchMessages(
+            {
+              query,
+              pageSize: resolvedPageSize,
+              ...(cursor ? { cursor } : {}),
+            },
+            signal
+          );
           for (const row of page.items) {
             results.push(exchangeEnvelope(row, account, exchangeFolderId));
             if (results.length >= limit) break;

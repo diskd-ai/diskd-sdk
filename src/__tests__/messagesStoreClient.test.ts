@@ -15,7 +15,7 @@ const makeAuth = (): AuthModule => ({
 });
 
 const withFetchMock = async (
-  handler: (input: string, init?: RequestInit) => Response,
+  handler: (input: string, init?: RequestInit) => Response | Promise<Response>,
   fn: (calls: FetchCall[]) => Promise<void>
 ): Promise<void> => {
   const calls: FetchCall[] = [];
@@ -169,6 +169,38 @@ test('messagesStore.folder.searchMessages uses the Drive search boundary', async
         });
 
       assert.deepEqual(result, { items: [], nextCursor: 'cursor-2' });
+    }
+  );
+});
+
+/* REQ-2912-CANCEL-010: Drive JSON-RPC cancellation must reach fetch and remain an abort rejection. */
+test('messagesStore.folder.searchMessages forwards AbortSignal to fetch', async () => {
+  const controller = new AbortController();
+  const abortReason = new Error('search stopped');
+  let markFetchStarted: (() => void) | undefined;
+  const fetchStarted = new Promise<void>((resolve) => {
+    markFetchStarted = resolve;
+  });
+
+  await withFetchMock(
+    (_url, init) => {
+      assert.equal(init?.signal, controller.signal);
+      markFetchStarted?.();
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(init.signal?.reason), { once: true });
+      });
+    },
+    async () => {
+      const client = diskd.os.messagesStore({ auth: makeAuth(), url: 'http://drive:8000/api/v1' });
+      const pending = client
+        .mailbox({ mailboxId: 'exchange-mail-w1upgraidefr' })
+        .folder({ folderId: 'INBOX' })
+        .searchMessages({ query: 'Luna', pageSize: 20 }, controller.signal);
+
+      await fetchStarted;
+      controller.abort(abortReason);
+
+      await assert.rejects(pending, (error: unknown) => error === abortReason);
     }
   );
 });

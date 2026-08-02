@@ -255,6 +255,33 @@ test('call() sends tools/call with correct params and returns result', async () 
   );
 });
 
+/* REQ-2912-CANCEL-008: MCP initialization and tool execution must share the caller's cancellation signal. */
+test('call() forwards the AbortSignal to every MCP fetch', async () => {
+  const controller = new AbortController();
+  let callIndex = 0;
+
+  await withFetchMock(
+    () => {
+      callIndex += 1;
+      if (callIndex === 1) {
+        return jsonRpcResponse(
+          { protocolVersion: '2024-11-05', capabilities: {}, serverInfo: { name: 'mcp-hub' } },
+          'session-abc'
+        );
+      }
+      return jsonRpcResponse({ content: [{ type: 'text', text: 'ok' }] }, 'session-abc');
+    },
+    async (calls) => {
+      const client = diskd.os.mcpTools({ auth: makeAuth(), url: 'http://mcp-hub:3000' });
+
+      await client.call('github__list_repos', { username: 'octocat' }, controller.signal);
+
+      assert.equal(calls.length, 2);
+      assert.ok(calls.every((call) => call.init?.signal === controller.signal));
+    }
+  );
+});
+
 test('call() without args sends empty arguments object', async () => {
   const url = 'http://mcp-hub:3000';
 

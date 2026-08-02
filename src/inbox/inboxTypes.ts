@@ -137,7 +137,8 @@ export type InboxClient = {
   readonly list: (params: InboxListParams) => Promise<InboxPage>;
   readonly read: (params: InboxReadParams) => Promise<StoredEmail>;
   readonly search: (
-    params: InboxSearchParams
+    params: InboxSearchParams,
+    signal?: AbortSignal
   ) => Promise<{ readonly results: readonly InboxEmailEnvelope[] }>;
   readonly markRead: (params: InboxMarkReadParams) => Promise<StoredEmail>;
   readonly saveAttachment: (

@@ -590,6 +590,52 @@ test('platform.inbox.search follows Drive search pages to reach older mail', asy
   );
 });
 
+/* REQ-2912-CANCEL-009: Inbox search must share cancellation with folder discovery and every Drive page. */
+test('platform.inbox.search forwards AbortSignal through folder discovery and Drive search', async () => {
+  const controller = new AbortController();
+
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/folder/list') {
+        return rpc(request.id, {
+          folders: [
+            {
+              folder_id: 'INBOX',
+              display_name: 'Inbox',
+              metadata: {},
+              message_count: 1,
+              updated_at: '2026-08-02T00:00:00.000Z',
+            },
+          ],
+        });
+      }
+      if (request.method === 'messages_store/search') {
+        return rpc(request.id, { items: [], next_cursor: null });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      await inbox.search(
+        { account: 'google__personal', query: 'Luna', limit: 1, pageSize: 20 },
+        controller.signal
+      );
+
+      assert.deepEqual(
+        calls.map((call) => body(call.init).method),
+        ['messages_store/folder/list', 'messages_store/search']
+      );
+      assert.ok(calls.every((call) => call.init?.signal === controller.signal));
+    }
+  );
+});
+
 /* REQ-2912-SEARCH-002: Default bounded pages traverse a 6,500-message mailbox. */
 test('platform.inbox.search traverses 6500 messages with default Drive pages', async () => {
   await withFetchMock(

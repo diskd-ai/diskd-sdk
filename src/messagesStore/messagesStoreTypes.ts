@@ -375,7 +375,10 @@ export type FolderScopedClient = {
    */
   readonly listMessages: (params?: ListMessagesParams) => Promise<ListMessagesResult>;
   /** Search one bounded Drive page and return matches plus its continuation cursor. */
-  readonly searchMessages: (params: SearchMessagesParams) => Promise<ListMessagesResult>;
+  readonly searchMessages: (
+    params: SearchMessagesParams,
+    signal?: AbortSignal
+  ) => Promise<ListMessagesResult>;
   /**
    * Read one message by `externalId`. Throws when the message
    * does not exist (server returns a `MESSAGE_NOT_FOUND` failure).
@@ -416,7 +419,7 @@ export type MailboxScopedClient = {
    */
   readonly upsertFolder: (params: UpsertFolderParams) => Promise<UpsertFolderResult>;
   /** Enumerate all folders in this mailbox. */
-  readonly listFolders: () => Promise<readonly FolderSummary[]>;
+  readonly listFolders: (signal?: AbortSignal) => Promise<readonly FolderSummary[]>;
   /**
    * Bind a folder-scoped client over `(mailboxId, folderId)`. The
    * returned client exposes folder CRUD plus message operations.

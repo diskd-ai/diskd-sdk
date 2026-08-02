@@ -33,6 +33,8 @@ export type JsonRpcCallParams = {
   readonly method: string;
   readonly rpcParams: unknown;
   readonly id: number;
+  /** Caller-owned cancellation for the exact HTTP request. */
+  readonly signal?: AbortSignal;
 } & (
   | { readonly bearerToken: string; readonly headers?: undefined }
   | { readonly headers: Readonly<Record<string, string>>; readonly bearerToken?: undefined }
@@ -57,6 +59,7 @@ export const jsonRpcCall = async (params: JsonRpcCallParams): Promise<unknown> =
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
+    signal: params.signal,
   });
 
   const body: unknown = await readJsonResponse(response);

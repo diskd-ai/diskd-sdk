@@ -102,7 +102,11 @@ export const createMcpToolsClient = (params: {
 
   // -- JSON-RPC transport --
 
-  const sendJsonRpc = async (method: string, rpcParams?: unknown): Promise<unknown> => {
+  const sendJsonRpc = async (
+    method: string,
+    rpcParams?: unknown,
+    signal?: AbortSignal
+  ): Promise<unknown> => {
     const authHeaders = await getAuthHeaders();
     const workspaceId = await params.auth.getWorkspaceId();
 
@@ -130,6 +134,7 @@ export const createMcpToolsClient = (params: {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
+      signal,
     });
 
     if (!response.ok) {
@@ -164,14 +169,18 @@ export const createMcpToolsClient = (params: {
 
   // -- Session lifecycle --
 
-  const ensureInitialized = async (): Promise<void> => {
+  const ensureInitialized = async (signal?: AbortSignal): Promise<void> => {
     if (initialized) return;
 
-    await sendJsonRpc('initialize', {
-      protocolVersion: '2024-11-05',
-      capabilities: {},
-      clientInfo: { name: '@diskd-ai/sdk', version: '1.0.0' },
-    });
+    await sendJsonRpc(
+      'initialize',
+      {
+        protocolVersion: '2024-11-05',
+        capabilities: {},
+        clientInfo: { name: '@diskd-ai/sdk', version: '1.0.0' },
+      },
+      signal
+    );
 
     initialized = true;
   };
@@ -194,13 +203,18 @@ export const createMcpToolsClient = (params: {
 
   const call = async (
     name: string,
-    args?: Readonly<Record<string, unknown>>
+    args?: Readonly<Record<string, unknown>>,
+    signal?: AbortSignal
   ): Promise<McpToolCallResult> => {
-    await ensureInitialized();
-    const result = (await sendJsonRpc('tools/call', {
-      name,
-      arguments: args ?? {},
-    })) as McpToolCallResult;
+    await ensureInitialized(signal);
+    const result = (await sendJsonRpc(
+      'tools/call',
+      {
+        name,
+        arguments: args ?? {},
+      },
+      signal
+    )) as McpToolCallResult;
     return result;
   };
 

@@ -52,6 +52,7 @@ export type McpToolsClient = {
   /** Call a tool by its fully-qualified namespaced name. */
   readonly call: (
     name: string,
-    args?: Readonly<Record<string, unknown>>
+    args?: Readonly<Record<string, unknown>>,
+    signal?: AbortSignal
   ) => Promise<McpToolCallResult>;
 };
