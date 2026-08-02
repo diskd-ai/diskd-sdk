@@ -162,7 +162,7 @@ test('messagesStore.mailbox.listSenders encodes cursor fields and decodes totals
           {
             name: 'Alice',
             address: 'alice@example.com',
-            message_count: 3,
+            count: 3,
             first_date: '2026-05-01T00:00:00+00:00',
             last_date: '2026-05-03T00:00:00+00:00',
           },
@@ -186,7 +186,7 @@ test('messagesStore.mailbox.listSenders encodes cursor fields and decodes totals
           {
             name: 'Alice',
             address: 'alice@example.com',
-            messageCount: 3,
+            count: 3,
             firstDate: '2026-05-01T00:00:00+00:00',
             lastDate: '2026-05-03T00:00:00+00:00',
           },

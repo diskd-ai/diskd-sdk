@@ -225,9 +225,9 @@ const decodeListMessages = (o: unknown): ListMessagesResult => {
 const decodeSenderSummary = (o: unknown): SenderSummary => {
   const r = raw(o);
   return {
-    name: str(r, 'name'),
-    address: str(r, 'address'),
-    messageCount: num(r, 'message_count'),
+    name: strRequired(r, 'name'),
+    address: strRequired(r, 'address'),
+    count: num(r, 'count'),
     firstDate: str(r, 'first_date'),
     lastDate: str(r, 'last_date'),
   };
