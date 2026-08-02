@@ -141,6 +141,38 @@ test('messagesStore.folder.listMessages forwards orderBy as order_by', async () 
   );
 });
 
+/* REQ-2912-SEARCH-013: Drive search receives query, bounded page size, and cursor. */
+test('messagesStore.folder.searchMessages uses the Drive search boundary', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = parseBody(init);
+      assert.equal(request.method, 'messages_store/search');
+      assert.deepEqual(request.params, {
+        mailbox_id: 'exchange-mail-w1upgraidefr',
+        folder_id: 'INBOX',
+        query: 'Luna after:2026-07-15',
+        page_size: 20,
+        cursor: 'cursor-1',
+      });
+      return jsonRpcResponse({ items: [], next_cursor: 'cursor-2' });
+    },
+    async () => {
+      const client = diskd.os.messagesStore({ auth: makeAuth(), url: 'http://drive:8000/api/v1' });
+
+      const result = await client
+        .mailbox({ mailboxId: 'exchange-mail-w1upgraidefr' })
+        .folder({ folderId: 'INBOX' })
+        .searchMessages({
+          query: 'Luna after:2026-07-15',
+          pageSize: 20,
+          cursor: 'cursor-1',
+        });
+
+      assert.deepEqual(result, { items: [], nextCursor: 'cursor-2' });
+    }
+  );
+});
+
 test('messagesStore attachment.saveToDrive encodes payload and decodes target entry only', async () => {
   await withFetchMock(
     (_url, init) => {

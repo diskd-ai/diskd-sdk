@@ -105,6 +105,8 @@ export type InboxSearchParams = {
   readonly query: string;
   readonly folderId?: string;
   readonly limit?: number;
+  /** Messages scanned per Drive request; defaults to 20 and accepts 1..100. */
+  readonly pageSize?: number;
 };
 
 export type InboxMarkReadParams = InboxReadParams & {

@@ -3,11 +3,6 @@ import { createMcpToolsClient } from '../mcpTools/mcpTools.js';
 import type { McpToolsClient } from '../mcpTools/mcpToolsTypes.js';
 import { createMessagesStoreClient } from '../messagesStore/messagesStore.js';
 import type { MessagesStoreClient, StoredMessage } from '../messagesStore/messagesStoreTypes.js';
-import {
-  formatInboxSearchQueryError,
-  matchesInboxSearchQuery,
-  parseInboxSearchQuery,
-} from './inboxSearchQuery.js';
 import type {
   InboxAccountList,
   InboxClient,
@@ -25,8 +20,9 @@ import type {
 } from './inboxTypes.js';
 
 const DEFAULT_EXCHANGE_FOLDER = 'INBOX';
-const SEARCH_SCAN_LIMIT = 100;
-const SEARCH_BODY_LOAD_CONCURRENCY = 20;
+const DEFAULT_SEARCH_PAGE_SIZE = 20;
+const MAX_SEARCH_PAGE_SIZE = 100;
+const MESSAGE_LOOKUP_SCAN_LIMIT = 100;
 const SYSTEM_HYDRATE_EMAIL_BODIES_TOOL = 'system_hydrate_email_bodies';
 const SYSTEM_HYDRATE_EMAIL_ATTACHMENT_TOOL = 'system_hydrate_email_attachment';
 
@@ -42,6 +38,15 @@ const isNumber = (value: unknown): value is number => typeof value === 'number';
 const nonEmpty = (value: string | undefined): string | null => {
   const trimmed = value?.trim();
   return trimmed && trimmed.length > 0 ? trimmed : null;
+};
+
+/** Validate the Drive scan-page size without conflating it with result limit. */
+const resolveSearchPageSize = (pageSize: number | undefined): number => {
+  const value = pageSize ?? DEFAULT_SEARCH_PAGE_SIZE;
+  if (!Number.isInteger(value) || value < 1 || value > MAX_SEARCH_PAGE_SIZE) {
+    throw new Error(`pageSize must be an integer between 1 and ${MAX_SEARCH_PAGE_SIZE}`);
+  }
+  return value;
 };
 
 const exchangeMailboxId = (account: string): string => {
@@ -381,7 +386,7 @@ export const createInboxClient = (params: {
       const page = await messagesStore
         .mailbox({ mailboxId })
         .folder({ folderId })
-        .listMessages({ limit: SEARCH_SCAN_LIMIT, ...(cursor ? { cursor } : {}) });
+        .listMessages({ limit: MESSAGE_LOOKUP_SCAN_LIMIT, ...(cursor ? { cursor } : {}) });
       const match = page.items.find((row) => {
         const payload = payloadObject(row);
         return (
@@ -507,62 +512,27 @@ export const createInboxClient = (params: {
       return readExchange(resolvedAccount, resolvedMessageId, folderId);
     },
 
-    search: async ({ account, query, folderId, limit = 10 }: InboxSearchParams) => {
-      const parsedQuery = parseInboxSearchQuery(query);
-      if (parsedQuery.tag === 'Err') {
-        throw new Error(formatInboxSearchQueryError(parsedQuery.error));
-      }
-      const queryWithoutText = { ...parsedQuery.value, textTerms: [] };
+    search: async ({ account, query, folderId, limit = 10, pageSize }: InboxSearchParams) => {
       const results: InboxEmailEnvelope[] = [];
       const mailboxId = exchangeMailboxId(account);
+      const resolvedPageSize = resolveSearchPageSize(pageSize);
       const exchangeFolders = folderId ? [folderId] : await listExchangeFolderIds(account);
       for (const exchangeFolderId of exchangeFolders) {
         if (results.length >= limit) break;
-        try {
-          // Walk every page of the folder (not just the newest SEARCH_SCAN_LIMIT)
-          // so operator filters reach old mail; stop early once limit matches collected.
-          const folder = messagesStore
-            .mailbox({ mailboxId })
-            .folder({ folderId: exchangeFolderId });
-          let cursor: string | undefined;
-          do {
-            const page = await folder.listMessages({
-              limit: SEARCH_SCAN_LIMIT,
-              ...(cursor ? { cursor } : {}),
-            });
-            for (
-              let offset = 0;
-              offset < page.items.length && results.length < limit;
-              offset += SEARCH_BODY_LOAD_CONCURRENCY
-            ) {
-              const batch = page.items.slice(offset, offset + SEARCH_BODY_LOAD_CONCURRENCY);
-              // Compact list rows omit bodies. Load only plausible text candidates,
-              // with a fixed concurrency bound and without triggering IMAP hydration.
-              const matchingEmails = await Promise.all(
-                batch.map(async (row): Promise<StoredEmail | null> => {
-                  const listedEmail = exchangeStoredEmail(row, account, exchangeFolderId);
-                  if (matchesInboxSearchQuery(listedEmail, parsedQuery.value)) return listedEmail;
-                  if (
-                    parsedQuery.value.textTerms.length === 0 ||
-                    !matchesInboxSearchQuery(listedEmail, queryWithoutText)
-                  ) {
-                    return null;
-                  }
-                  const fullRow = await folder.getMessage({ externalId: row.externalId });
-                  const fullEmail = exchangeStoredEmail(fullRow, account, exchangeFolderId);
-                  return matchesInboxSearchQuery(fullEmail, parsedQuery.value) ? fullEmail : null;
-                })
-              );
-              for (const email of matchingEmails) {
-                if (email) results.push(envelopeFromStoredEmail(email));
-                if (results.length >= limit) break;
-              }
-            }
-            cursor = page.nextCursor ?? undefined;
-          } while (cursor && results.length < limit);
-        } catch (error) {
-          if (!isNotFound(error)) throw error;
-        }
+        const folder = messagesStore.mailbox({ mailboxId }).folder({ folderId: exchangeFolderId });
+        let cursor: string | undefined;
+        do {
+          const page = await folder.searchMessages({
+            query,
+            pageSize: resolvedPageSize,
+            ...(cursor ? { cursor } : {}),
+          });
+          for (const row of page.items) {
+            results.push(exchangeEnvelope(row, account, exchangeFolderId));
+            if (results.length >= limit) break;
+          }
+          cursor = page.nextCursor ?? undefined;
+        } while (cursor && results.length < limit);
       }
       return { results };
     },

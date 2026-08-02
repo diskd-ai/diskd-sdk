@@ -535,6 +535,17 @@ const makeFolderScoped = (
     return decodeListMessages(result);
   },
 
+  searchMessages: async (p) => {
+    const result = await call('messages_store/search', {
+      mailbox_id: mailboxId,
+      folder_id: folderId,
+      query: p.query,
+      page_size: p.pageSize,
+      ...optional('cursor', p.cursor),
+    });
+    return decodeListMessages(result);
+  },
+
   getMessage: async (p) => {
     const result = await call('messages_store/get', {
       mailbox_id: mailboxId,

@@ -329,12 +329,18 @@ test('platform.inbox.read does not fallback to legacy Drive mail storage', async
   );
 });
 
-/* REQUIREMENT REQ enabling:dev/platform-api/sdk/inbox: InboxClient.search filters normalized envelopes by Gmail-style criteria. */
-test('platform.inbox.search filters Exchange messages with Gmail-style syntax', async () => {
+/* REQ-2912-SEARCH-013: InboxClient forwards the complete Gmail-like query to Drive search. */
+test('platform.inbox.search forwards Gmail-style criteria to Drive', async () => {
   await withFetchMock(
     (_url, init) => {
       const request = body(init);
-      if (request.method === 'messages_store/list') {
+      if (request.method === 'messages_store/search') {
+        assert.deepEqual(request.params, {
+          mailbox_id: 'exchange-google-personal',
+          folder_id: 'INBOX',
+          query: 'invoice from:gmail.com after:2025-05-17',
+          page_size: 20,
+        });
         return rpc(request.id, {
           items: [
             {
@@ -343,40 +349,6 @@ test('platform.inbox.search filters Exchange messages with Gmail-style syntax', 
                 accountId: 'google__personal',
                 mailbox: 'INBOX',
                 from: { name: 'Alice', address: 'alice@gmail.com' },
-                subject: 'Invoice ready',
-                date: '2025-05-18T10:00:00.000Z',
-                flags: [],
-                labels: [],
-                hasAttachments: false,
-                attachments: [],
-                snippet: 'May billing statement',
-              },
-              created_at: '2025-05-18T10:00:00.000Z',
-              updated_at: '2025-05-18T10:00:00.000Z',
-            },
-            {
-              external_id: 'gmail-old-invoice',
-              payload: {
-                accountId: 'google__personal',
-                mailbox: 'INBOX',
-                from: { name: 'Bob', address: 'bob@gmail.com' },
-                subject: 'Invoice old',
-                date: '2025-05-16T23:59:59.000Z',
-                flags: [],
-                labels: [],
-                hasAttachments: false,
-                attachments: [],
-                snippet: 'Old billing statement',
-              },
-              created_at: '2025-05-16T23:59:59.000Z',
-              updated_at: '2025-05-16T23:59:59.000Z',
-            },
-            {
-              external_id: 'example-new-invoice',
-              payload: {
-                accountId: 'google__personal',
-                mailbox: 'INBOX',
-                from: { name: 'Carol', address: 'carol@example.com' },
                 subject: 'Invoice ready',
                 date: '2025-05-18T10:00:00.000Z',
                 flags: [],
@@ -416,12 +388,12 @@ test('platform.inbox.search filters Exchange messages with Gmail-style syntax', 
   );
 });
 
-/* REQ-2912-2: Free-text inbox search loads the full stored payload when the compact list row omits the matching body. */
-test('platform.inbox.search loads compact Exchange rows before evaluating body-only terms', async () => {
+/* REQ-2912-SEARCH-012: Body-only matches come directly from Drive without per-message gets. */
+test('platform.inbox.search returns Drive body matches without getMessage fan-out', async () => {
   await withFetchMock(
     (_url, init) => {
       const request = body(init);
-      if (request.method === 'messages_store/list') {
+      if (request.method === 'messages_store/search') {
         return rpc(request.id, {
           items: [
             {
@@ -435,39 +407,15 @@ test('platform.inbox.search loads compact Exchange rows before evaluating body-o
                 flags: [],
                 labels: [],
                 hasAttachments: false,
+                attachments: [],
                 snippet: 'Today, we are making GPT-5.6 more affordable and faster.',
+                bodyText: 'GPT-5.6 Luna now costs 80% less',
               },
               created_at: '2026-07-31T00:02:32.000Z',
               updated_at: '2026-07-31T00:02:32.000Z',
             },
           ],
           next_cursor: null,
-        });
-      }
-      if (request.method === 'messages_store/get') {
-        return rpc(request.id, {
-          message: {
-            external_id: 'openai-luna',
-            payload: {
-              accountId: 'google__aileron',
-              mailbox: 'INBOX',
-              from: { name: 'OpenAI', address: 'team@openai.com' },
-              to: [],
-              cc: [],
-              subject: 'New pricing and Fast mode for Sol',
-              date: '2026-07-31T00:02:32.000Z',
-              flags: [],
-              labels: [],
-              hasAttachments: false,
-              attachments: [],
-              snippet: 'Today, we are making GPT-5.6 more affordable and faster.',
-              bodyText: 'GPT-5.6 Luna now costs 80% less',
-              bodyHtml: null,
-              bodyState: 'loaded',
-            },
-            created_at: '2026-07-31T00:02:32.000Z',
-            updated_at: '2026-07-31T00:02:32.000Z',
-          },
         });
       }
       throw new Error(`unexpected method ${String(request.method)}`);
@@ -490,67 +438,21 @@ test('platform.inbox.search loads compact Exchange rows before evaluating body-o
         result.results.map((item) => item.messageId),
         ['openai-luna']
       );
-      assert.equal(
-        calls.filter((call) => body(call.init).method === 'messages_store/get').length,
-        1
+      assert.deepEqual(
+        calls.map((call) => body(call.init).method),
+        ['messages_store/search']
       );
     }
   );
 });
 
-/* REQ-2912-4: Free-text inbox search must not hydrate every unloaded body while scanning a mailbox. */
-test('platform.inbox.search leaves unloaded body candidates unhydrated', async () => {
+/* REQ-2912-SEARCH-005: Empty Drive match pages do not trigger per-message reads. */
+test('platform.inbox.search does not hydrate candidates outside Drive search', async () => {
   await withFetchMock(
     (_url, init) => {
       const request = body(init);
-      if (request.method === 'messages_store/list') {
-        return rpc(request.id, {
-          items: [
-            {
-              external_id: 'unloaded-message',
-              payload: {
-                from: { name: 'Alice', address: 'alice@example.com' },
-                to: [],
-                cc: [],
-                subject: 'Unrelated subject',
-                date: '2026-07-31T00:02:32.000Z',
-                flags: [],
-                labels: [],
-                hasAttachments: false,
-                snippet: 'Unrelated preview',
-              },
-              created_at: '2026-07-31T00:02:32.000Z',
-              updated_at: '2026-07-31T00:02:32.000Z',
-            },
-          ],
-          next_cursor: null,
-        });
-      }
-      if (request.method === 'messages_store/get') {
-        return rpc(request.id, {
-          message: {
-            external_id: 'unloaded-message',
-            payload: {
-              accountId: 'google__aileron',
-              mailbox: 'INBOX',
-              from: { name: 'Alice', address: 'alice@example.com' },
-              to: [],
-              cc: [],
-              subject: 'Unrelated subject',
-              date: '2026-07-31T00:02:32.000Z',
-              flags: [],
-              labels: [],
-              hasAttachments: false,
-              attachments: [],
-              snippet: 'Unrelated preview',
-              bodyText: null,
-              bodyHtml: null,
-              bodyState: 'not_loaded',
-            },
-            created_at: '2026-07-31T00:02:32.000Z',
-            updated_at: '2026-07-31T00:02:32.000Z',
-          },
-        });
+      if (request.method === 'messages_store/search') {
+        return rpc(request.id, { items: [], next_cursor: null });
       }
       throw new Error(`unexpected method ${String(request.method)}`);
     },
@@ -571,17 +473,20 @@ test('platform.inbox.search leaves unloaded body candidates unhydrated', async (
       assert.deepEqual(result.results, []);
       assert.deepEqual(
         calls.map((call) => body(call.init).method),
-        ['messages_store/list', 'messages_store/get']
+        ['messages_store/search']
       );
     }
   );
 });
 
-/* REQUIREMENT REQ enabling:dev/platform-api/sdk/inbox: InboxClient.search surfaces invalid Gmail-style syntax instead of returning empty results. */
-test('platform.inbox.search rejects unsupported Gmail-style operators before scanning', async () => {
+/* REQ-2912-SEARCH-016: InboxClient surfaces Drive query validation errors. */
+test('platform.inbox.search surfaces unsupported Gmail-style operators from Drive', async () => {
   await withFetchMock(
     (_url, init) => {
       const request = body(init);
+      if (request.method === 'messages_store/search') {
+        return rpcError(request.id, 'INVALID_INBOX_SEARCH_QUERY: unsupported operator "category"');
+      }
       throw new Error(`unexpected method ${String(request.method)}`);
     },
     async () => {
@@ -605,36 +510,16 @@ test('platform.inbox.search rejects unsupported Gmail-style operators before sca
   );
 });
 
-/* REQUIREMENT REQ enabling:dev/platform-api/sdk/inbox: InboxClient.search paginates folder pages so operator filters reach older mail. */
-test('platform.inbox.search paginates folder pages to reach older mail', async () => {
+/* REQ-2912-SEARCH-014: InboxClient follows Drive cursors after an empty match page. */
+test('platform.inbox.search follows Drive search pages to reach older mail', async () => {
   await withFetchMock(
     (_url, init) => {
       const request = body(init);
-      if (request.method === 'messages_store/list') {
+      if (request.method === 'messages_store/search') {
         const params = request.params as { readonly cursor?: string };
         if (!params.cursor) {
           return rpc(request.id, {
-            items: [
-              {
-                external_id: 'recent-other',
-                payload: {
-                  accountId: 'google__personal',
-                  mailbox: 'INBOX',
-                  from: { name: 'Carol', address: 'carol@example.com' },
-                  to: [{ name: 'Someone Else', address: 'else@example.com' }],
-                  cc: [],
-                  subject: 'Unrelated',
-                  date: '2026-05-04T10:00:00.000Z',
-                  flags: [],
-                  labels: [],
-                  hasAttachments: false,
-                  attachments: [],
-                  snippet: 'Nothing here',
-                },
-                created_at: '2026-05-04T10:00:00.000Z',
-                updated_at: '2026-05-04T10:00:00.000Z',
-              },
-            ],
+            items: [],
             next_cursor: 'cursor-2',
           });
         }
@@ -677,14 +562,170 @@ test('platform.inbox.search paginates folder pages to reach older mail', async (
         folderId: 'INBOX',
         query: 'to:estelle',
         limit: 10,
+        pageSize: 7,
       });
 
       assert.deepEqual(
         result.results.map((item) => item.messageId),
         ['old-to-estelle']
       );
-      const listCalls = calls.filter((call) => body(call.init).method === 'messages_store/list');
-      assert.equal(listCalls.length, 2);
+      const searchCalls = calls.filter(
+        (call) => body(call.init).method === 'messages_store/search'
+      );
+      assert.equal(searchCalls.length, 2);
+      assert.deepEqual(body(searchCalls[0]?.init).params, {
+        mailbox_id: 'exchange-google-personal',
+        folder_id: 'INBOX',
+        query: 'to:estelle',
+        page_size: 7,
+      });
+      assert.deepEqual(body(searchCalls[1]?.init).params, {
+        mailbox_id: 'exchange-google-personal',
+        folder_id: 'INBOX',
+        query: 'to:estelle',
+        page_size: 7,
+        cursor: 'cursor-2',
+      });
+    }
+  );
+});
+
+/* REQ-2912-SEARCH-002: Default bounded pages traverse a 6,500-message mailbox. */
+test('platform.inbox.search traverses 6500 messages with default Drive pages', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method !== 'messages_store/search') {
+        throw new Error(`unexpected method ${String(request.method)}`);
+      }
+      const params = request.params as {
+        readonly cursor?: string;
+        readonly page_size: number;
+      };
+      assert.equal(params.page_size, 20);
+      const offset = Number(params.cursor ?? '0');
+      const nextOffset = offset + params.page_size;
+      if (nextOffset < 6500) {
+        return rpc(request.id, { items: [], next_cursor: String(nextOffset) });
+      }
+      return rpc(request.id, {
+        items: [
+          {
+            external_id: 'message-6500',
+            payload: {
+              accountId: 'google__personal',
+              mailbox: 'INBOX',
+              from: { name: 'OpenAI', address: 'team@openai.com' },
+              subject: 'Final page',
+              date: '2026-07-15T10:00:00.000Z',
+              snippet: 'Luna appears in the final bounded page',
+            },
+            created_at: '2026-07-15T10:00:00.000Z',
+            updated_at: '2026-07-15T10:00:00.000Z',
+          },
+        ],
+        next_cursor: null,
+      });
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      const result = await inbox.search({
+        account: 'google__personal',
+        folderId: 'INBOX',
+        query: 'Luna',
+        limit: 1,
+      });
+
+      assert.deepEqual(
+        result.results.map((item) => item.messageId),
+        ['message-6500']
+      );
+      assert.equal(calls.length, 325);
+      assert.ok(calls.every((call) => body(call.init).method === 'messages_store/search'));
+    }
+  );
+});
+
+/* REQ-2912-SEARCH-013: InboxClient rejects pageSize outside the Drive contract before I/O. */
+test('platform.inbox.search validates pageSize bounds', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      await assert.rejects(
+        () =>
+          inbox.search({
+            account: 'google__personal',
+            folderId: 'INBOX',
+            query: 'Luna',
+            pageSize: 101,
+          }),
+        /pageSize must be an integer between 1 and 100/
+      );
+      assert.equal(calls.length, 0);
+    }
+  );
+});
+
+/* REQ-2912-SEARCH-015: result limit stops automatic Drive pagination. */
+test('platform.inbox.search stops paging after reaching result limit', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method !== 'messages_store/search') {
+        throw new Error(`unexpected method ${String(request.method)}`);
+      }
+      return rpc(request.id, {
+        items: [
+          {
+            external_id: 'first-match',
+            payload: {
+              accountId: 'google__personal',
+              mailbox: 'INBOX',
+              from: { name: 'Alice', address: 'alice@example.com' },
+              subject: 'Luna',
+              date: '2026-07-15T10:00:00.000Z',
+              snippet: 'First',
+            },
+            created_at: '2026-07-15T10:00:00.000Z',
+            updated_at: '2026-07-15T10:00:00.000Z',
+          },
+        ],
+        next_cursor: 'must-not-be-requested',
+      });
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      const result = await inbox.search({
+        account: 'google__personal',
+        folderId: 'INBOX',
+        query: 'Luna',
+        limit: 1,
+      });
+
+      assert.deepEqual(
+        result.results.map((item) => item.messageId),
+        ['first-match']
+      );
+      assert.equal(calls.length, 1);
     }
   );
 });

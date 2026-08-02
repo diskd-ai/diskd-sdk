@@ -125,6 +125,13 @@ export type ListMessagesParams = {
   readonly orderBy?: ListMessagesOrderBy;
 };
 
+/** Drive-owned query page parameters; pageSize counts scanned messages. */
+export type SearchMessagesParams = {
+  readonly query: string;
+  readonly pageSize: number;
+  readonly cursor?: string;
+};
+
 /** One stored message row, payload opaque. */
 export type StoredMessage = {
   readonly externalId: string;
@@ -367,6 +374,8 @@ export type FolderScopedClient = {
    * page size is server-defined (currently 100, max 1000).
    */
   readonly listMessages: (params?: ListMessagesParams) => Promise<ListMessagesResult>;
+  /** Search one bounded Drive page and return matches plus its continuation cursor. */
+  readonly searchMessages: (params: SearchMessagesParams) => Promise<ListMessagesResult>;
   /**
    * Read one message by `externalId`. Throws when the message
    * does not exist (server returns a `MESSAGE_NOT_FOUND` failure).
