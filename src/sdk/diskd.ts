@@ -155,7 +155,7 @@ export const diskd: DiskD = {
 
     contacts: ({ auth, url }) => createContactsClient({ auth, url }),
 
-    inbox: ({ auth, driveUrl, mcpUrl }) => createInboxClient({ auth, driveUrl, mcpUrl }),
+    inbox: (params) => createInboxClient(params),
   },
 
   utils: {

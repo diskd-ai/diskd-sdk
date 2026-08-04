@@ -158,6 +158,80 @@ test('platform.inbox.read hydrates unloaded Exchange body and rereads messagesSt
   );
 });
 
+/* REQ-INBOX-STORED-ONLY-001: Stored-only Inbox reads must surface unloaded bodies without Email MCP access. */
+test('platform.inbox.read rejects unloaded stored-only bodies without Email MCP calls', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/folder/list') {
+        return rpc(request.id, {
+          folders: [
+            {
+              folder_id: 'INBOX',
+              display_name: 'Inbox',
+              metadata: {},
+              message_count: 1,
+              updated_at: '2026-05-04T10:00:00.000Z',
+            },
+          ],
+        });
+      }
+      if (request.method === 'messages_store/get') {
+        return rpc(request.id, messageRow('not_loaded', null));
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        contentMode: 'stored-only',
+      });
+
+      await assert.rejects(
+        () => inbox.read({ account: 'google__personal', messageId: '14:42' }),
+        /Inbox body is not stored in Drive messagebox: 14:42/
+      );
+      assert.deepEqual(
+        calls.map((call) => body(call.init).method),
+        ['messages_store/folder/list', 'messages_store/get']
+      );
+    }
+  );
+});
+
+/* REQ-INBOX-STORED-ONLY-002: Stored-only Inbox reads return content already persisted in Drive. */
+test('platform.inbox.read returns loaded stored-only bodies directly from Drive', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/get') {
+        return rpc(request.id, messageRow('loaded', 'Stored body'));
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        contentMode: 'stored-only',
+      });
+
+      const result = await inbox.read({
+        account: 'google__personal',
+        folderId: 'INBOX',
+        messageId: '14:42',
+      });
+
+      assert.equal(result.bodyText, 'Stored body');
+      assert.deepEqual(
+        calls.map((call) => body(call.init).method),
+        ['messages_store/get']
+      );
+    }
+  );
+});
+
 test('platform.inbox.read returns synthesized attachmentId for unloaded Exchange attachments', async () => {
   await withFetchMock(
     (_url, init) => {
@@ -1375,6 +1449,42 @@ test('platform.inbox.saveAttachment hydrates unloaded Exchange attachment before
           attachmentId: 'part-1',
         },
       });
+    }
+  );
+});
+
+/* REQ-INBOX-STORED-ONLY-003: Stored-only Inbox attachment reads must not invoke Email MCP hydration. */
+test('platform.inbox.saveAttachment rejects unloaded stored-only attachments without Email MCP calls', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/get') {
+        return rpc(request.id, attachmentMessageRow('not_loaded'));
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        contentMode: 'stored-only',
+      });
+
+      await assert.rejects(
+        () =>
+          inbox.saveAttachment({
+            account: 'exchange-google-personal',
+            folderId: 'INBOX',
+            messageId: '14:42',
+            attachmentId: 'part-1',
+            targetPath: '/Projects/p/docs/invoice.pdf',
+          }),
+        /Inbox attachment is not stored in Drive messagebox: part-1/
+      );
+      assert.deepEqual(
+        calls.map((call) => body(call.init).method),
+        ['messages_store/get']
+      );
     }
   );
 });

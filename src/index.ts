@@ -272,6 +272,8 @@ export type {
   InboxAccountItem,
   InboxAccountList,
   InboxClient,
+  InboxClientParams,
+  InboxContentMode,
   InboxEmailEnvelope,
   InboxListParams,
   InboxMarkReadParams,

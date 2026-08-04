@@ -1,4 +1,3 @@
-import type { AuthModule } from '../auth/types.js';
 import { createMcpToolsClient } from '../mcpTools/mcpTools.js';
 import type { McpToolsClient } from '../mcpTools/mcpToolsTypes.js';
 import { createMessagesStoreClient } from '../messagesStore/messagesStore.js';
@@ -6,6 +5,7 @@ import type { MessagesStoreClient, StoredMessage } from '../messagesStore/messag
 import type {
   InboxAccountList,
   InboxClient,
+  InboxClientParams,
   InboxEmailEnvelope,
   InboxListParams,
   InboxMarkReadParams,
@@ -249,16 +249,15 @@ const findAttachmentByHandle = (
 const shouldHydrateAttachment = (attachment: StoredEmailAttachment): boolean =>
   attachment.storageState === 'not_loaded' || attachment.storageState === 'failed_retryable';
 
-export const createInboxClient = (params: {
-  readonly auth: AuthModule;
-  readonly driveUrl?: string;
-  readonly mcpUrl?: string;
-}): InboxClient => {
+export const createInboxClient = (params: InboxClientParams): InboxClient => {
   const messagesStore: MessagesStoreClient = createMessagesStoreClient({
     auth: params.auth,
     url: params.driveUrl,
   });
-  const mcpTools = createMcpToolsClient({ auth: params.auth, url: params.mcpUrl });
+  const mcpTools: McpToolsClient | null =
+    params.contentMode === 'stored-only'
+      ? null
+      : createMcpToolsClient({ auth: params.auth, url: params.mcpUrl });
   let hydrateBodyToolName: string | null = null;
   let hydrateAttachmentToolName: string | null = null;
 
@@ -280,6 +279,9 @@ export const createInboxClient = (params: {
     folderId: string,
     externalId: string
   ): Promise<void> => {
+    if (!mcpTools) {
+      throw new Error(`Inbox body is not stored in Drive messagebox: ${externalId}`);
+    }
     hydrateBodyToolName ??= await findSystemToolName(mcpTools, SYSTEM_HYDRATE_EMAIL_BODIES_TOOL);
     const result = await mcpTools.call(hydrateBodyToolName, {
       messages: [{ mailboxId, folderId, externalId }],
@@ -335,6 +337,9 @@ export const createInboxClient = (params: {
     externalId: string,
     attachmentId: string
   ): Promise<void> => {
+    if (!mcpTools) {
+      throw new Error(`Inbox attachment is not stored in Drive messagebox: ${attachmentId}`);
+    }
     hydrateAttachmentToolName ??= await findSystemToolName(
       mcpTools,
       SYSTEM_HYDRATE_EMAIL_ATTACHMENT_TOOL
