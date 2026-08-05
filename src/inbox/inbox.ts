@@ -196,6 +196,31 @@ const exchangeEnvelope = (
   folderId: string
 ): InboxEmailEnvelope => envelopeFromStoredEmail(exchangeStoredEmail(row, account, folderId));
 
+/** Identify one RFC message across its repeated folder projections. */
+const storedMessageIdentity = (row: StoredMessage, folderId: string): string => {
+  const providerMessageId = payloadObject(row).messageId;
+  if (isString(providerMessageId) && providerMessageId.trim().length > 0) {
+    return `rfc:${providerMessageId.trim().toLowerCase()}`;
+  }
+  return `stored:${folderId}:${row.externalId}`;
+};
+
+/** Order mailbox-wide search envelopes by received time with stable ties. */
+const compareEnvelopeNewestFirst = (
+  left: InboxEmailEnvelope,
+  right: InboxEmailEnvelope
+): number => {
+  const leftTime = Date.parse(left.date);
+  const rightTime = Date.parse(right.date);
+  const timeDifference =
+    (Number.isFinite(rightTime) ? rightTime : Number.NEGATIVE_INFINITY) -
+    (Number.isFinite(leftTime) ? leftTime : Number.NEGATIVE_INFINITY);
+  if (timeDifference !== 0) return timeDifference;
+  return `${left.folderId}\u0000${left.messageId}`.localeCompare(
+    `${right.folderId}\u0000${right.messageId}`
+  );
+};
+
 const shouldHydrateBody = (row: StoredMessage): boolean => {
   const payload = payloadObject(row);
   if (payload.bodyState === 'loaded') return false;
@@ -530,11 +555,12 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
       signal?: AbortSignal
     ) => {
       const results: InboxEmailEnvelope[] = [];
+      const uniqueResults = new Map<string, InboxEmailEnvelope>();
       const mailboxId = exchangeMailboxId(account);
       const resolvedPageSize = resolveSearchPageSize(pageSize);
       const exchangeFolders = folderId ? [folderId] : await listExchangeFolderIds(account, signal);
       for (const exchangeFolderId of exchangeFolders) {
-        if (results.length >= limit) break;
+        if (folderId && results.length >= limit) break;
         const folder = messagesStore.mailbox({ mailboxId }).folder({ folderId: exchangeFolderId });
         let cursor: string | undefined;
         do {
@@ -547,13 +573,23 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
             signal
           );
           for (const row of page.items) {
-            results.push(exchangeEnvelope(row, account, exchangeFolderId));
-            if (results.length >= limit) break;
+            const envelope = exchangeEnvelope(row, account, exchangeFolderId);
+            if (folderId) {
+              results.push(envelope);
+              if (results.length >= limit) break;
+            } else {
+              const identity = storedMessageIdentity(row, exchangeFolderId);
+              if (!uniqueResults.has(identity)) uniqueResults.set(identity, envelope);
+            }
           }
           cursor = page.nextCursor ?? undefined;
-        } while (cursor && results.length < limit);
+        } while (cursor && (!folderId || results.length < limit));
       }
-      return { results };
+      return folderId
+        ? { results }
+        : {
+            results: [...uniqueResults.values()].sort(compareEnvelopeNewestFirst).slice(0, limit),
+          };
     },
 
     markRead: async ({ account, messageId, folderId, isRead }: InboxMarkReadParams) => {

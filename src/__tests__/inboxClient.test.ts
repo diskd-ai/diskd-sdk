@@ -754,6 +754,110 @@ test('platform.inbox.search forwards AbortSignal through folder discovery and Dr
   );
 });
 
+/* REQ-INBOX-SEARCH-UNIQUE-018: mailbox-wide search returns one globally ordered envelope per RFC message across folders. */
+test('platform.inbox.search deduplicates and orders matches across folders', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/folder/list') {
+        return rpc(request.id, {
+          folders: [
+            {
+              folder_id: 'INBOX',
+              display_name: 'Inbox',
+              metadata: {},
+              message_count: 1,
+              updated_at: '2026-08-05T00:00:00.000Z',
+            },
+            {
+              folder_id: 'ALL',
+              display_name: 'All Mail',
+              metadata: {},
+              message_count: 1,
+              updated_at: '2026-08-05T00:00:00.000Z',
+            },
+            {
+              folder_id: 'SPAM',
+              display_name: 'Spam',
+              metadata: {},
+              message_count: 1,
+              updated_at: '2026-08-05T00:00:00.000Z',
+            },
+          ],
+        });
+      }
+      if (request.method === 'messages_store/search') {
+        const params = request.params as { readonly folder_id: string };
+        if (params.folder_id === 'SPAM') {
+          return rpc(request.id, {
+            items: [
+              {
+                external_id: 'spam-newer',
+                payload: {
+                  messageId: '<newer@example.com>',
+                  mailbox: 'SPAM',
+                  from: { name: 'Newer', address: 'newer@example.com' },
+                  subject: 'Newer message',
+                  date: '2026-08-05T16:00:00.000Z',
+                  snippet: 'Newer match',
+                },
+                created_at: '2026-08-05T16:00:00.000Z',
+                updated_at: '2026-08-05T16:00:00.000Z',
+              },
+            ],
+            next_cursor: null,
+          });
+        }
+        const isInbox = params.folder_id === 'INBOX';
+        return rpc(request.id, {
+          items: [
+            {
+              external_id: isInbox ? 'inbox-copy' : 'all-copy',
+              payload: {
+                messageId: '<same@example.com>',
+                mailbox: params.folder_id,
+                from: { name: 'Same', address: 'same@example.com' },
+                subject: 'Same message',
+                date: '2026-08-01T10:00:00.000Z',
+                snippet: 'Same match',
+              },
+              created_at: '2026-08-01T10:00:00.000Z',
+              updated_at: '2026-08-01T10:00:00.000Z',
+            },
+          ],
+          next_cursor: null,
+        });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      const result = await inbox.search({
+        account: 'google__personal',
+        query: 'after:2026-07-29 before:2026-08-06',
+        limit: 10,
+      });
+
+      assert.deepEqual(
+        result.results.map((item) => [item.folderId, item.messageId]),
+        [
+          ['SPAM', 'spam-newer'],
+          ['INBOX', 'inbox-copy'],
+        ]
+      );
+      assert.equal(
+        calls.filter((call) => body(call.init).method === 'messages_store/search').length,
+        3
+      );
+    }
+  );
+});
+
 /* REQ-2912-SEARCH-002: Default bounded pages traverse a 6,500-message mailbox. */
 test('platform.inbox.search traverses 6500 messages with default Drive pages', async () => {
   await withFetchMock(
