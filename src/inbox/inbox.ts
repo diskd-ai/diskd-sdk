@@ -1,7 +1,11 @@
 import { createMcpToolsClient } from '../mcpTools/mcpTools.js';
 import type { McpToolsClient } from '../mcpTools/mcpToolsTypes.js';
 import { createMessagesStoreClient } from '../messagesStore/messagesStore.js';
-import type { MessagesStoreClient, StoredMessage } from '../messagesStore/messagesStoreTypes.js';
+import type {
+  MailboxSummary,
+  MessagesStoreClient,
+  StoredMessage,
+} from '../messagesStore/messagesStoreTypes.js';
 import type {
   InboxAccountList,
   InboxClient,
@@ -56,6 +60,10 @@ const exchangeMailboxId = (account: string): string => {
   if (slug.startsWith('exchange-')) return slug.slice(0, 64);
   return `exchange-${slug.slice(0, 55)}`;
 };
+
+/** Keep the Inbox account projection limited to mailboxes owned by Exchange ingestion. */
+const isConnectedInboxMailbox = (mailbox: MailboxSummary): boolean =>
+  mailbox.mailboxId.startsWith('exchange-');
 
 const parseContact = (value: unknown): StoredEmailContact => {
   if (!isObject(value)) return { name: '', address: '' };
@@ -481,6 +489,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
     listAccounts: async (): Promise<InboxAccountList> => {
       const mailboxes = await messagesStore.listMailboxes();
       const items = mailboxes
+        .filter(isConnectedInboxMailbox)
         .map((mailbox) => ({
           account: mailbox.mailboxId,
           displayName: mailbox.displayName,

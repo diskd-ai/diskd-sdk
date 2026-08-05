@@ -77,6 +77,50 @@ const messageRow = (bodyState: string, bodyText: string | null) => ({
   },
 });
 
+/* REQ-INBOX-ACCOUNTS-001: Connected Inbox accounts must exclude Drive-owned system mailboxes. */
+test('platform.inbox.listAccounts excludes the Drive review mailbox', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      assert.equal(request.method, 'messages_store/list_mailboxes');
+      return rpc(request.id, {
+        mailboxes: [
+          {
+            mailbox_id: 'exchange-google-personal',
+            display_name: 'Personal',
+            db_inode: null,
+            record_count: 12,
+            size_bytes: 1024,
+            updated_at: '2026-08-05T10:00:00.000Z',
+          },
+          {
+            mailbox_id: 'review',
+            display_name: 'Review',
+            db_inode: null,
+            record_count: 1,
+            size_bytes: 128,
+            updated_at: '2026-08-05T10:00:00.000Z',
+          },
+        ],
+      });
+    },
+    async () => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        contentMode: 'stored-only',
+      });
+
+      const result = await inbox.listAccounts();
+
+      assert.deepEqual(result, {
+        accounts: ['exchange-google-personal'],
+        items: [{ account: 'exchange-google-personal', displayName: 'Personal' }],
+      });
+    }
+  );
+});
+
 test('platform.inbox.read hydrates unloaded Exchange body and rereads messagesStore', async () => {
   let getCount = 0;
   await withFetchMock(

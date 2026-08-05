@@ -1,5 +1,9 @@
 # LOG
 
+## 2026-08-05
+
+- `enabling:dev/platform-api/sdk/inbox`: limited connected Inbox account discovery to Exchange-ingested mailboxes, leaving Drive-owned system mailboxes such as Review accessible only through their dedicated typed APIs. Motivation: prevent parallel mail search workers from treating the Review queue as a connected email account and deterministically retrying a nonexistent remapped mailbox.
+
 ## 2026-08-04
 
 - `enabling:dev/platform-api/sdk/inbox`: added a typed `stored-only` Inbox content mode that reads exclusively from Drive messageboxes, rejects content not yet persisted by ingestion, and cannot be configured with Email MCP. Motivation: parallel Messages workers must remain independent from the Email MCP ingestion process.
