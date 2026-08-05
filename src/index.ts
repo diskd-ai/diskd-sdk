@@ -55,6 +55,7 @@ export type {
   CalendarEvent,
   CalendarEventMetadata,
   CalendarEventNoteRef,
+  CalendarRsvp,
   CalendarSettings,
   CreateEventParams,
   EventAttachment,

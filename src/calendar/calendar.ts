@@ -7,6 +7,7 @@ import type {
   CalendarAccount,
   CalendarClient,
   CalendarEvent,
+  CalendarRsvp,
   CalendarSettings,
   CreateEventParams,
   EventAttachment,
@@ -135,7 +136,7 @@ export const createCalendarClient = (params: {
       updateRsvp: async (
         eventId: string,
         attendeeId: string,
-        rsvp: string
+        rsvp: CalendarRsvp
       ): Promise<EventAttendee> => {
         return request<EventAttendee>(
           'PUT',

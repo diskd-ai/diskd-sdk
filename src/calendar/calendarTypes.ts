@@ -14,6 +14,9 @@ export type CalendarEventMetadata = {
   readonly timeBlockCategory?: 'meeting' | 'focus' | 'personal' | 'admin';
 };
 
+/** Canonical attendee response values shared with calendar providers. */
+export type CalendarRsvp = 'accepted' | 'tentative' | 'declined' | 'needsAction';
+
 export type CalendarAccount = {
   readonly id: string;
   readonly provider: string;
@@ -64,7 +67,7 @@ export type EventAttendee = {
   readonly email: string;
   readonly name: string | null;
   readonly role: string;
-  readonly rsvp: string;
+  readonly rsvp: CalendarRsvp;
 };
 
 export type EventAttachment = {
@@ -189,7 +192,7 @@ export type CalendarClient = {
     readonly updateRsvp: (
       eventId: string,
       attendeeId: string,
-      rsvp: string
+      rsvp: CalendarRsvp
     ) => Promise<EventAttendee>;
   };
 
