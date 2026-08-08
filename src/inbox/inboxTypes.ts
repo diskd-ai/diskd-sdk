@@ -92,14 +92,20 @@ export type InboxPage = {
   readonly total: number;
 };
 
-export type InboxAccountItem = {
-  readonly account: string;
-  readonly displayName: string;
-  readonly folders?: readonly {
-    readonly folderId: string;
-    readonly displayName: string;
-  }[];
-};
+/** Searchable and unavailable account variants keep mailbox identity explicit. */
+export type InboxAccountItem =
+  | {
+      readonly status: 'searchable';
+      readonly account: string;
+      readonly email: string;
+      readonly displayName: string;
+    }
+  | {
+      readonly status: 'unavailable';
+      readonly account: string;
+      readonly displayName: string;
+      readonly reason: 'missing-email-metadata' | 'invalid-email-metadata';
+    };
 
 export type InboxAccountList = {
   readonly accounts: readonly string[];

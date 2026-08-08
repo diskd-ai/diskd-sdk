@@ -88,6 +88,7 @@ test('platform.inbox.listAccounts excludes the Drive review mailbox', async () =
           {
             mailbox_id: 'exchange-google-personal',
             display_name: 'Personal',
+            metadata: { email: 'owner@example.com' },
             db_inode: null,
             record_count: 12,
             size_bytes: 1024,
@@ -115,7 +116,72 @@ test('platform.inbox.listAccounts excludes the Drive review mailbox', async () =
 
       assert.deepEqual(result, {
         accounts: ['exchange-google-personal'],
-        items: [{ account: 'exchange-google-personal', displayName: 'Personal' }],
+        items: [
+          {
+            status: 'searchable',
+            account: 'exchange-google-personal',
+            email: 'owner@example.com',
+            displayName: 'Personal',
+          },
+        ],
+      });
+    }
+  );
+});
+
+/* REQ-3066-003: Inbox account projection must distinguish missing and invalid email metadata. */
+test('platform.inbox.listAccounts validates explicit mailbox email metadata', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      return rpc(request.id, {
+        mailboxes: [
+          {
+            mailbox_id: 'exchange-imap-missing',
+            display_name: 'Missing address',
+            metadata: {},
+            db_inode: null,
+            record_count: 0,
+            size_bytes: 0,
+            updated_at: '2026-08-05T10:00:00.000Z',
+          },
+          {
+            mailbox_id: 'exchange-imap-invalid',
+            display_name: 'Invalid address',
+            metadata: { email: 'not-an-address' },
+            db_inode: null,
+            record_count: 0,
+            size_bytes: 0,
+            updated_at: '2026-08-05T10:00:00.000Z',
+          },
+        ],
+      });
+    },
+    async () => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        contentMode: 'stored-only',
+      });
+
+      const result = await inbox.listAccounts();
+
+      assert.deepEqual(result, {
+        accounts: ['exchange-imap-invalid', 'exchange-imap-missing'],
+        items: [
+          {
+            status: 'unavailable',
+            account: 'exchange-imap-invalid',
+            displayName: 'Invalid address',
+            reason: 'invalid-email-metadata',
+          },
+          {
+            status: 'unavailable',
+            account: 'exchange-imap-missing',
+            displayName: 'Missing address',
+            reason: 'missing-email-metadata',
+          },
+        ],
       });
     }
   );

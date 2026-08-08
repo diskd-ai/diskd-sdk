@@ -65,6 +65,36 @@ const exchangeMailboxId = (account: string): string => {
 const isConnectedInboxMailbox = (mailbox: MailboxSummary): boolean =>
   mailbox.mailboxId.startsWith('exchange-');
 
+const EMAIL_ADDRESS_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Validate opaque Drive metadata at the typed Inbox projection boundary. */
+const inboxAccountFromMailbox = (mailbox: MailboxSummary): InboxAccountList['items'][number] => {
+  const rawEmail = mailbox.metadata.email;
+  if (typeof rawEmail !== 'string' || rawEmail.trim().length === 0) {
+    return {
+      status: 'unavailable',
+      account: mailbox.mailboxId,
+      displayName: mailbox.displayName,
+      reason: 'missing-email-metadata',
+    };
+  }
+  const email = rawEmail.trim();
+  if (!EMAIL_ADDRESS_PATTERN.test(email)) {
+    return {
+      status: 'unavailable',
+      account: mailbox.mailboxId,
+      displayName: mailbox.displayName,
+      reason: 'invalid-email-metadata',
+    };
+  }
+  return {
+    status: 'searchable',
+    account: mailbox.mailboxId,
+    email,
+    displayName: mailbox.displayName,
+  };
+};
+
 const parseContact = (value: unknown): StoredEmailContact => {
   if (!isObject(value)) return { name: '', address: '' };
   return {
@@ -515,10 +545,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
       const mailboxes = await messagesStore.listMailboxes();
       const items = mailboxes
         .filter(isConnectedInboxMailbox)
-        .map((mailbox) => ({
-          account: mailbox.mailboxId,
-          displayName: mailbox.displayName,
-        }))
+        .map(inboxAccountFromMailbox)
         .sort((a, b) => a.displayName.localeCompare(b.displayName));
       return { accounts: items.map((item) => item.account), items };
     },

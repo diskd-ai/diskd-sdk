@@ -130,6 +130,7 @@ const decodeMailboxSummary = (o: unknown): MailboxSummary => {
   return {
     mailboxId: strRequired(r, 'mailbox_id'),
     displayName: strRequired(r, 'display_name'),
+    metadata: metadataObj(r, 'metadata'),
     dbInode: legacyStorageString(r, 'db_inode'),
     recordCount: num(r, 'record_count'),
     sizeBytes: num(r, 'size_bytes'),

@@ -84,6 +84,7 @@ test('messagesStore.listMailboxes accepts null db_inode for segment-backed mailb
           {
             mailbox_id: 'mail-inbox',
             display_name: 'Inbox',
+            metadata: { email: 'owner@example.com', provider: 'imap' },
             db_inode: null,
             record_count: 21,
             size_bytes: 0,
@@ -100,6 +101,7 @@ test('messagesStore.listMailboxes accepts null db_inode for segment-backed mailb
         {
           mailboxId: 'mail-inbox',
           displayName: 'Inbox',
+          metadata: { email: 'owner@example.com', provider: 'imap' },
           dbInode: null,
           recordCount: 21,
           sizeBytes: 0,

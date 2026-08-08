@@ -35,6 +35,7 @@ export type CreateMailboxResult = {
 export type MailboxSummary = {
   readonly mailboxId: string;
   readonly displayName: string;
+  readonly metadata: Readonly<Record<string, unknown>>;
   readonly dbInode: string | null;
   readonly recordCount: number;
   readonly sizeBytes: number;
