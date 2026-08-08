@@ -1,5 +1,9 @@
 # LOG
 
+## 2026-08-09
+
+- `enabling:dev/platform-api/sdk/inbox`: modelled connected mailbox identity as an explicit searchable or unavailable variant and exposed the caller-owned email metadata separately from the executable account selector and human display name. Motivation: Redmine 3066 mail coverage must never infer an email from a label or omit a connector whose legacy metadata is unavailable.
+
 ## 2026-08-05
 
 - `enabling:dev/platform-api/sdk/inbox`: made mailbox-wide Inbox search collapse repeated folder projections by normalized RFC message ID and order the unique envelopes globally by received time before applying the caller limit. Motivation: one stored email can appear through Inbox, All Mail, Important, or Spam projections, which made parallel mail digests duplicate messages and lose newest-first order (Redmine 3056).
