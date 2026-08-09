@@ -251,14 +251,18 @@ const decodeWriteResult = (o: unknown): DriveToolsWriteResult => {
 
 // -- Typed tools decoders --
 
-const decodeDocumentPart = (o: unknown): DriveToolsDocumentPart => {
+// Prefer the reusable source document origin over converter-local part paths.
+const decodeDocumentPart = (
+  o: unknown,
+  documentOriginUrl: string | null
+): DriveToolsDocumentPart => {
   const r = raw(o);
   return {
     type: strRequired(r, 'type'),
     title: str(r, 'title'),
     content: typeof r.content === 'string' ? r.content : '',
     pageNumber: num(r, 'page_number') ?? num(r, 'pageNumber'),
-    originUrl: str(r, 'origin_url') ?? str(r, 'originUrl'),
+    originUrl: documentOriginUrl ?? str(r, 'origin_url') ?? str(r, 'originUrl'),
     author: str(r, 'author'),
     timestamp: num(r, 'timestamp'),
   };
@@ -267,9 +271,12 @@ const decodeDocumentPart = (o: unknown): DriveToolsDocumentPart => {
 const decodeDocument = (o: unknown): DriveToolsDocument => {
   const r = raw(o);
   const partsArr = r.parts;
+  const originUrl = str(r, 'origin_url') ?? str(r, 'originUrl');
   return {
     id: strRequired(r, 'id'),
-    parts: Array.isArray(partsArr) ? partsArr.map(decodeDocumentPart) : [],
+    parts: Array.isArray(partsArr)
+      ? partsArr.map((part) => decodeDocumentPart(part, originUrl))
+      : [],
   };
 };
 

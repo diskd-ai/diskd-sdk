@@ -893,6 +893,22 @@ test('drive.tools.grep returns DriveToolsGrepResult with typed documents and war
                 },
               ],
             },
+            /* REQ-3074-SDK-001: indexed parts must expose the reusable document origin instead of a converter-temporary path. */
+            {
+              id: 'inode-12',
+              origin_url: 'drive:///Projects/project-1/deals/lead-1.md',
+              parts: [
+                {
+                  type: 'text',
+                  title: 'tmp-converted.html',
+                  content: 'contractor: Example',
+                  page_number: 1,
+                  origin_url: '/tmp/tmp-converted.html',
+                  author: null,
+                  timestamp: null,
+                },
+              ],
+            },
             // Error result -- must be filtered out
             { error: 'File not found', code: 404 },
           ],
@@ -929,7 +945,7 @@ test('drive.tools.grep returns DriveToolsGrepResult with typed documents and war
 
     // Must return typed documents, error results filtered out
     assert.ok(Array.isArray(result.documents), 'result.documents must be an array');
-    assert.equal(result.documents.length, 2, 'error results must be filtered out');
+    assert.equal(result.documents.length, 3, 'error results must be filtered out');
 
     // First document
     const doc1 = result.documents[0];
@@ -953,6 +969,10 @@ test('drive.tools.grep returns DriveToolsGrepResult with typed documents and war
     assert.equal(doc2?.id, 'inode-11');
     assert.equal(doc2?.parts.length, 1);
     assert.equal(doc2?.parts[0]?.title, 'Summary');
+
+    // Converter-local origins are not reusable by SDK consumers.
+    const doc3 = result.documents[2];
+    assert.equal(doc3?.parts[0]?.originUrl, 'drive:///Projects/project-1/deals/lead-1.md');
     assert.deepEqual(result.warnings, [
       {
         code: 'NOT_INDEXED',
