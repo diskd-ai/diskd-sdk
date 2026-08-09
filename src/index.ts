@@ -270,6 +270,14 @@ export type { DriveClient, DrivePathEntry, DrivePathType } from './drive/types.j
 // -- Inbox (stored email types + platform inbox client) --
 export { createInboxClient } from './inbox/inbox.js';
 export type {
+  InboxSearchQuery,
+  InboxSearchQueryError,
+} from './inbox/inboxSearchQuery.js';
+export {
+  formatInboxSearchQueryError,
+  parseInboxSearchQuery,
+} from './inbox/inboxSearchQuery.js';
+export type {
   InboxAccountItem,
   InboxAccountList,
   InboxClient,

@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  formatInboxSearchQueryError,
-  type InboxSearchableMessage,
-  matchesInboxSearchQuery,
-  parseInboxSearchQuery,
-} from '../inbox/inboxSearchQuery.js';
+import { type InboxSearchableMessage, matchesInboxSearchQuery } from '../inbox/inboxSearchQuery.js';
+import { formatInboxSearchQueryError, parseInboxSearchQuery } from '../index.js';
 
 const message: InboxSearchableMessage = {
   from: { name: 'Alice Sender', address: 'alice@gmail.com' },
