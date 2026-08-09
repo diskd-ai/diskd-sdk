@@ -3,6 +3,7 @@
 ## 2026-08-09
 
 - `enabling:dev/platform-api/sdk/inbox`: modelled connected mailbox identity as an explicit searchable or unavailable variant and exposed the caller-owned email metadata separately from the executable account selector and human display name. Motivation: Redmine 3066 mail coverage must never infer an email from a label or omit a connector whose legacy metadata is unavailable.
+- `enabling:dev/platform-api/sdk/inbox`: exported the existing typed inbox query parser and stable error formatter from the SDK package root. Motivation: mail orchestrators must validate the exact Gmail-style query contract before creating deterministic or LLM-backed subprocesses without duplicating query grammar.
 
 ## 2026-08-05
 
