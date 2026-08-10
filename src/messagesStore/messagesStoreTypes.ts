@@ -400,7 +400,10 @@ export type FolderScopedClient = {
    * `nextCursor` to continue; `null` means end of stream. Default
    * page size is server-defined (currently 100, max 1000).
    */
-  readonly listMessages: (params?: ListMessagesParams) => Promise<ListMessagesResult>;
+  readonly listMessages: (
+    params?: ListMessagesParams,
+    signal?: AbortSignal
+  ) => Promise<ListMessagesResult>;
   /** Search one bounded Drive page and return matches plus its continuation cursor. */
   readonly searchMessages: (
     params: SearchMessagesParams,

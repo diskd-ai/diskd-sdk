@@ -1,5 +1,9 @@
 # LOG
 
+## 2026-08-10
+
+- `enabling:dev/platform-api/sdk/inbox`: added typed `folder:` and `recursive:` query criteria, with recursive search enabled by default, exact path before unique display-name resolution, provider-delimiter descendant boundaries, and explicit missing or ambiguous folder errors. Folder routing is removed before Drive message search, while folder-only queries use the existing ordered Messages Store listing. Motivation: Redmine 2910 must search one mail folder tree without adding a parallel selector parameter or matching prefix siblings such as `Aix2`.
+
 ## 2026-08-09
 
 - `enabling:dev/platform-api/sdk/drive`: decode indexed document parts with the reusable document-level origin when Drive provides one, instead of exposing converter-temporary part paths. Motivation: Redmine 3074 search results must remain readable through an operative chroot after indexing.

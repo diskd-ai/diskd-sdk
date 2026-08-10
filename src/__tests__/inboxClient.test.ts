@@ -924,6 +924,293 @@ test('platform.inbox.search deduplicates and orders matches across folders', asy
   );
 });
 
+/* REQ-2910-005: A folder query searches the exact folder and delimiter-bounded descendants by default. */
+test('platform.inbox.search resolves a recursive folder query without matching prefix siblings', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/folder/list') {
+        return rpc(request.id, {
+          folders: [
+            {
+              folder_id: 'Aix',
+              display_name: 'Aix',
+              metadata: { delimiter: '.' },
+              message_count: 1,
+              updated_at: '2026-08-10T00:00:00.000Z',
+            },
+            {
+              folder_id: 'Aix.Conservatory',
+              display_name: 'Conservatory',
+              metadata: { delimiter: '.' },
+              message_count: 1,
+              updated_at: '2026-08-10T00:00:00.000Z',
+            },
+            {
+              folder_id: 'Aix2',
+              display_name: 'Aix2',
+              metadata: { delimiter: '.' },
+              message_count: 1,
+              updated_at: '2026-08-10T00:00:00.000Z',
+            },
+          ],
+        });
+      }
+      if (request.method === 'messages_store/search') {
+        const params = request.params as {
+          readonly folder_id: string;
+          readonly query: string;
+        };
+        assert.equal(params.query, 'subject:invoice');
+        return rpc(request.id, {
+          items: [
+            {
+              external_id: `message-${params.folder_id}`,
+              payload: {
+                mailbox: params.folder_id,
+                from: { name: 'Alice', address: 'alice@example.com' },
+                subject: 'Invoice',
+                date: '2026-08-10T10:00:00.000Z',
+                snippet: 'Invoice',
+              },
+              created_at: '2026-08-10T10:00:00.000Z',
+              updated_at: '2026-08-10T10:00:00.000Z',
+            },
+          ],
+          next_cursor: null,
+        });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        contentMode: 'stored-only',
+      });
+
+      const result = await inbox.search({
+        account: 'google__personal',
+        query: 'folder:Aix subject:invoice',
+        limit: 10,
+      });
+
+      assert.deepEqual(
+        new Set(result.results.map((item) => item.folderId)),
+        new Set(['Aix', 'Aix.Conservatory'])
+      );
+      assert.deepEqual(
+        calls
+          .filter((call) => body(call.init).method === 'messages_store/search')
+          .map((call) => (body(call.init).params as { readonly folder_id: string }).folder_id),
+        ['Aix', 'Aix.Conservatory']
+      );
+    }
+  );
+});
+
+/* REQ-2910-006: A non-recursive folder-only query prefers an exact ID and lists only that folder. */
+test('platform.inbox.search supports folder-only non-recursive queries', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/folder/list') {
+        return rpc(request.id, {
+          folders: [
+            {
+              folder_id: 'Aix',
+              display_name: 'Aix',
+              metadata: { delimiter: '/' },
+              message_count: 1,
+              updated_at: '2026-08-10T00:00:00.000Z',
+            },
+            {
+              folder_id: 'Aix/Conservatory',
+              display_name: 'Conservatory',
+              metadata: { delimiter: '/' },
+              message_count: 1,
+              updated_at: '2026-08-10T00:00:00.000Z',
+            },
+            {
+              folder_id: 'France/Aix',
+              display_name: 'Aix',
+              metadata: { delimiter: '/' },
+              message_count: 1,
+              updated_at: '2026-08-10T00:00:00.000Z',
+            },
+          ],
+        });
+      }
+      if (request.method === 'messages_store/list') {
+        assert.deepEqual(request.params, {
+          mailbox_id: 'exchange-google-personal',
+          folder_id: 'Aix',
+          limit: 20,
+          order_by: 'message_date_desc',
+        });
+        return rpc(request.id, {
+          items: [
+            {
+              external_id: 'aix-message',
+              payload: {
+                mailbox: 'Aix',
+                from: { name: 'Alice', address: 'alice@example.com' },
+                subject: 'Aix subject',
+                date: '2026-08-10T10:00:00.000Z',
+                snippet: 'Aix message',
+              },
+              created_at: '2026-08-10T10:00:00.000Z',
+              updated_at: '2026-08-10T10:00:00.000Z',
+            },
+          ],
+          next_cursor: null,
+        });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        contentMode: 'stored-only',
+      });
+
+      const result = await inbox.search({
+        account: 'google__personal',
+        query: 'folder:Aix recursive:false',
+        limit: 10,
+      });
+
+      assert.deepEqual(
+        result.results.map((item) => item.messageId),
+        ['aix-message']
+      );
+      assert.deepEqual(
+        calls.map((call) => body(call.init).method),
+        ['messages_store/folder/list', 'messages_store/list']
+      );
+    }
+  );
+});
+
+/* REQ-2910-007: Display-name folder resolution fails visibly when the name is ambiguous. */
+test('platform.inbox.search rejects ambiguous folder display names before message I/O', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method !== 'messages_store/folder/list') {
+        throw new Error(`unexpected method ${String(request.method)}`);
+      }
+      return rpc(request.id, {
+        folders: [
+          {
+            folder_id: 'France/Aix',
+            display_name: 'Aix',
+            metadata: { delimiter: '/' },
+            message_count: 1,
+            updated_at: '2026-08-10T00:00:00.000Z',
+          },
+          {
+            folder_id: 'Canada/Aix',
+            display_name: 'Aix',
+            metadata: { delimiter: '/' },
+            message_count: 1,
+            updated_at: '2026-08-10T00:00:00.000Z',
+          },
+        ],
+      });
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        contentMode: 'stored-only',
+      });
+
+      await assert.rejects(
+        () =>
+          inbox.search({
+            account: 'google__personal',
+            query: 'folder:Aix recursive:false',
+          }),
+        /INBOX_FOLDER_AMBIGUOUS/
+      );
+      assert.equal(calls.length, 1);
+    }
+  );
+});
+
+/* REQ-2910-010: Folder resolution reports a missing selector instead of falling back mailbox-wide. */
+test('platform.inbox.search rejects missing folder selectors before message I/O', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method !== 'messages_store/folder/list') {
+        throw new Error(`unexpected method ${String(request.method)}`);
+      }
+      return rpc(request.id, {
+        folders: [
+          {
+            folder_id: 'INBOX',
+            display_name: 'Inbox',
+            metadata: { delimiter: '/' },
+            message_count: 1,
+            updated_at: '2026-08-10T00:00:00.000Z',
+          },
+        ],
+      });
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        contentMode: 'stored-only',
+      });
+
+      await assert.rejects(
+        () => inbox.search({ account: 'google__personal', query: 'folder:Aix' }),
+        /INBOX_FOLDER_NOT_FOUND/
+      );
+      assert.equal(calls.length, 1);
+    }
+  );
+});
+
+/* REQ-2910-008: Recursive folder search requires persisted provider delimiter metadata. */
+test('platform.inbox.search rejects recursive folder selection without delimiter metadata', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method !== 'messages_store/folder/list') {
+        throw new Error(`unexpected method ${String(request.method)}`);
+      }
+      return rpc(request.id, {
+        folders: [
+          {
+            folder_id: 'Aix',
+            display_name: 'Aix',
+            metadata: {},
+            message_count: 1,
+            updated_at: '2026-08-10T00:00:00.000Z',
+          },
+        ],
+      });
+    },
+    async () => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        contentMode: 'stored-only',
+      });
+
+      await assert.rejects(
+        () => inbox.search({ account: 'google__personal', query: 'folder:Aix' }),
+        /INBOX_FOLDER_DELIMITER_MISSING/
+      );
+    }
+  );
+});
+
 /* REQ-2912-SEARCH-002: Default bounded pages traverse a 6,500-message mailbox. */
 test('platform.inbox.search traverses 6500 messages with default Drive pages', async () => {
   await withFetchMock(

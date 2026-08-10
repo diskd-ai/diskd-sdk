@@ -2,10 +2,20 @@ import { createMcpToolsClient } from '../mcpTools/mcpTools.js';
 import type { McpToolsClient } from '../mcpTools/mcpToolsTypes.js';
 import { createMessagesStoreClient } from '../messagesStore/messagesStore.js';
 import type {
+  FolderSummary,
   MailboxSummary,
   MessagesStoreClient,
   StoredMessage,
 } from '../messagesStore/messagesStoreTypes.js';
+import {
+  Err,
+  formatInboxMessageSearchQuery,
+  formatInboxSearchQueryError,
+  type InboxFolderScope,
+  Ok,
+  parseInboxSearchQuery,
+  type Result,
+} from './inboxSearchQuery.js';
 import type {
   InboxAccountList,
   InboxClient,
@@ -32,6 +42,15 @@ const SYSTEM_HYDRATE_EMAIL_ATTACHMENT_TOOL = 'system_hydrate_email_attachment';
 
 type RawObject = { readonly [key: string]: unknown };
 
+type InboxFolderResolutionError =
+  | { readonly tag: 'FolderNotFound'; readonly selector: string }
+  | {
+      readonly tag: 'FolderAmbiguous';
+      readonly selector: string;
+      readonly folderIds: readonly string[];
+    }
+  | { readonly tag: 'FolderDelimiterMissing'; readonly folderId: string };
+
 const isObject = (value: unknown): value is RawObject =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -42,6 +61,60 @@ const isNumber = (value: unknown): value is number => typeof value === 'number';
 const nonEmpty = (value: string | undefined): string | null => {
   const trimmed = value?.trim();
   return trimmed && trimmed.length > 0 ? trimmed : null;
+};
+
+/** Keep Inbox first while preserving the provider's remaining folder order. */
+const orderExchangeFolders = (folders: readonly FolderSummary[]): readonly FolderSummary[] => {
+  const inbox = folders.find((folder) => folder.folderId === DEFAULT_EXCHANGE_FOLDER);
+  if (!inbox) return folders;
+  return [inbox, ...folders.filter((folder) => folder.folderId !== DEFAULT_EXCHANGE_FOLDER)];
+};
+
+/** Resolve exact folder paths before requiring a unique display-name match. */
+const resolveFolderScope = (
+  folders: readonly FolderSummary[],
+  scope: Extract<InboxFolderScope, { readonly tag: 'FolderTree' }>
+): Result<InboxFolderResolutionError, readonly FolderSummary[]> => {
+  const exact = folders.find((folder) => folder.folderId === scope.selector);
+  const displayMatches = folders.filter((folder) => folder.displayName === scope.selector);
+  const selected = exact ?? (displayMatches.length === 1 ? displayMatches[0] : undefined);
+  if (!selected) {
+    if (displayMatches.length > 1) {
+      return Err({
+        tag: 'FolderAmbiguous',
+        selector: scope.selector,
+        folderIds: displayMatches.map((folder) => folder.folderId),
+      });
+    }
+    return Err({ tag: 'FolderNotFound', selector: scope.selector });
+  }
+  if (!scope.recursive) return Ok([selected]);
+
+  const delimiter = isString(selected.metadata.delimiter)
+    ? nonEmpty(selected.metadata.delimiter)
+    : null;
+  if (!delimiter) return Err({ tag: 'FolderDelimiterMissing', folderId: selected.folderId });
+  const descendantPrefix = selected.folderId.endsWith(delimiter)
+    ? selected.folderId
+    : `${selected.folderId}${delimiter}`;
+  return Ok(
+    folders.filter(
+      (folder) =>
+        folder.folderId === selected.folderId || folder.folderId.startsWith(descendantPrefix)
+    )
+  );
+};
+
+/** Surface folder-resolution failures as stable Inbox client error codes. */
+const formatFolderResolutionError = (error: InboxFolderResolutionError): string => {
+  switch (error.tag) {
+    case 'FolderNotFound':
+      return `INBOX_FOLDER_NOT_FOUND: no folder matches ${JSON.stringify(error.selector)}`;
+    case 'FolderAmbiguous':
+      return `INBOX_FOLDER_AMBIGUOUS: ${JSON.stringify(error.selector)} matches ${error.folderIds.map((folderId) => JSON.stringify(folderId)).join(', ')}`;
+    case 'FolderDelimiterMissing':
+      return `INBOX_FOLDER_DELIMITER_MISSING: folder ${JSON.stringify(error.folderId)} has no provider delimiter metadata`;
+  }
 };
 
 /** Validate the Drive scan-page size without conflating it with result limit. */
@@ -324,18 +397,31 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
   let hydrateBodyToolName: string | null = null;
   let hydrateAttachmentToolName: string | null = null;
 
-  const listExchangeFolderIds = async (
+  const listExchangeFolders = async (
     account: string,
     signal?: AbortSignal
-  ): Promise<readonly string[]> => {
+  ): Promise<readonly FolderSummary[]> => {
     const folders = await messagesStore
       .mailbox({ mailboxId: exchangeMailboxId(account) })
       .listFolders(signal);
-    const ids = folders.map((folder) => folder.folderId);
-    if (ids.length === 0) return [DEFAULT_EXCHANGE_FOLDER];
-    const rest = ids.filter((id) => id !== DEFAULT_EXCHANGE_FOLDER);
-    return ids.includes(DEFAULT_EXCHANGE_FOLDER) ? [DEFAULT_EXCHANGE_FOLDER, ...rest] : ids;
+    if (folders.length > 0) return orderExchangeFolders(folders);
+    return [
+      {
+        folderId: DEFAULT_EXCHANGE_FOLDER,
+        displayName: DEFAULT_EXCHANGE_FOLDER,
+        metadata: {},
+        messageCount: 0,
+        updatedAt: '',
+      },
+    ];
   };
+
+  /** Project folder summaries to IDs for legacy read/mark operations. */
+  const listExchangeFolderIds = async (
+    account: string,
+    signal?: AbortSignal
+  ): Promise<readonly string[]> =>
+    (await listExchangeFolders(account, signal)).map((folder) => folder.folderId);
 
   const hydrateBody = async (
     mailboxId: string,
@@ -585,23 +671,60 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
       const uniqueResults = new Map<string, InboxEmailEnvelope>();
       const mailboxId = exchangeMailboxId(account);
       const resolvedPageSize = resolveSearchPageSize(pageSize);
-      const exchangeFolders = folderId ? [folderId] : await listExchangeFolderIds(account, signal);
+      const parsedQuery = parseInboxSearchQuery(query);
+      if (parsedQuery.tag === 'Err') {
+        throw new Error(formatInboxSearchQueryError(parsedQuery.error));
+      }
+      const messageQuery = formatInboxMessageSearchQuery(parsedQuery.value);
+      const explicitFolderId = nonEmpty(folderId) ?? undefined;
+      if (explicitFolderId && parsedQuery.value.folderScope.tag === 'FolderTree') {
+        throw new Error(
+          'INBOX_FOLDER_SELECTOR_CONFLICT: use either folderId or folder: in query, not both'
+        );
+      }
+
+      let exchangeFolders: readonly string[];
+      if (explicitFolderId) {
+        exchangeFolders = [explicitFolderId];
+      } else {
+        const folders = await listExchangeFolders(account, signal);
+        if (parsedQuery.value.folderScope.tag === 'AllFolders') {
+          exchangeFolders = folders.map((folder) => folder.folderId);
+        } else {
+          const resolved = resolveFolderScope(folders, parsedQuery.value.folderScope);
+          if (resolved.tag === 'Err') {
+            throw new Error(formatFolderResolutionError(resolved.error));
+          }
+          exchangeFolders = resolved.value.map((folder) => folder.folderId);
+        }
+      }
+
       for (const exchangeFolderId of exchangeFolders) {
-        if (folderId && results.length >= limit) break;
+        if (explicitFolderId && results.length >= limit) break;
         const folder = messagesStore.mailbox({ mailboxId }).folder({ folderId: exchangeFolderId });
         let cursor: string | undefined;
         do {
-          const page = await folder.searchMessages(
-            {
-              query,
-              pageSize: resolvedPageSize,
-              ...(cursor ? { cursor } : {}),
-            },
-            signal
-          );
+          const page =
+            messageQuery.tag === 'Some'
+              ? await folder.searchMessages(
+                  {
+                    query: messageQuery.value,
+                    pageSize: resolvedPageSize,
+                    ...(cursor ? { cursor } : {}),
+                  },
+                  signal
+                )
+              : await folder.listMessages(
+                  {
+                    limit: resolvedPageSize,
+                    orderBy: 'message_date_desc',
+                    ...(cursor ? { cursor } : {}),
+                  },
+                  signal
+                );
           for (const row of page.items) {
             const envelope = exchangeEnvelope(row, account, exchangeFolderId);
-            if (folderId) {
+            if (explicitFolderId) {
               results.push(envelope);
               if (results.length >= limit) break;
             } else {
@@ -610,9 +733,9 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
             }
           }
           cursor = page.nextCursor ?? undefined;
-        } while (cursor && (!folderId || results.length < limit));
+        } while (cursor && (!explicitFolderId || results.length < limit));
       }
-      return folderId
+      return explicitFolderId
         ? { results }
         : {
             results: [...uniqueResults.values()].sort(compareEnvelopeNewestFirst).slice(0, limit),

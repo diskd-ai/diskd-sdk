@@ -553,14 +553,18 @@ const makeFolderScoped = (
     return decodeDeleteBatch(result);
   },
 
-  listMessages: async (p?: ListMessagesParams) => {
-    const result = await call('messages_store/list', {
-      mailbox_id: mailboxId,
-      folder_id: folderId,
-      ...optional('limit', p?.limit),
-      ...optional('cursor', p?.cursor),
-      ...optional('order_by', p?.orderBy),
-    });
+  listMessages: async (p?: ListMessagesParams, signal?: AbortSignal) => {
+    const result = await call(
+      'messages_store/list',
+      {
+        mailbox_id: mailboxId,
+        folder_id: folderId,
+        ...optional('limit', p?.limit),
+        ...optional('cursor', p?.cursor),
+        ...optional('order_by', p?.orderBy),
+      },
+      signal
+    );
     return decodeListMessages(result);
   },
 

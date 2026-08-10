@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { type InboxSearchableMessage, matchesInboxSearchQuery } from '../inbox/inboxSearchQuery.js';
-import { formatInboxSearchQueryError, parseInboxSearchQuery } from '../index.js';
+import {
+  formatInboxMessageSearchQuery,
+  formatInboxSearchQueryError,
+  parseInboxSearchQuery,
+} from '../index.js';
 
 const message: InboxSearchableMessage = {
   from: { name: 'Alice Sender', address: 'alice@gmail.com' },
@@ -67,6 +71,66 @@ test('inbox search query parser accepts is and has flag operators', () => {
   assert.deepEqual(parsed.value.isRead, { tag: 'Some', value: false });
   assert.deepEqual(parsed.value.isFlagged, { tag: 'Some', value: true });
   assert.deepEqual(parsed.value.hasAttachment, { tag: 'Some', value: true });
+});
+
+/* REQ-2910-001: A folder selector accepts quoted display names and searches descendants by default. */
+test('inbox search query parser defaults folder selectors to recursive search', () => {
+  const parsed = parseInboxSearchQuery('folder:"Aix Centre" subject:invoice');
+
+  assert.equal(parsed.tag, 'Ok');
+  if (parsed.tag !== 'Ok') return;
+  assert.deepEqual(parsed.value.folderScope, {
+    tag: 'FolderTree',
+    selector: 'Aix Centre',
+    recursive: true,
+  });
+  assert.deepEqual(formatInboxMessageSearchQuery(parsed.value), {
+    tag: 'Some',
+    value: 'subject:invoice',
+  });
+});
+
+/* REQ-2910-002: recursive:false restricts a folder query to the selected folder. */
+test('inbox search query parser accepts an explicit non-recursive folder selector', () => {
+  const parsed = parseInboxSearchQuery('folder:Aix recursive:false');
+
+  assert.equal(parsed.tag, 'Ok');
+  if (parsed.tag !== 'Ok') return;
+  assert.deepEqual(parsed.value.folderScope, {
+    tag: 'FolderTree',
+    selector: 'Aix',
+    recursive: false,
+  });
+  assert.deepEqual(formatInboxMessageSearchQuery(parsed.value), { tag: 'None' });
+});
+
+/* REQ-2910-003: recursive is valid only as a modifier of a folder selector. */
+test('inbox search query parser rejects recursive without folder', () => {
+  const parsed = parseInboxSearchQuery('recursive:true');
+
+  assert.deepEqual(parsed, {
+    tag: 'Err',
+    error: { tag: 'MissingOperatorDependency', operator: 'recursive', required: 'folder' },
+  });
+  assert.equal(parsed.tag, 'Err');
+  if (parsed.tag !== 'Err') return;
+  assert.match(formatInboxSearchQueryError(parsed.error), /recursive: requires folder:/);
+});
+
+/* REQ-2910-004: Folder query modifiers reject malformed and duplicate values visibly. */
+test('inbox search query parser rejects invalid folder modifiers', () => {
+  assert.deepEqual(parseInboxSearchQuery('folder:Aix recursive:yes'), {
+    tag: 'Err',
+    error: { tag: 'InvalidFilterValue', operator: 'recursive', value: 'yes' },
+  });
+  assert.deepEqual(parseInboxSearchQuery('folder:Aix folder:Lyon'), {
+    tag: 'Err',
+    error: { tag: 'DuplicateOperator', operator: 'folder' },
+  });
+  assert.deepEqual(parseInboxSearchQuery('folder:"Aix Centre'), {
+    tag: 'Err',
+    error: { tag: 'InvalidQuotedValue', operator: 'folder', value: '"Aix' },
+  });
 });
 
 /* REQUIREMENT REQ enabling:dev/platform-api/sdk/inbox: Inbox search rejects unsupported and malformed Gmail-style syntax visibly. */
