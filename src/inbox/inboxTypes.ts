@@ -132,6 +132,10 @@ export type InboxSearchParams = {
   readonly limit?: number;
   /** Messages scanned per Drive request; defaults to 20 and accepts 1..100. */
   readonly pageSize?: number;
+  /** Optional chronological selection applied across all matching pages before limit. */
+  readonly order?: 'newest' | 'oldest';
+  /** Optional domain-level deduplication applied after ordering and before limit. */
+  readonly distinctBy?: 'none' | 'sender' | 'subject';
 };
 
 export type InboxMarkReadParams = InboxReadParams & {

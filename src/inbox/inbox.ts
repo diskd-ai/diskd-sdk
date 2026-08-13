@@ -324,6 +324,48 @@ const compareEnvelopeNewestFirst = (
   );
 };
 
+/** Build the domain identity used for optional search-result deduplication. */
+const inboxSearchDistinctKey = (
+  envelope: InboxEmailEnvelope,
+  distinctBy: Exclude<NonNullable<InboxSearchParams['distinctBy']>, 'none'>
+): string => {
+  if (distinctBy === 'subject') {
+    const subject = envelope.subject.trim().toLowerCase();
+    return subject.length > 0 ? subject : `message:${envelope.messageId}`;
+  }
+  const address = envelope.from.address.trim().toLowerCase();
+  if (address.length > 0) return address;
+  const name = envelope.from.name.trim().toLowerCase();
+  return name.length > 0 ? name : `message:${envelope.messageId}`;
+};
+
+/** Apply caller-selected ordering and deduplication before the result limit. */
+const selectInboxSearchResults = (
+  envelopes: readonly InboxEmailEnvelope[],
+  params: Pick<InboxSearchParams, 'distinctBy' | 'limit' | 'order'>
+): readonly InboxEmailEnvelope[] => {
+  const ordered =
+    params.order === undefined
+      ? [...envelopes]
+      : [...envelopes].sort((left, right) => {
+          const newestFirst = compareEnvelopeNewestFirst(left, right);
+          return params.order === 'oldest' ? -newestFirst : newestFirst;
+        });
+  const distinctBy = params.distinctBy ?? 'none';
+  if (distinctBy === 'none') return ordered.slice(0, params.limit);
+
+  const selected: InboxEmailEnvelope[] = [];
+  const seen = new Set<string>();
+  for (const envelope of ordered) {
+    const key = inboxSearchDistinctKey(envelope, distinctBy);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    selected.push(envelope);
+    if (selected.length >= (params.limit ?? 10)) break;
+  }
+  return selected;
+};
+
 const shouldHydrateBody = (row: StoredMessage): boolean => {
   const payload = payloadObject(row);
   if (payload.bodyState === 'loaded') return false;
@@ -664,7 +706,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
     },
 
     search: async (
-      { account, query, folderId, limit = 10, pageSize }: InboxSearchParams,
+      { account, query, folderId, limit = 10, pageSize, order, distinctBy }: InboxSearchParams,
       signal?: AbortSignal
     ) => {
       const results: InboxEmailEnvelope[] = [];
@@ -677,6 +719,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
       }
       const messageQuery = formatInboxMessageSearchQuery(parsedQuery.value);
       const explicitFolderId = nonEmpty(folderId) ?? undefined;
+      const requiresCompleteSelection = order !== undefined || (distinctBy ?? 'none') !== 'none';
       if (explicitFolderId && parsedQuery.value.folderScope.tag === 'FolderTree') {
         throw new Error(
           'INBOX_FOLDER_SELECTOR_CONFLICT: use either folderId or folder: in query, not both'
@@ -700,7 +743,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
       }
 
       for (const exchangeFolderId of exchangeFolders) {
-        if (explicitFolderId && results.length >= limit) break;
+        if (explicitFolderId && !requiresCompleteSelection && results.length >= limit) break;
         const folder = messagesStore.mailbox({ mailboxId }).folder({ folderId: exchangeFolderId });
         let cursor: string | undefined;
         do {
@@ -724,7 +767,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
                 );
           for (const row of page.items) {
             const envelope = exchangeEnvelope(row, account, exchangeFolderId);
-            if (explicitFolderId) {
+            if (explicitFolderId && !requiresCompleteSelection) {
               results.push(envelope);
               if (results.length >= limit) break;
             } else {
@@ -733,13 +776,22 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
             }
           }
           cursor = page.nextCursor ?? undefined;
-        } while (cursor && (!explicitFolderId || results.length < limit));
+        } while (
+          cursor &&
+          (!explicitFolderId || requiresCompleteSelection || results.length < limit)
+        );
       }
-      return explicitFolderId
-        ? { results }
-        : {
-            results: [...uniqueResults.values()].sort(compareEnvelopeNewestFirst).slice(0, limit),
-          };
+      const candidates =
+        explicitFolderId && !requiresCompleteSelection ? results : [...uniqueResults.values()];
+      const selectionOrder =
+        explicitFolderId && !requiresCompleteSelection ? order : (order ?? 'newest');
+      return {
+        results: selectInboxSearchResults(candidates, {
+          limit,
+          ...(selectionOrder !== undefined ? { order: selectionOrder } : {}),
+          ...(distinctBy !== undefined ? { distinctBy } : {}),
+        }),
+      };
     },
 
     markRead: async ({ account, messageId, folderId, isRead }: InboxMarkReadParams) => {

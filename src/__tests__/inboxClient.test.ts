@@ -924,6 +924,104 @@ test('platform.inbox.search deduplicates and orders matches across folders', asy
   );
 });
 
+/* REQ-3088-INBOX-SELECTION-001: Inbox search orders and sender-deduplicates all matching pages before applying limit. */
+test('platform.inbox.search selects the oldest distinct senders before limit', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method !== 'messages_store/search') {
+        throw new Error(`unexpected method ${String(request.method)}`);
+      }
+      const params = request.params as { readonly cursor?: string };
+      if (!params.cursor) {
+        return rpc(request.id, {
+          items: [
+            {
+              external_id: 'new-alice',
+              payload: {
+                from: { name: 'Alice', address: 'ALICE@example.com' },
+                subject: 'New Alice',
+                date: '2023-01-20T10:00:00.000Z',
+              },
+              created_at: '2023-01-20T10:00:00.000Z',
+              updated_at: '2023-01-20T10:00:00.000Z',
+            },
+            {
+              external_id: 'new-bob',
+              payload: {
+                from: { name: 'Bob', address: 'bob@example.com' },
+                subject: 'New Bob',
+                date: '2023-01-18T10:00:00.000Z',
+              },
+              created_at: '2023-01-18T10:00:00.000Z',
+              updated_at: '2023-01-18T10:00:00.000Z',
+            },
+          ],
+          next_cursor: 'older-page',
+        });
+      }
+      return rpc(request.id, {
+        items: [
+          {
+            external_id: 'old-alice',
+            payload: {
+              from: { name: 'Alice', address: 'alice@example.com' },
+              subject: 'Old Alice',
+              date: '2023-01-02T08:00:00.000Z',
+            },
+            created_at: '2023-01-02T08:00:00.000Z',
+            updated_at: '2023-01-02T08:00:00.000Z',
+          },
+          {
+            external_id: 'old-carol',
+            payload: {
+              from: { name: 'Carol', address: 'carol@example.com' },
+              subject: 'Old Carol',
+              date: '2023-01-03T08:00:00.000Z',
+            },
+            created_at: '2023-01-03T08:00:00.000Z',
+            updated_at: '2023-01-03T08:00:00.000Z',
+          },
+          {
+            external_id: 'old-dan',
+            payload: {
+              from: { name: 'Dan', address: 'dan@example.com' },
+              subject: 'Old Dan',
+              date: '2023-01-04T08:00:00.000Z',
+            },
+            created_at: '2023-01-04T08:00:00.000Z',
+            updated_at: '2023-01-04T08:00:00.000Z',
+          },
+        ],
+        next_cursor: null,
+      });
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        mcpUrl: 'http://mcp',
+      });
+
+      const result = await inbox.search({
+        account: 'google__personal',
+        folderId: 'INBOX',
+        query: 'after:2023-01-01 before:2023-02-01',
+        limit: 3,
+        pageSize: 100,
+        order: 'oldest',
+        distinctBy: 'sender',
+      });
+
+      assert.deepEqual(
+        result.results.map((item) => item.messageId),
+        ['old-alice', 'old-carol', 'old-dan']
+      );
+      assert.equal(calls.length, 2);
+    }
+  );
+});
+
 /* REQ-2910-005: A folder query searches the exact folder and delimiter-bounded descendants by default. */
 test('platform.inbox.search resolves a recursive folder query without matching prefix siblings', async () => {
   await withFetchMock(
