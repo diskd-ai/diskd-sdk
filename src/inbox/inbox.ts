@@ -741,8 +741,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
       }
 
       const selectionOrder = order ?? 'newest';
-      const searchOrderBy =
-        selectionOrder === 'oldest' ? 'message_date_asc' : 'message_date_desc';
+      const searchOrderBy = selectionOrder === 'oldest' ? 'message_date_asc' : 'message_date_desc';
       for (const exchangeFolderId of exchangeFolders) {
         const folder = messagesStore.mailbox({ mailboxId }).folder({ folderId: exchangeFolderId });
         const folderCandidates: Array<{
