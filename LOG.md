@@ -2,6 +2,12 @@
 
 ## 2026-08-13
 
+- `enabling:dev/platform-api/sdk/inbox`: preserve a double-quoted free-text
+  phrase as one literal criterion and retain its quotes when forwarding the
+  query to Drive. Motivation: Redmine 3088 copied `"Your rank: #1"` from the
+  selected email, but SDK validation split the phrase and rejected `rank:` as
+  an unsupported operator before the quote-safe Drive provider was called.
+
 - `enabling:dev/platform-api/sdk/inbox`: forward oldest/newest search order to
   Drive and stop each folder after it yields enough ordered distinct
   candidates, then merge and limit globally before any message body is read.

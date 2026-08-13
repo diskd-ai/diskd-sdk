@@ -78,7 +78,7 @@ export type InboxSearchableMessage = {
 };
 
 const OPERATOR_TOKEN = /^([A-Za-z][A-Za-z0-9_-]*):/;
-const QUERY_TOKEN = /[A-Za-z][A-Za-z0-9_-]*:"[^"]*"|[^\s]+/g;
+const QUERY_TOKEN = /[A-Za-z][A-Za-z0-9_-]*:"[^"]*"|"[^"]*"|[^\s]+/g;
 const BOUNDARY_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /** Build an Ok result for pure inbox search parsing outcomes. */
@@ -96,6 +96,13 @@ const None = <T>(): Option<T> => ({ tag: 'None' });
 /** Split operator tokens while preserving a quoted value such as folder:"Aix Centre". */
 const tokenizeInboxSearchQuery = (query: string): readonly string[] =>
   query.match(QUERY_TOKEN) ?? [];
+
+/** Return whether a whole token is a quoted literal rather than an operator. */
+const isQuotedTextToken = (token: string): boolean => token.startsWith('"') && token.endsWith('"');
+
+/** Remove the syntax quotes from one exact free-text phrase. */
+const parseTextToken = (token: string): string =>
+  isQuotedTextToken(token) ? token.slice(1, -1) : token;
 
 /** Decode one optional quoted operator value without introducing a general query language. */
 const parseOperatorValue = (
@@ -151,7 +158,7 @@ export const parseInboxSearchQuery = (
   let recursive: Option<boolean> = None();
 
   for (const token of tokens) {
-    const operatorMatch = OPERATOR_TOKEN.exec(token);
+    const operatorMatch = isQuotedTextToken(token) ? null : OPERATOR_TOKEN.exec(token);
     const operator = operatorMatch?.[1]?.toLowerCase();
     const rawValue = operator ? token.slice(operator.length + 1).trim() : '';
 
@@ -242,7 +249,7 @@ export const parseInboxSearchQuery = (
     }
 
     if (operator !== undefined) return Err({ tag: 'UnsupportedOperator', operator });
-    textTerms.push(token.toLowerCase());
+    textTerms.push(parseTextToken(token).toLowerCase());
   }
 
   if (recursive.tag === 'Some' && folderSelector.tag === 'None') {
@@ -276,9 +283,12 @@ export const parseInboxSearchQuery = (
 /** Quote a normalized operator value only when its whitespace requires it. */
 const formatOperatorValue = (value: string): string => (/\s/.test(value) ? `"${value}"` : value);
 
+/** Preserve phrase boundaries and colons when forwarding free text to Drive. */
+const formatTextTerm = (value: string): string => (/[\s:]/.test(value) ? `"${value}"` : value);
+
 /** Build the Drive message-query subset after folder routing has been resolved locally. */
 export const formatInboxMessageSearchQuery = (search: InboxSearchQuery): Option<string> => {
-  const tokens = [...search.textTerms];
+  const tokens = search.textTerms.map(formatTextTerm);
   if (search.sender.tag === 'Some') tokens.push(`from:${formatOperatorValue(search.sender.value)}`);
   if (search.recipient.tag === 'Some')
     tokens.push(`to:${formatOperatorValue(search.recipient.value)}`);

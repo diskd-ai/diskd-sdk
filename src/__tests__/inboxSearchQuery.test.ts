@@ -34,6 +34,27 @@ test('inbox search query parser accepts from and after operators with free text'
   });
 });
 
+/* REQ-3088-SEARCH-002: A quoted exact phrase with a colon remains one literal across SDK parsing and Drive forwarding. */
+test('inbox search query preserves a quoted literal containing a colon', () => {
+  const parsed = parseInboxSearchQuery('"Your rank: #1"');
+
+  assert.equal(parsed.tag, 'Ok');
+  if (parsed.tag !== 'Ok') return;
+  assert.deepEqual(parsed.value.textTerms, ['your rank: #1']);
+  assert.deepEqual(formatInboxMessageSearchQuery(parsed.value), {
+    tag: 'Some',
+    value: '"your rank: #1"',
+  });
+  assert.equal(
+    matchesInboxSearchQuery({ ...message, bodyText: 'Your rank: #1 this week.' }, parsed.value),
+    true
+  );
+  assert.equal(
+    matchesInboxSearchQuery({ ...message, bodyText: 'Your rank was #1 this week.' }, parsed.value),
+    false
+  );
+});
+
 /* REQUIREMENT REQ enabling:dev/platform-api/sdk/inbox: Inbox search parses to, cc, and subject operators. */
 test('inbox search query parser accepts to, cc, and subject operators', () => {
   const parsed = parseInboxSearchQuery('to:estelle cc:bob subject:invoice');
