@@ -1,5 +1,14 @@
 # LOG
 
+## 2026-08-13
+
+- `enabling:dev/platform-api/sdk/inbox`: forward oldest/newest search order to
+  Drive and stop each folder after it yields enough ordered distinct
+  candidates, then merge and limit globally before any message body is read.
+  Motivation: Redmine 3088 needs three oldest distinct senders, but the SDK
+  previously scanned every matching page in every folder before selecting
+  three envelopes for the single-message evidence phase.
+
 ## 2026-08-10
 
 - `enabling:dev/platform-api/sdk/inbox`: added typed `folder:` and `recursive:` query criteria, with recursive search enabled by default, exact path before unique display-name resolution, provider-delimiter descendant boundaries, and explicit missing or ambiguous folder errors. Folder routing is removed before Drive message search, while folder-only queries use the existing ordered Messages Store listing. Motivation: Redmine 2910 must search one mail folder tree without adding a parallel selector parameter or matching prefix siblings such as `Aix2`.

@@ -524,6 +524,7 @@ test('platform.inbox.search forwards Gmail-style criteria to Drive', async () =>
           folder_id: 'INBOX',
           query: 'invoice from:gmail.com after:2025-05-17',
           page_size: 20,
+          order_by: 'message_date_desc',
         });
         return rpc(request.id, {
           items: [
@@ -762,6 +763,7 @@ test('platform.inbox.search follows Drive search pages to reach older mail', asy
         folder_id: 'INBOX',
         query: 'to:estelle',
         page_size: 7,
+        order_by: 'message_date_desc',
       });
       assert.deepEqual(body(searchCalls[1]?.init).params, {
         mailbox_id: 'exchange-google-personal',
@@ -769,6 +771,7 @@ test('platform.inbox.search follows Drive search pages to reach older mail', asy
         query: 'to:estelle',
         page_size: 7,
         cursor: 'cursor-2',
+        order_by: 'message_date_desc',
       });
     }
   );
@@ -924,7 +927,7 @@ test('platform.inbox.search deduplicates and orders matches across folders', asy
   );
 });
 
-/* REQ-3088-INBOX-SELECTION-001: Inbox search orders and sender-deduplicates all matching pages before applying limit. */
+/* REQ-3088-INBOX-SELECTION-001: Inbox search selects the oldest distinct senders before limit without scanning later ordered pages. */
 test('platform.inbox.search selects the oldest distinct senders before limit', async () => {
   await withFetchMock(
     (_url, init) => {
@@ -932,34 +935,13 @@ test('platform.inbox.search selects the oldest distinct senders before limit', a
       if (request.method !== 'messages_store/search') {
         throw new Error(`unexpected method ${String(request.method)}`);
       }
-      const params = request.params as { readonly cursor?: string };
-      if (!params.cursor) {
-        return rpc(request.id, {
-          items: [
-            {
-              external_id: 'new-alice',
-              payload: {
-                from: { name: 'Alice', address: 'ALICE@example.com' },
-                subject: 'New Alice',
-                date: '2023-01-20T10:00:00.000Z',
-              },
-              created_at: '2023-01-20T10:00:00.000Z',
-              updated_at: '2023-01-20T10:00:00.000Z',
-            },
-            {
-              external_id: 'new-bob',
-              payload: {
-                from: { name: 'Bob', address: 'bob@example.com' },
-                subject: 'New Bob',
-                date: '2023-01-18T10:00:00.000Z',
-              },
-              created_at: '2023-01-18T10:00:00.000Z',
-              updated_at: '2023-01-18T10:00:00.000Z',
-            },
-          ],
-          next_cursor: 'older-page',
-        });
-      }
+      assert.deepEqual(request.params, {
+        mailbox_id: 'exchange-google-personal',
+        folder_id: 'INBOX',
+        query: 'after:2023-01-01 before:2023-02-01',
+        page_size: 100,
+        order_by: 'message_date_asc',
+      });
       return rpc(request.id, {
         items: [
           {
@@ -993,7 +975,7 @@ test('platform.inbox.search selects the oldest distinct senders before limit', a
             updated_at: '2023-01-04T08:00:00.000Z',
           },
         ],
-        next_cursor: null,
+        next_cursor: 'later-matches-that-are-not-needed',
       });
     },
     async (calls) => {
@@ -1017,7 +999,7 @@ test('platform.inbox.search selects the oldest distinct senders before limit', a
         result.results.map((item) => item.messageId),
         ['old-alice', 'old-carol', 'old-dan']
       );
-      assert.equal(calls.length, 2);
+      assert.equal(calls.length, 1);
     }
   );
 });

@@ -577,6 +577,7 @@ const makeFolderScoped = (
         query: p.query,
         page_size: p.pageSize,
         ...optional('cursor', p.cursor),
+        ...optional('order_by', p.orderBy),
       },
       signal
     );

@@ -143,6 +143,36 @@ test('messagesStore.folder.listMessages forwards orderBy as order_by', async () 
   );
 });
 
+/* REQ-3088-SEARCH-PREFILTER-004: SDK search forwards chronological index order without exposing Drive cursors. */
+test('messagesStore.folder.searchMessages forwards oldest order as order_by', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = parseBody(init);
+      assert.equal(request.method, 'messages_store/search');
+      assert.deepEqual(request.params, {
+        mailbox_id: 'exchange-mail-w1upgraidefr',
+        folder_id: 'INBOX',
+        query: 'after:2023-01-01 before:2023-01-08',
+        page_size: 3,
+        order_by: 'message_date_asc',
+      });
+      return jsonRpcResponse({ items: [], next_cursor: null });
+    },
+    async () => {
+      const client = diskd.os.messagesStore({ auth: makeAuth(), url: 'http://drive:8000/api/v1' });
+
+      await client
+        .mailbox({ mailboxId: 'exchange-mail-w1upgraidefr' })
+        .folder({ folderId: 'INBOX' })
+        .searchMessages({
+          query: 'after:2023-01-01 before:2023-01-08',
+          pageSize: 3,
+          orderBy: 'message_date_asc',
+        });
+    }
+  );
+});
+
 /* REQ-2917-SENDERS-009: the SDK exposes bounded sender aggregation pages without message reads. */
 test('messagesStore.mailbox.listSenders encodes cursor fields and decodes totals', async () => {
   await withFetchMock(

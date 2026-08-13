@@ -118,6 +118,7 @@ export type DeleteBatchResult = {
 };
 
 export type ListMessagesOrderBy = 'message_date_desc' | 'store_updated_desc';
+export type SearchMessagesOrderBy = 'message_date_desc' | 'message_date_asc';
 
 /** Cursor-paginated message-list parameters. */
 export type ListMessagesParams = {
@@ -131,6 +132,8 @@ export type SearchMessagesParams = {
   readonly query: string;
   readonly pageSize: number;
   readonly cursor?: string;
+  /** Chronological index order used before Drive applies the bounded page size. */
+  readonly orderBy?: SearchMessagesOrderBy;
 };
 
 /** One stored message row, payload opaque. */

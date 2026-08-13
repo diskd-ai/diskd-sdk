@@ -709,7 +709,6 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
       { account, query, folderId, limit = 10, pageSize, order, distinctBy }: InboxSearchParams,
       signal?: AbortSignal
     ) => {
-      const results: InboxEmailEnvelope[] = [];
       const uniqueResults = new Map<string, InboxEmailEnvelope>();
       const mailboxId = exchangeMailboxId(account);
       const resolvedPageSize = resolveSearchPageSize(pageSize);
@@ -719,7 +718,6 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
       }
       const messageQuery = formatInboxMessageSearchQuery(parsedQuery.value);
       const explicitFolderId = nonEmpty(folderId) ?? undefined;
-      const requiresCompleteSelection = order !== undefined || (distinctBy ?? 'none') !== 'none';
       if (explicitFolderId && parsedQuery.value.folderScope.tag === 'FolderTree') {
         throw new Error(
           'INBOX_FOLDER_SELECTOR_CONFLICT: use either folderId or folder: in query, not both'
@@ -742,9 +740,16 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
         }
       }
 
+      const selectionOrder = order ?? 'newest';
+      const searchOrderBy =
+        selectionOrder === 'oldest' ? 'message_date_asc' : 'message_date_desc';
       for (const exchangeFolderId of exchangeFolders) {
-        if (explicitFolderId && !requiresCompleteSelection && results.length >= limit) break;
         const folder = messagesStore.mailbox({ mailboxId }).folder({ folderId: exchangeFolderId });
+        const folderCandidates: Array<{
+          readonly identity: string;
+          readonly envelope: InboxEmailEnvelope;
+        }> = [];
+        const folderIdentities = new Set<string>();
         let cursor: string | undefined;
         do {
           const page =
@@ -754,6 +759,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
                     query: messageQuery.value,
                     pageSize: resolvedPageSize,
                     ...(cursor ? { cursor } : {}),
+                    orderBy: searchOrderBy,
                   },
                   signal
                 )
@@ -767,28 +773,43 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
                 );
           for (const row of page.items) {
             const envelope = exchangeEnvelope(row, account, exchangeFolderId);
-            if (explicitFolderId && !requiresCompleteSelection) {
-              results.push(envelope);
-              if (results.length >= limit) break;
-            } else {
-              const identity = storedMessageIdentity(row, exchangeFolderId);
-              if (!uniqueResults.has(identity)) uniqueResults.set(identity, envelope);
-            }
+            const identity = storedMessageIdentity(row, exchangeFolderId);
+            if (folderIdentities.has(identity)) continue;
+            folderIdentities.add(identity);
+            folderCandidates.push({ identity, envelope });
           }
           cursor = page.nextCursor ?? undefined;
-        } while (
-          cursor &&
-          (!explicitFolderId || requiresCompleteSelection || results.length < limit)
+          const canStopAtSelection = messageQuery.tag === 'Some' || selectionOrder === 'newest';
+          if (
+            canStopAtSelection &&
+            selectInboxSearchResults(
+              folderCandidates.map((candidate) => candidate.envelope),
+              { limit, order: selectionOrder, ...(distinctBy !== undefined ? { distinctBy } : {}) }
+            ).length >= limit
+          ) {
+            cursor = undefined;
+          }
+        } while (cursor);
+
+        const selectedFolderEnvelopes = new Set(
+          selectInboxSearchResults(
+            folderCandidates.map((candidate) => candidate.envelope),
+            { limit, order: selectionOrder, ...(distinctBy !== undefined ? { distinctBy } : {}) }
+          )
         );
+        for (const candidate of folderCandidates) {
+          if (
+            selectedFolderEnvelopes.has(candidate.envelope) &&
+            !uniqueResults.has(candidate.identity)
+          ) {
+            uniqueResults.set(candidate.identity, candidate.envelope);
+          }
+        }
       }
-      const candidates =
-        explicitFolderId && !requiresCompleteSelection ? results : [...uniqueResults.values()];
-      const selectionOrder =
-        explicitFolderId && !requiresCompleteSelection ? order : (order ?? 'newest');
       return {
-        results: selectInboxSearchResults(candidates, {
+        results: selectInboxSearchResults([...uniqueResults.values()], {
           limit,
-          ...(selectionOrder !== undefined ? { order: selectionOrder } : {}),
+          order: selectionOrder,
           ...(distinctBy !== undefined ? { distinctBy } : {}),
         }),
       };
