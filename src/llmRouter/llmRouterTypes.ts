@@ -152,6 +152,8 @@ export type CompletionParams = {
   readonly toolChoice?: ToolChoice;
   readonly responseFormat?: ResponseFormat;
   readonly reasoning?: ReasoningConfig;
+  /** Caller-owned cancellation for the exact completion HTTP request. */
+  readonly signal?: AbortSignal;
   /**
    * Provider-passthrough chat-template kwargs (vLLM/Together convention).
    * Use `{ enable_thinking: false }` to disable hybrid reasoning on models

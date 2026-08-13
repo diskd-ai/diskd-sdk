@@ -208,6 +208,39 @@ test('completions.create decodes response reasoning', async () => {
   );
 });
 
+/* REQ-SDK-LLM-CANCEL-001: non-streaming completions must forward caller cancellation to the exact JSON-RPC request. */
+test('completions.create forwards AbortSignal without serializing it', async () => {
+  const controller = new AbortController();
+  await withFetchMock(
+    (_url, init) => {
+      assert.equal(init?.signal, controller.signal);
+      return jsonResponse({
+        jsonrpc: '2.0',
+        result: {
+          id: 'completion-cancel-1',
+          choices: [],
+          created: 1,
+          model: 'openai/gpt-oss-120b',
+        },
+        id: 1,
+      });
+    },
+    async (calls) => {
+      const client = createLlmRouterClient({ auth, url: 'https://apis.example' });
+      await client.completions.create({
+        provider: 'together',
+        model: 'openai/gpt-oss-120b',
+        messages: [{ role: 'user', content: 'Collect evidence.' }],
+        signal: controller.signal,
+      });
+
+      const body = parseRequestBody(calls[0]);
+      assert.equal(Reflect.has(body, 'signal'), false);
+      assert.equal(body.params === undefined || Reflect.has(body.params, 'signal'), false);
+    }
+  );
+});
+
 /* REQ-SDK-LLM-REASONING-003: SDK streaming decoding exposes reasoning deltas separately from answer content without alteration. */
 test('completions.stream encodes the toggle and decodes reasoning deltas', async () => {
   const chunk = {

@@ -554,23 +554,31 @@ export const createLlmRouterClient = (params: {
     return { Authorization: `Bearer ${token}` };
   };
 
-  const call = async (method: string, rpcParams: unknown): Promise<unknown> => {
+  const call = async (
+    method: string,
+    rpcParams: unknown,
+    signal?: AbortSignal
+  ): Promise<unknown> => {
     const id = nextId;
     nextId += 1;
 
     if (params.auth.getRequestHeaders) {
       const headers = await params.auth.getRequestHeaders();
-      return jsonRpcCall({ url: invokeUrl, headers, method, rpcParams, id });
+      return jsonRpcCall({ url: invokeUrl, headers, method, rpcParams, id, signal });
     }
 
     const bearerToken = await params.auth.getAccessToken();
-    return jsonRpcCall({ url: invokeUrl, bearerToken, method, rpcParams, id });
+    return jsonRpcCall({ url: invokeUrl, bearerToken, method, rpcParams, id, signal });
   };
 
   return {
     completions: {
       create: async (completionParams: CompletionParams) => {
-        const result = await call('completions/create', encodeCompletionParams(completionParams));
+        const result = await call(
+          'completions/create',
+          encodeCompletionParams(completionParams),
+          completionParams.signal
+        );
         return decodeCompletionResult(result);
       },
 
