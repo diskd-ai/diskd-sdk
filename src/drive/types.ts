@@ -44,6 +44,8 @@ import type {
   DriveUploadFileResult,
   DriveUploadStartParams,
   DriveUploadStartResult,
+  DriveUploadTransferParams,
+  DriveUploadTransferResult,
 } from './driveTypes.js';
 import type { DriveSessionManager } from './sessionObject.js';
 
@@ -67,6 +69,8 @@ export type DriveClient = {
   readonly upload: {
     readonly file: (params: DriveUploadFileParams) => Promise<DriveUploadFileResult>;
     readonly start: (params: DriveUploadStartParams) => Promise<DriveUploadStartResult>;
+    /** Transfer bytes for an existing intent while preserving the known body length. */
+    readonly transfer: (params: DriveUploadTransferParams) => Promise<DriveUploadTransferResult>;
     readonly commit: (params: DriveUploadCommitParams) => Promise<DriveUploadCommitResult>;
   };
 

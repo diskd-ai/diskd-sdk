@@ -7,6 +7,71 @@ import { diskd } from '../sdk/diskd.js';
 
 type FetchCall = { readonly url: string; readonly init?: RequestInit };
 
+type StreamingRequestInit = RequestInit & { readonly duplex?: 'half' };
+
+/* REQ-DRIVE-UPLOAD-001: Existing upload intents transfer through the SDK with
+ * an explicit content length so Drive can stream the body to object storage. */
+test('drive.upload.transfer sends the known content length and returns the etag', async () => {
+  const calls: FetchCall[] = [];
+  const originalFetch = globalThis.fetch;
+  const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const url = typeof input === 'string' ? input : input.toString();
+    calls.push({ url, init });
+    return new Response(JSON.stringify({ etag: 'etag-transfer-1' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+  (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
+
+  const auth: AuthModule = {
+    signIn: async () => {},
+    signOut: () => {},
+    handleRedirectCallback: async () => {},
+    getAccessToken: async () => 'unused-token',
+    getRequestHeaders: async () => ({ 'X-Api-Key': 'drive-key' }),
+    getToken: () => ({ accessToken: 'unused-token' }),
+    getWorkspaceId: async () => 'test-workspace',
+  };
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new Uint8Array([1, 2, 3, 4]));
+      controller.close();
+    },
+  });
+
+  try {
+    const drive = diskd.os.drive({
+      version: 'v1',
+      auth,
+      url: 'https://drive.example/api/v1',
+    });
+    const result = await drive.upload.transfer({
+      uploadUrl: '/api/v1/drive/upload',
+      intentId: 'intent-transfer-1',
+      stream,
+      size: 4,
+      mimeType: 'image/png',
+    });
+
+    assert.deepEqual(result, { etag: 'etag-transfer-1' });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0]?.url, 'https://drive.example/api/v1/drive/upload');
+    const init = calls[0]?.init as StreamingRequestInit | undefined;
+    assert.equal(init?.method, 'PUT');
+    assert.equal(init?.body, stream);
+    assert.equal(init?.duplex, 'half');
+    assert.deepEqual(init?.headers, {
+      'X-Api-Key': 'drive-key',
+      'Content-Type': 'image/png',
+      'Content-Length': '4',
+      'X-Upload-Intent-Id': 'intent-transfer-1',
+    });
+  } finally {
+    (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
+  }
+});
+
 test('drive.init calls JSON-RPC with Bearer token', async () => {
   process.env.APIS_BASE_URL = 'https://apis.example';
 

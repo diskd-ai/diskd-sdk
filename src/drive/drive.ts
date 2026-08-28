@@ -42,6 +42,8 @@ import type { DriveClient } from './types.js';
 
 type RawObject = { readonly [key: string]: unknown };
 
+type StreamingRequestInit = RequestInit & { readonly duplex: 'half' };
+
 const isObject = (value: unknown): value is RawObject =>
   typeof value === 'object' && value !== null;
 
@@ -668,6 +670,50 @@ export const createDriveClient = (params: {
           ...optional('force', p.force),
         });
         return decodeUploadStart(result);
+      },
+
+      /** Transfer an existing intent through the authenticated Drive boundary. */
+      transfer: async (p) => {
+        if (!p.uploadUrl.startsWith('/api/v1/drive/upload')) {
+          throw new Error('Upload transfer URL must target the Drive upload endpoint');
+        }
+        if (!p.intentId.trim()) {
+          throw new Error('Upload transfer intent ID is required');
+        }
+        if (!Number.isSafeInteger(p.size) || p.size < 0) {
+          throw new Error('Upload transfer size must be a non-negative safe integer');
+        }
+
+        const uploadUrl = rpcUrl.replace(/\/+$/, '').replace(/\/api\/v1$/, '') + p.uploadUrl;
+        const authHeaders: Record<string, string> = params.auth.getRequestHeaders
+          ? await params.auth.getRequestHeaders()
+          : { Authorization: `Bearer ${await params.auth.getAccessToken()}` };
+        const requestInit: StreamingRequestInit = {
+          method: 'PUT',
+          headers: {
+            ...authHeaders,
+            'Content-Type': p.mimeType ?? 'application/octet-stream',
+            'Content-Length': String(p.size),
+            'X-Upload-Intent-Id': p.intentId,
+          },
+          body: p.stream,
+          duplex: 'half',
+        };
+        const response = await fetch(uploadUrl, requestInit);
+
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(
+            `Upload transfer failed (HTTP ${response.status}): ${text.slice(0, 200)}`
+          );
+        }
+
+        const body = (await response.json()) as { readonly etag?: string };
+        const etag = body.etag ?? response.headers.get('etag') ?? '';
+        if (!etag) {
+          throw new Error('Upload transfer response missing etag');
+        }
+        return { etag };
       },
 
       commit: async (p) => {
