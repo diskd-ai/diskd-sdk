@@ -1,5 +1,14 @@
 # LOG
 
+## 2026-08-29
+
+- `enabling:dev/platform-api/sdk/messages-store`: exposed atomic Review
+  approval plus Outbox get, pending listing, claim, lease renewal, and explicit
+  Sent/Failed terminal writes through one canonical `ExchangeItem` contract.
+  Motivation: platform callers and provider adapters should use the released
+  typed Drive storage boundary without duplicating JSON-RPC wire shapes or
+  provider-delivery policy.
+
 ## 2026-08-28
 
 - `enabling:dev/platform-api/sdk/messages-store`: exposed one canonical outbound

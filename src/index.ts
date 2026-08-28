@@ -389,6 +389,8 @@ export type {
   ListMessagesOrderBy,
   ListMessagesParams,
   ListMessagesResult,
+  ListPendingOutboxParams,
+  ListPendingOutboxResult,
   ListReviewItemsParams,
   ListReviewItemsResult,
   ListSendersParams,
@@ -397,6 +399,8 @@ export type {
   MailboxSummary,
   MessageScopedClient,
   MessagesStoreClient,
+  OutboxLeaseParams,
+  OutboxTerminalOutcome,
   ReviewItem,
   SenderSummary,
   StoredMessage,
@@ -405,6 +409,7 @@ export type {
   UpsertBatchResult,
   UpsertFolderParams,
   UpsertFolderResult,
+  WriteOutboxTerminalParams,
 } from './messagesStore/messagesStoreTypes.js';
 // -- Notes --
 export { createProjectNotesClient } from './notes/notes.js';

@@ -37,6 +37,8 @@ import type {
   InitMailboxResult,
   ListMessagesParams,
   ListMessagesResult,
+  ListPendingOutboxParams,
+  ListPendingOutboxResult,
   ListReviewItemsParams,
   ListReviewItemsResult,
   ListSendersParams,
@@ -45,6 +47,8 @@ import type {
   MailboxSummary,
   MessageScopedClient,
   MessagesStoreClient,
+  OutboxLeaseParams,
+  OutboxTerminalOutcome,
   ReviewItem,
   SenderSummary,
   StoredMessage,
@@ -53,6 +57,7 @@ import type {
   UpsertBatchResult,
   UpsertFolderParams,
   UpsertFolderResult,
+  WriteOutboxTerminalParams,
 } from './messagesStoreTypes.js';
 
 // ---------------------------------------------------------------------------
@@ -300,6 +305,10 @@ const decodeExchangeItem = (o: unknown): ExchangeItem => {
     payload: payloadObj(r, 'payload'),
     result: nullablePayloadObj(r, 'result'),
     revision: strRequired(r, 'revision'),
+    deliveryAttempts: num(r, 'delivery_attempts'),
+    leaseOwner: str(r, 'lease_owner'),
+    leaseExpiresAt: str(r, 'lease_expires_at'),
+    failureReason: str(r, 'failure_reason'),
     createdAt: strRequired(r, 'created_at'),
     updatedAt: strRequired(r, 'updated_at'),
   };
@@ -312,6 +321,14 @@ const decodeExchangeEnvelope = (o: unknown): ExchangeItem => {
     throw new Error("Invalid messages_store response: 'item' must be an object");
   }
   return decodeExchangeItem(item);
+};
+
+const decodeExchangeList = (o: unknown): ListPendingOutboxResult => {
+  const r = raw(o);
+  return {
+    items: arr(r, 'items').map(decodeExchangeItem),
+    nextCursor: str(r, 'next_cursor'),
+  };
 };
 
 const decodeReviewEnvelope = (o: unknown): ReviewItem => {
@@ -429,6 +446,19 @@ const encodeIncomingMessage = (m: IncomingMessage): Record<string, unknown> => (
   payload: m.payload,
 });
 
+const encodeTerminalOutcome = (
+  outcome: OutboxTerminalOutcome
+): Readonly<Record<string, unknown>> =>
+  outcome.state === 'sent'
+    ? {
+        state: outcome.state,
+        provider_response: outcome.providerResponse,
+      }
+    : {
+        state: outcome.state,
+        reason: outcome.reason,
+      };
+
 // ---------------------------------------------------------------------------
 // Scoped factories (closures capture the path identifiers)
 // ---------------------------------------------------------------------------
@@ -467,6 +497,13 @@ const makeReviewScoped = (call: CallFn): MessagesStoreClient['review'] => ({
     });
     return decodeReviewDelete(result);
   },
+
+  approve: async (p) => {
+    const result = await call('messages_store/review/approve', {
+      review_id: p.reviewId,
+    });
+    return decodeExchangeEnvelope(result);
+  },
 });
 
 const makeOutboxScoped = (call: CallFn): MessagesStoreClient['outbox'] => ({
@@ -475,6 +512,51 @@ const makeOutboxScoped = (call: CallFn): MessagesStoreClient['outbox'] => ({
       external_id: p.externalId,
       account: p.account,
       payload: p.payload,
+    });
+    return decodeExchangeEnvelope(result);
+  },
+
+  get: async (p) => {
+    const result = await call('messages_store/outbox/get', {
+      external_id: p.externalId,
+    });
+    return decodeExchangeEnvelope(result);
+  },
+
+  listPending: async (p?: ListPendingOutboxParams) => {
+    const result = await call('messages_store/outbox/list-pending', {
+      ...optional('limit', p?.limit),
+      ...optional('cursor', p?.cursor),
+    });
+    return decodeExchangeList(result);
+  },
+
+  claim: async (p: OutboxLeaseParams) => {
+    const result = await call('messages_store/outbox/claim', {
+      external_id: p.externalId,
+      expected_revision: p.expectedRevision,
+      lease_owner: p.leaseOwner,
+      lease_seconds: p.leaseSeconds,
+    });
+    return decodeExchangeEnvelope(result);
+  },
+
+  renewLease: async (p: OutboxLeaseParams) => {
+    const result = await call('messages_store/outbox/renew-lease', {
+      external_id: p.externalId,
+      expected_revision: p.expectedRevision,
+      lease_owner: p.leaseOwner,
+      lease_seconds: p.leaseSeconds,
+    });
+    return decodeExchangeEnvelope(result);
+  },
+
+  writeTerminal: async (p: WriteOutboxTerminalParams) => {
+    const result = await call('messages_store/outbox/write-terminal', {
+      external_id: p.externalId,
+      expected_revision: p.expectedRevision,
+      lease_owner: p.leaseOwner,
+      outcome: encodeTerminalOutcome(p.outcome),
     });
     return decodeExchangeEnvelope(result);
   },

@@ -473,6 +473,10 @@ test('messagesStore.outbox creates the canonical item with an account', async ()
           payload: { subject: 'Ready' },
           result: null,
           revision: '1',
+          delivery_attempts: 0,
+          lease_owner: null,
+          lease_expires_at: null,
+          failure_reason: null,
           created_at: '2026-08-28T10:00:00+00:00',
           updated_at: '2026-08-28T10:00:00+00:00',
         },
@@ -488,6 +492,196 @@ test('messagesStore.outbox creates the canonical item with an account', async ()
       assert.equal(item.state, 'outbox');
       assert.equal(item.revision, '1');
       assert.equal(item.result, null);
+    }
+  );
+});
+
+test('messagesStore review approval and outbox lifecycle use one canonical item', async () => {
+  /* REQ-EXCHANGE-SDK-004: Approval, reads, leases, and terminal writes use the Drive-owned lifecycle contract. */
+  const seenMethods: string[] = [];
+  await withFetchMock(
+    (_url, init) => {
+      const request = parseBody(init);
+      const method = String(request.method);
+      seenMethods.push(method);
+      const revisions: Readonly<Record<string, string>> = {
+        'messages_store/review/approve': '2',
+        'messages_store/outbox/get': '2',
+        'messages_store/outbox/claim': '3',
+        'messages_store/outbox/renew-lease': '4',
+        'messages_store/outbox/write-terminal': '5',
+      };
+
+      if (method === 'messages_store/outbox/list-pending') {
+        assert.deepEqual(request.params, { limit: 25, cursor: 'cursor-1' });
+        return jsonRpcResponse({
+          items: [
+            {
+              external_id: 'send-1',
+              account: 'work@example.com',
+              mailbox_id: 'exchange-work-example-com',
+              state: 'outbox',
+              payload: { subject: 'Ready' },
+              result: null,
+              revision: '2',
+              delivery_attempts: 0,
+              lease_owner: null,
+              lease_expires_at: null,
+              failure_reason: null,
+              created_at: '2026-08-29T10:00:00+00:00',
+              updated_at: '2026-08-29T10:01:00+00:00',
+            },
+          ],
+          next_cursor: null,
+        });
+      }
+
+      if (method === 'messages_store/review/approve') {
+        assert.deepEqual(request.params, { review_id: 'send-1' });
+      } else if (method === 'messages_store/outbox/get') {
+        assert.deepEqual(request.params, { external_id: 'send-1' });
+      } else if (method === 'messages_store/outbox/claim') {
+        assert.deepEqual(request.params, {
+          external_id: 'send-1',
+          expected_revision: '2',
+          lease_owner: 'provider-1',
+          lease_seconds: 30,
+        });
+      } else if (method === 'messages_store/outbox/renew-lease') {
+        assert.deepEqual(request.params, {
+          external_id: 'send-1',
+          expected_revision: '3',
+          lease_owner: 'provider-1',
+          lease_seconds: 30,
+        });
+      } else if (method === 'messages_store/outbox/write-terminal') {
+        assert.deepEqual(request.params, {
+          external_id: 'send-1',
+          expected_revision: '4',
+          lease_owner: 'provider-1',
+          outcome: {
+            state: 'sent',
+            provider_response: { providerId: 'provider-message-1' },
+          },
+        });
+      } else {
+        throw new Error(`unexpected method ${method}`);
+      }
+
+      const terminal = method === 'messages_store/outbox/write-terminal';
+      const leased =
+        method === 'messages_store/outbox/claim' || method === 'messages_store/outbox/renew-lease';
+      return jsonRpcResponse({
+        item: {
+          external_id: 'send-1',
+          account: 'work@example.com',
+          mailbox_id: 'exchange-work-example-com',
+          state: terminal ? 'sent' : 'outbox',
+          payload: { subject: 'Ready' },
+          result: terminal ? { providerId: 'provider-message-1' } : null,
+          revision: revisions[method],
+          delivery_attempts: leased || terminal ? 1 : 0,
+          lease_owner: leased ? 'provider-1' : null,
+          lease_expires_at: leased ? '2026-08-29T10:02:00+00:00' : null,
+          failure_reason: null,
+          created_at: '2026-08-29T10:00:00+00:00',
+          updated_at: '2026-08-29T10:01:00+00:00',
+        },
+      });
+    },
+    async () => {
+      const client = diskd.os.messagesStore({ auth: makeAuth(), url: 'http://drive:8000/api/v1' });
+      const approved = await client.review.approve({ reviewId: 'send-1' });
+      const got = await client.outbox.get({ externalId: 'send-1' });
+      const pending = await client.outbox.listPending({ limit: 25, cursor: 'cursor-1' });
+      const claimed = await client.outbox.claim({
+        externalId: 'send-1',
+        expectedRevision: '2',
+        leaseOwner: 'provider-1',
+        leaseSeconds: 30,
+      });
+      const renewed = await client.outbox.renewLease({
+        externalId: 'send-1',
+        expectedRevision: '3',
+        leaseOwner: 'provider-1',
+        leaseSeconds: 30,
+      });
+      const sent = await client.outbox.writeTerminal({
+        externalId: 'send-1',
+        expectedRevision: '4',
+        leaseOwner: 'provider-1',
+        outcome: {
+          state: 'sent',
+          providerResponse: { providerId: 'provider-message-1' },
+        },
+      });
+
+      assert.equal(approved.revision, '2');
+      assert.equal(got.deliveryAttempts, 0);
+      assert.equal(pending.items[0]?.leaseOwner, null);
+      assert.equal(claimed.deliveryAttempts, 1);
+      assert.equal(renewed.leaseOwner, 'provider-1');
+      assert.equal(sent.state, 'sent');
+      assert.equal(sent.leaseOwner, null);
+      assert.deepEqual(seenMethods, [
+        'messages_store/review/approve',
+        'messages_store/outbox/get',
+        'messages_store/outbox/list-pending',
+        'messages_store/outbox/claim',
+        'messages_store/outbox/renew-lease',
+        'messages_store/outbox/write-terminal',
+      ]);
+    }
+  );
+});
+
+test('messagesStore.outbox writes a terminal Failed reason', async () => {
+  /* REQ-EXCHANGE-SDK-005: Failed delivery writes an explicit reason through the terminal outcome variant. */
+  await withFetchMock(
+    (_url, init) => {
+      const request = parseBody(init);
+      assert.equal(request.method, 'messages_store/outbox/write-terminal');
+      assert.deepEqual(request.params, {
+        external_id: 'send-2',
+        expected_revision: '7',
+        lease_owner: 'provider-1',
+        outcome: {
+          state: 'failed',
+          reason: 'provider rejected recipient',
+        },
+      });
+      return jsonRpcResponse({
+        item: {
+          external_id: 'send-2',
+          account: 'work@example.com',
+          mailbox_id: 'exchange-work-example-com',
+          state: 'failed',
+          payload: { subject: 'Ready' },
+          result: null,
+          revision: '8',
+          delivery_attempts: 2,
+          lease_owner: null,
+          lease_expires_at: null,
+          failure_reason: 'provider rejected recipient',
+          created_at: '2026-08-29T10:00:00+00:00',
+          updated_at: '2026-08-29T10:05:00+00:00',
+        },
+      });
+    },
+    async () => {
+      const client = diskd.os.messagesStore({ auth: makeAuth(), url: 'http://drive:8000/api/v1' });
+      const failed = await client.outbox.writeTerminal({
+        externalId: 'send-2',
+        expectedRevision: '7',
+        leaseOwner: 'provider-1',
+        outcome: {
+          state: 'failed',
+          reason: 'provider rejected recipient',
+        },
+      });
+
+      assert.equal(failed.state, 'failed');
+      assert.equal(failed.failureReason, 'provider rejected recipient');
     }
   );
 });
@@ -512,6 +706,10 @@ test('messagesStore.exchange updates by expected revision', async () => {
           payload: { subject: 'Ready' },
           result: { providerId: 'provider-7' },
           revision: '2',
+          delivery_attempts: 1,
+          lease_owner: null,
+          lease_expires_at: null,
+          failure_reason: null,
           created_at: '2026-08-28T10:00:00+00:00',
           updated_at: '2026-08-28T10:01:00+00:00',
         },

@@ -190,6 +190,10 @@ export type ExchangeItem = {
   readonly payload: Readonly<Record<string, unknown>>;
   readonly result: Readonly<Record<string, unknown>> | null;
   readonly revision: string;
+  readonly deliveryAttempts: number;
+  readonly leaseOwner: string | null;
+  readonly leaseExpiresAt: string | null;
+  readonly failureReason: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -199,6 +203,45 @@ export type CreateOutboxItemParams = {
   readonly externalId: string;
   readonly account: string;
   readonly payload: Readonly<Record<string, unknown>>;
+};
+
+/** Cursor-paginated available Outbox work. */
+export type ListPendingOutboxParams = {
+  readonly limit?: number;
+  readonly cursor?: string;
+};
+
+/** One page of Outbox items whose lease is absent or expired. */
+export type ListPendingOutboxResult = {
+  readonly items: readonly ExchangeItem[];
+  readonly nextCursor: string | null;
+};
+
+/** Common optimistic lease mutation parameters. */
+export type OutboxLeaseParams = {
+  readonly externalId: string;
+  readonly expectedRevision: string;
+  readonly leaseOwner: string;
+  readonly leaseSeconds: number;
+};
+
+/** Provider outcome persisted without interpreting provider-specific fields. */
+export type OutboxTerminalOutcome =
+  | {
+      readonly state: 'sent';
+      readonly providerResponse: Readonly<Record<string, unknown>>;
+    }
+  | {
+      readonly state: 'failed';
+      readonly reason: string;
+    };
+
+/** Lease-guarded terminal-state write parameters. */
+export type WriteOutboxTerminalParams = {
+  readonly externalId: string;
+  readonly expectedRevision: string;
+  readonly leaseOwner: string;
+  readonly outcome: OutboxTerminalOutcome;
 };
 
 /** Fields that a lifecycle owner may persist with a revision guard. */
@@ -547,10 +590,17 @@ export type MessagesStoreClient = {
     readonly get: (params: { readonly reviewId: string }) => Promise<ReviewItem>;
     /** Delete one review item by reviewId. */
     readonly delete: (params: { readonly reviewId: string }) => Promise<DeleteReviewItemResult>;
+    /** Atomically move Review to Outbox and return the same canonical item. */
+    readonly approve: (params: { readonly reviewId: string }) => Promise<ExchangeItem>;
   };
-  /** Create canonical items that are ready for provider delivery. */
+  /** Create, read, lease, and complete canonical provider work. */
   readonly outbox: {
     readonly create: (params: CreateOutboxItemParams) => Promise<ExchangeItem>;
+    readonly get: (params: { readonly externalId: string }) => Promise<ExchangeItem>;
+    readonly listPending: (params?: ListPendingOutboxParams) => Promise<ListPendingOutboxResult>;
+    readonly claim: (params: OutboxLeaseParams) => Promise<ExchangeItem>;
+    readonly renewLease: (params: OutboxLeaseParams) => Promise<ExchangeItem>;
+    readonly writeTerminal: (params: WriteOutboxTerminalParams) => Promise<ExchangeItem>;
   };
   /** Persist lifecycle changes owned by a provider or reconciliation process. */
   readonly exchange: {
