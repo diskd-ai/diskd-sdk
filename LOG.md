@@ -1,5 +1,13 @@
 # LOG
 
+## 2026-08-28
+
+- `enabling:dev/platform-api/sdk/messages-store`: exposed one canonical outbound
+  Exchange item through account-required Review and Outbox creation plus a
+  generic revision-guarded lifecycle update. Motivation: producers and provider
+  adapters need a typed Drive storage contract without embedding delivery or
+  retry policy in the SDK.
+
 ## 2026-08-13
 
 - `enabling:dev/platform-api/sdk/inbox`: preserve a double-quoted free-text

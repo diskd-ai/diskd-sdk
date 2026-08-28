@@ -352,7 +352,7 @@ test('messagesStore attachment.saveToDrive encodes payload and decodes target en
 });
 
 test('messagesStore.review create/list/get/delete use the single workspace review box', async () => {
-  /* REQUIREMENT REVIEW-BOX-SDK-01: SDK forwards single review box create/list/get/delete with snake_case review item params */
+  /* REQ-EXCHANGE-SDK-001: Review creation requires an account and decodes the canonical item locator and revision. */
   const seenMethods: string[] = [];
   await withFetchMock(
     (_url, init) => {
@@ -361,6 +361,7 @@ test('messagesStore.review create/list/get/delete use the single workspace revie
       if (request.method === 'messages_store/review/create') {
         assert.deepEqual(request.params, {
           review_id: 'draft-1',
+          account: 'work@example.com',
           payload: {
             subject: 'Draft',
             sendAccountId: 'work@example.com',
@@ -369,10 +370,13 @@ test('messagesStore.review create/list/get/delete use the single workspace revie
         return jsonRpcResponse({
           item: {
             review_id: 'draft-1',
+            account: 'work@example.com',
+            mailbox_id: 'exchange-work-example-com',
             payload: {
               subject: 'Draft',
               sendAccountId: 'work@example.com',
             },
+            revision: '1',
             created_at: '2026-05-17T20:00:00+00:00',
             updated_at: '2026-05-17T20:00:00+00:00',
           },
@@ -384,7 +388,10 @@ test('messagesStore.review create/list/get/delete use the single workspace revie
           items: [
             {
               review_id: 'draft-1',
+              account: 'work@example.com',
+              mailbox_id: 'exchange-work-example-com',
               payload: { subject: 'Draft' },
+              revision: '1',
               created_at: '2026-05-17T20:00:00+00:00',
               updated_at: '2026-05-17T20:00:00+00:00',
             },
@@ -397,7 +404,10 @@ test('messagesStore.review create/list/get/delete use the single workspace revie
         return jsonRpcResponse({
           item: {
             review_id: 'draft-1',
+            account: 'work@example.com',
+            mailbox_id: 'exchange-work-example-com',
             payload: { subject: 'Draft' },
+            revision: '1',
             created_at: '2026-05-17T20:00:00+00:00',
             updated_at: '2026-05-17T20:00:00+00:00',
           },
@@ -414,6 +424,7 @@ test('messagesStore.review create/list/get/delete use the single workspace revie
 
       const created = await client.review.create({
         reviewId: 'draft-1',
+        account: 'work@example.com',
         payload: {
           subject: 'Draft',
           sendAccountId: 'work@example.com',
@@ -424,6 +435,9 @@ test('messagesStore.review create/list/get/delete use the single workspace revie
       const deleted = await client.review.delete({ reviewId: 'draft-1' });
 
       assert.equal(created.reviewId, 'draft-1');
+      assert.equal(created.account, 'work@example.com');
+      assert.equal(created.mailboxId, 'exchange-work-example-com');
+      assert.equal(created.revision, '1');
       assert.equal(created.payload.sendAccountId, 'work@example.com');
       assert.equal(listed.items[0]?.reviewId, 'draft-1');
       assert.equal(listed.nextCursor, null);
@@ -435,6 +449,84 @@ test('messagesStore.review create/list/get/delete use the single workspace revie
         'messages_store/review/get',
         'messages_store/review/delete',
       ]);
+    }
+  );
+});
+
+test('messagesStore.outbox creates the canonical item with an account', async () => {
+  /* REQ-EXCHANGE-SDK-002: Outbox creation forwards canonical identity and decodes Drive lifecycle metadata. */
+  await withFetchMock(
+    (_url, init) => {
+      const request = parseBody(init);
+      assert.equal(request.method, 'messages_store/outbox/create');
+      assert.deepEqual(request.params, {
+        external_id: 'send-1',
+        account: 'work@example.com',
+        payload: { subject: 'Ready' },
+      });
+      return jsonRpcResponse({
+        item: {
+          external_id: 'send-1',
+          account: 'work@example.com',
+          mailbox_id: 'exchange-work-example-com',
+          state: 'outbox',
+          payload: { subject: 'Ready' },
+          result: null,
+          revision: '1',
+          created_at: '2026-08-28T10:00:00+00:00',
+          updated_at: '2026-08-28T10:00:00+00:00',
+        },
+      });
+    },
+    async () => {
+      const client = diskd.os.messagesStore({ auth: makeAuth(), url: 'http://drive:8000/api/v1' });
+      const item = await client.outbox.create({
+        externalId: 'send-1',
+        account: 'work@example.com',
+        payload: { subject: 'Ready' },
+      });
+      assert.equal(item.state, 'outbox');
+      assert.equal(item.revision, '1');
+      assert.equal(item.result, null);
+    }
+  );
+});
+
+test('messagesStore.exchange updates by expected revision', async () => {
+  /* REQ-EXCHANGE-SDK-003: Lifecycle updates carry the caller revision and one generic patch without transport policy. */
+  await withFetchMock(
+    (_url, init) => {
+      const request = parseBody(init);
+      assert.equal(request.method, 'messages_store/exchange/update');
+      assert.deepEqual(request.params, {
+        external_id: 'send-1',
+        expected_revision: '1',
+        patch: { state: 'sent', result: { providerId: 'provider-7' } },
+      });
+      return jsonRpcResponse({
+        item: {
+          external_id: 'send-1',
+          account: 'work@example.com',
+          mailbox_id: 'exchange-work-example-com',
+          state: 'sent',
+          payload: { subject: 'Ready' },
+          result: { providerId: 'provider-7' },
+          revision: '2',
+          created_at: '2026-08-28T10:00:00+00:00',
+          updated_at: '2026-08-28T10:01:00+00:00',
+        },
+      });
+    },
+    async () => {
+      const client = diskd.os.messagesStore({ auth: makeAuth(), url: 'http://drive:8000/api/v1' });
+      const item = await client.exchange.update({
+        externalId: 'send-1',
+        expectedRevision: '1',
+        patch: { state: 'sent', result: { providerId: 'provider-7' } },
+      });
+      assert.equal(item.state, 'sent');
+      assert.equal(item.revision, '2');
+      assert.deepEqual(item.result, { providerId: 'provider-7' });
     }
   );
 });

@@ -25,10 +25,12 @@ import type {
   AttachmentUploadStartResult,
   CreateMailboxParams,
   CreateMailboxResult,
+  CreateOutboxItemParams,
   DeleteBatchParams,
   DeleteBatchResult,
   DeleteFolderResult,
   DeleteMailboxResult,
+  ExchangeItem,
   FolderScopedClient,
   FolderSummary,
   IncomingMessage,
@@ -46,6 +48,7 @@ import type {
   ReviewItem,
   SenderSummary,
   StoredMessage,
+  UpdateExchangeItemParams,
   UpsertBatchParams,
   UpsertBatchResult,
   UpsertFolderParams,
@@ -107,6 +110,14 @@ const metadataObj = (obj: RawObject, key: string): Readonly<Record<string, unkno
 const payloadObj = (obj: RawObject, key: string): Readonly<Record<string, unknown>> => {
   const v = obj[key];
   return isObject(v) ? v : {};
+};
+
+const nullablePayloadObj = (
+  obj: RawObject,
+  key: string
+): Readonly<Record<string, unknown>> | null => {
+  const value = obj[key];
+  return value === null ? null : payloadObj(obj, key);
 };
 
 const arr = (obj: RawObject, key: string): readonly unknown[] => {
@@ -260,10 +271,47 @@ const decodeReviewItem = (o: unknown): ReviewItem => {
   const r = raw(o);
   return {
     reviewId: strRequired(r, 'review_id'),
+    account: strRequired(r, 'account'),
+    mailboxId: strRequired(r, 'mailbox_id'),
     payload: payloadObj(r, 'payload'),
+    revision: strRequired(r, 'revision'),
     createdAt: strRequired(r, 'created_at'),
     updatedAt: strRequired(r, 'updated_at'),
   };
+};
+
+const decodeExchangeItem = (o: unknown): ExchangeItem => {
+  const r = raw(o);
+  const state = strRequired(r, 'state');
+  if (
+    state !== 'review' &&
+    state !== 'outbox' &&
+    state !== 'sent' &&
+    state !== 'failed' &&
+    state !== 'reconciliation_required'
+  ) {
+    throw new Error("Invalid messages_store response: 'state' is not an Exchange state");
+  }
+  return {
+    externalId: strRequired(r, 'external_id'),
+    account: strRequired(r, 'account'),
+    mailboxId: strRequired(r, 'mailbox_id'),
+    state,
+    payload: payloadObj(r, 'payload'),
+    result: nullablePayloadObj(r, 'result'),
+    revision: strRequired(r, 'revision'),
+    createdAt: strRequired(r, 'created_at'),
+    updatedAt: strRequired(r, 'updated_at'),
+  };
+};
+
+const decodeExchangeEnvelope = (o: unknown): ExchangeItem => {
+  const r = raw(o);
+  const item = r.item;
+  if (!isObject(item)) {
+    throw new Error("Invalid messages_store response: 'item' must be an object");
+  }
+  return decodeExchangeItem(item);
 };
 
 const decodeReviewEnvelope = (o: unknown): ReviewItem => {
@@ -392,6 +440,7 @@ const makeReviewScoped = (call: CallFn): MessagesStoreClient['review'] => ({
   create: async (p) => {
     const result = await call('messages_store/review/create', {
       review_id: p.reviewId,
+      account: p.account,
       payload: p.payload,
     });
     return decodeReviewEnvelope(result);
@@ -417,6 +466,28 @@ const makeReviewScoped = (call: CallFn): MessagesStoreClient['review'] => ({
       review_id: p.reviewId,
     });
     return decodeReviewDelete(result);
+  },
+});
+
+const makeOutboxScoped = (call: CallFn): MessagesStoreClient['outbox'] => ({
+  create: async (p: CreateOutboxItemParams) => {
+    const result = await call('messages_store/outbox/create', {
+      external_id: p.externalId,
+      account: p.account,
+      payload: p.payload,
+    });
+    return decodeExchangeEnvelope(result);
+  },
+});
+
+const makeExchangeScoped = (call: CallFn): MessagesStoreClient['exchange'] => ({
+  update: async (p: UpdateExchangeItemParams) => {
+    const result = await call('messages_store/exchange/update', {
+      external_id: p.externalId,
+      expected_revision: p.expectedRevision,
+      patch: p.patch,
+    });
+    return decodeExchangeEnvelope(result);
   },
 });
 
@@ -705,6 +776,10 @@ export const createMessagesStoreClient = (params: {
     },
 
     review: makeReviewScoped(call),
+
+    outbox: makeOutboxScoped(call),
+
+    exchange: makeExchangeScoped(call),
 
     mailbox: ({ mailboxId }) => makeMailboxScoped(call, mailboxId),
   };

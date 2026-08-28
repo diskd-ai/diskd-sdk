@@ -176,12 +176,52 @@ export type ListSendersResult = {
   readonly nextCursor: string | null;
 };
 
-// -- Boundary 3b: single review box --
+// -- Boundary 3b: canonical outbound Exchange item --
+
+/** Storage lifecycle state for one canonical outbound item. */
+export type ExchangeState = 'review' | 'outbox' | 'sent' | 'failed' | 'reconciliation_required';
+
+/** One canonical outbound item stored by Drive. */
+export type ExchangeItem = {
+  readonly externalId: string;
+  readonly account: string;
+  readonly mailboxId: string;
+  readonly state: ExchangeState;
+  readonly payload: Readonly<Record<string, unknown>>;
+  readonly result: Readonly<Record<string, unknown>> | null;
+  readonly revision: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+/** Create one canonical item directly in Outbox state. */
+export type CreateOutboxItemParams = {
+  readonly externalId: string;
+  readonly account: string;
+  readonly payload: Readonly<Record<string, unknown>>;
+};
+
+/** Fields that a lifecycle owner may persist with a revision guard. */
+export type ExchangePatch = {
+  readonly state?: ExchangeState;
+  readonly payload?: Readonly<Record<string, unknown>>;
+  readonly result?: Readonly<Record<string, unknown>>;
+};
+
+/** Apply one idempotent compare-and-set update to a canonical item. */
+export type UpdateExchangeItemParams = {
+  readonly externalId: string;
+  readonly expectedRevision: string;
+  readonly patch: ExchangePatch;
+};
 
 /** One message waiting for review before send. */
 export type ReviewItem = {
   readonly reviewId: string;
+  readonly account: string;
+  readonly mailboxId: string;
   readonly payload: Readonly<Record<string, unknown>>;
+  readonly revision: string;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -189,6 +229,7 @@ export type ReviewItem = {
 /** Create one item in the single workspace review box. */
 export type CreateReviewItemParams = {
   readonly reviewId: string;
+  readonly account: string;
   readonly payload: Readonly<Record<string, unknown>>;
 };
 
@@ -506,6 +547,14 @@ export type MessagesStoreClient = {
     readonly get: (params: { readonly reviewId: string }) => Promise<ReviewItem>;
     /** Delete one review item by reviewId. */
     readonly delete: (params: { readonly reviewId: string }) => Promise<DeleteReviewItemResult>;
+  };
+  /** Create canonical items that are ready for provider delivery. */
+  readonly outbox: {
+    readonly create: (params: CreateOutboxItemParams) => Promise<ExchangeItem>;
+  };
+  /** Persist lifecycle changes owned by a provider or reconciliation process. */
+  readonly exchange: {
+    readonly update: (params: UpdateExchangeItemParams) => Promise<ExchangeItem>;
   };
   /**
    * Bind a mailbox-scoped client over `mailboxId`. The returned
