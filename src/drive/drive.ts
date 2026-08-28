@@ -1,3 +1,6 @@
+import { request as httpRequest, type IncomingHttpHeaders } from 'node:http';
+import { request as httpsRequest } from 'node:https';
+import { Readable } from 'node:stream';
 import type { AuthModule } from '../auth/types.js';
 import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import { createDriveCrontabClient } from './crontab.js';
@@ -480,6 +483,47 @@ const sha256hex = async (data: Uint8Array | ArrayBuffer): Promise<string> => {
   return hex;
 };
 
+type DriveUploadHttpResponse = {
+  readonly statusCode: number;
+  readonly headers: IncomingHttpHeaders;
+  readonly text: string;
+};
+
+/** Send upload bytes with a determinate length in Node and Bun runtimes. */
+const putDriveUpload = (
+  url: string,
+  headers: Readonly<Record<string, string>>,
+  body: ArrayBuffer | ReadableStream<Uint8Array>
+): Promise<DriveUploadHttpResponse> =>
+  new Promise((resolve, reject) => {
+    const target = new URL(url);
+    const request = target.protocol === 'https:' ? httpsRequest : httpRequest;
+    const outgoing = request(target, { method: 'PUT', headers }, (response) => {
+      const chunks: Buffer[] = [];
+      response.on('data', (chunk: Buffer) => chunks.push(chunk));
+      response.on('error', reject);
+      response.on('end', () => {
+        resolve({
+          statusCode: response.statusCode ?? 0,
+          headers: response.headers,
+          text: Buffer.concat(chunks).toString('utf8'),
+        });
+      });
+    });
+    outgoing.on('error', reject);
+
+    if (body instanceof ArrayBuffer) {
+      outgoing.end(Buffer.from(body));
+      return;
+    }
+
+    const readable = Readable.fromWeb(
+      body as unknown as import('node:stream/web').ReadableStream<Uint8Array>
+    );
+    readable.on('error', (error) => outgoing.destroy(error));
+    readable.pipe(outgoing);
+  });
+
 // ---------------------------------------------------------------------------
 // Client factory
 // ---------------------------------------------------------------------------
@@ -616,25 +660,27 @@ export const createDriveClient = (params: {
           ? await params.auth.getRequestHeaders()
           : { Authorization: `Bearer ${await params.auth.getAccessToken()}` };
 
-        const putResponse = await fetch(uploadUrl, {
-          method: 'PUT',
-          headers: {
+        const putResponse = await putDriveUpload(
+          uploadUrl,
+          {
             ...authHeaders,
             'Content-Type': p.mimeType ?? 'application/octet-stream',
             'Content-Length': String(fileSize),
             'X-Upload-Intent-Id': intent.intentId,
           },
-          body,
-          ...(isStream ? { duplex: 'half' } : {}),
-        });
+          body
+        );
 
-        if (!putResponse.ok) {
-          const text = await putResponse.text();
-          throw new Error(`Upload PUT failed (HTTP ${putResponse.status}): ${text.slice(0, 200)}`);
+        if (putResponse.statusCode < 200 || putResponse.statusCode >= 300) {
+          throw new Error(
+            `Upload PUT failed (HTTP ${putResponse.statusCode}): ${putResponse.text.slice(0, 200)}`
+          );
         }
 
-        const putBody = (await putResponse.json()) as { etag?: string };
-        const etag = putBody.etag ?? putResponse.headers.get('etag') ?? '';
+        const putBody: unknown = putResponse.text ? JSON.parse(putResponse.text) : {};
+        const responseEtag = isObject(putBody) ? str(putBody, 'etag') : null;
+        const headerEtag = putResponse.headers.etag;
+        const etag = responseEtag ?? (Array.isArray(headerEtag) ? headerEtag[0] : headerEtag) ?? '';
         if (!etag) {
           throw new Error('Upload PUT response missing etag');
         }

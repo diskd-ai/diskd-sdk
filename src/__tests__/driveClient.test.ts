@@ -1,27 +1,39 @@
 /* REQUIREMENT ADR-028: SDK default clients must derive versioned APIS gateway URLs under `/v1/{namespace}/{module}`. */
 
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
 import test from 'node:test';
 import type { AuthModule } from '../auth/types.js';
 import { diskd } from '../sdk/diskd.js';
 
 type FetchCall = { readonly url: string; readonly init?: RequestInit };
 
-type StreamingRequestInit = RequestInit & { readonly duplex?: 'half' };
-
 /* REQ-DRIVE-UPLOAD-001: Stream uploads preserve their declared content length
  * while the SDK owns the complete start, transfer, and commit lifecycle. */
 test('drive.upload.file sends the known stream length and commits the upload', async () => {
   const calls: FetchCall[] = [];
+  let receivedContentLength: string | undefined;
+  let receivedBodySize = 0;
+  const server = createServer((request, response) => {
+    receivedContentLength = request.headers['content-length'];
+    request.on('data', (chunk: Buffer) => {
+      receivedBodySize += chunk.byteLength;
+    });
+    request.on('end', () => {
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ etag: 'etag-upload-1' }));
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  assert.ok(address && typeof address !== 'string');
+
   const originalFetch = globalThis.fetch;
   const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = typeof input === 'string' ? input : input.toString();
     calls.push({ url, init });
     if (init?.method === 'PUT') {
-      return new Response(JSON.stringify({ etag: 'etag-upload-1' }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      throw new Error('Stream upload must use the determinate-length transport');
     }
     const body = typeof init?.body === 'string' ? init.body : '';
     if (body.includes('drive/upload/start')) {
@@ -79,7 +91,7 @@ test('drive.upload.file sends the known stream length and commits the upload', a
     const drive = diskd.os.drive({
       version: 'v1',
       auth,
-      url: 'https://drive.example/api/v1',
+      url: `http://127.0.0.1:${address.port}/api/v1`,
     });
     const result = await drive.upload.file({
       name: 'upload.png',
@@ -96,20 +108,14 @@ test('drive.upload.file sends the known stream length and commits the upload', a
       committedAt: '2026-08-29T00:00:00Z',
       intentId: 'intent-upload-1',
     });
-    assert.equal(calls.length, 3);
-    assert.equal(calls[1]?.url, 'https://drive.example/api/v1/drive/upload');
-    const init = calls[1]?.init as StreamingRequestInit | undefined;
-    assert.equal(init?.method, 'PUT');
-    assert.equal(init?.body, stream);
-    assert.equal(init?.duplex, 'half');
-    assert.deepEqual(init?.headers, {
-      'X-Api-Key': 'drive-key',
-      'Content-Type': 'image/png',
-      'Content-Length': '4',
-      'X-Upload-Intent-Id': 'intent-upload-1',
-    });
+    assert.equal(calls.length, 2);
+    assert.equal(receivedContentLength, '4');
+    assert.equal(receivedBodySize, 4);
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
   }
 });
 
