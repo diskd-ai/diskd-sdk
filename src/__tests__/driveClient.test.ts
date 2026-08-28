@@ -9,18 +9,53 @@ type FetchCall = { readonly url: string; readonly init?: RequestInit };
 
 type StreamingRequestInit = RequestInit & { readonly duplex?: 'half' };
 
-/* REQ-DRIVE-UPLOAD-001: Existing upload intents transfer through the SDK with
- * an explicit content length so Drive can stream the body to object storage. */
-test('drive.upload.transfer sends the known content length and returns the etag', async () => {
+/* REQ-DRIVE-UPLOAD-001: Stream uploads preserve their declared content length
+ * while the SDK owns the complete start, transfer, and commit lifecycle. */
+test('drive.upload.file sends the known stream length and commits the upload', async () => {
   const calls: FetchCall[] = [];
   const originalFetch = globalThis.fetch;
   const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = typeof input === 'string' ? input : input.toString();
     calls.push({ url, init });
-    return new Response(JSON.stringify({ etag: 'etag-transfer-1' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    if (init?.method === 'PUT') {
+      return new Response(JSON.stringify({ etag: 'etag-upload-1' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    const body = typeof init?.body === 'string' ? init.body : '';
+    if (body.includes('drive/upload/start')) {
+      return new Response(
+        JSON.stringify({
+          jsonrpc: '2.0',
+          result: {
+            intent_id: 'intent-upload-1',
+            inode: 'inode-upload-1',
+            upload_url: '/api/v1/drive/upload',
+            expires_in: 900,
+            multipart: false,
+          },
+          id: 1,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    return new Response(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        result: {
+          inode: 'inode-upload-1',
+          etag: 'etag-upload-1',
+          version: 1,
+          committed_at: '2026-08-29T00:00:00Z',
+        },
+        id: 2,
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   };
   (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
 
@@ -46,18 +81,24 @@ test('drive.upload.transfer sends the known content length and returns the etag'
       auth,
       url: 'https://drive.example/api/v1',
     });
-    const result = await drive.upload.transfer({
-      uploadUrl: '/api/v1/drive/upload',
-      intentId: 'intent-transfer-1',
+    const result = await drive.upload.file({
+      name: 'upload.png',
       stream,
       size: 4,
+      sha256Root: 'sha256-upload-1',
       mimeType: 'image/png',
     });
 
-    assert.deepEqual(result, { etag: 'etag-transfer-1' });
-    assert.equal(calls.length, 1);
-    assert.equal(calls[0]?.url, 'https://drive.example/api/v1/drive/upload');
-    const init = calls[0]?.init as StreamingRequestInit | undefined;
+    assert.deepEqual(result, {
+      id: 'inode-upload-1',
+      etag: 'etag-upload-1',
+      version: 1,
+      committedAt: '2026-08-29T00:00:00Z',
+      intentId: 'intent-upload-1',
+    });
+    assert.equal(calls.length, 3);
+    assert.equal(calls[1]?.url, 'https://drive.example/api/v1/drive/upload');
+    const init = calls[1]?.init as StreamingRequestInit | undefined;
     assert.equal(init?.method, 'PUT');
     assert.equal(init?.body, stream);
     assert.equal(init?.duplex, 'half');
@@ -65,7 +106,7 @@ test('drive.upload.transfer sends the known content length and returns the etag'
       'X-Api-Key': 'drive-key',
       'Content-Type': 'image/png',
       'Content-Length': '4',
-      'X-Upload-Intent-Id': 'intent-transfer-1',
+      'X-Upload-Intent-Id': 'intent-upload-1',
     });
   } finally {
     (globalThis as { fetch: typeof fetch }).fetch = originalFetch;

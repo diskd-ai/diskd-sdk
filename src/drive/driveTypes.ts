@@ -267,20 +267,6 @@ export type DriveUploadFileResult = {
   readonly intentId: string;
 };
 
-/** Transfers bytes for an existing Drive upload intent without committing it. */
-export type DriveUploadTransferParams = {
-  readonly uploadUrl: string;
-  readonly intentId: string;
-  readonly stream: ReadableStream<Uint8Array>;
-  readonly size: number;
-  readonly mimeType?: string;
-};
-
-/** Identifies the transferred object version required by upload commit. */
-export type DriveUploadTransferResult = {
-  readonly etag: string;
-};
-
 // -- Download file (convenience) --
 
 export type DriveDownloadFileParams = {

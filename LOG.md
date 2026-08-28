@@ -2,6 +2,11 @@
 
 ## 2026-08-29
 
+- `enabling:dev/platform-api/sdk/drive`: preserved the declared byte length on
+  streaming `upload.file` requests and removed the redundant transfer-only
+  operation. Motivation: the SDK must own the complete Drive upload lifecycle
+  while allowing Drive to validate and stream a determinate-length body.
+
 - `enabling:dev/platform-api/sdk/messages-store`: exposed atomic Review
   approval plus Outbox get, pending listing, claim, lease renewal, and explicit
   Sent/Failed terminal writes through one canonical `ExchangeItem` contract.
