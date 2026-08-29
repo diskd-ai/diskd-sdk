@@ -262,6 +262,19 @@ export type ListPendingOutboxResult = {
   readonly nextCursor: string | null;
 };
 
+/** Cursor-paginated query for one canonical Exchange lifecycle state. */
+export type ListExchangeItemsParams = {
+  readonly state: ExchangeState;
+  readonly limit?: number;
+  readonly cursor?: string;
+};
+
+/** One persisted lifecycle page used by reload-safe projections. */
+export type ListExchangeItemsResult = {
+  readonly items: readonly ExchangeItem[];
+  readonly nextCursor: string | null;
+};
+
 /** Common optimistic lease mutation parameters. */
 export type OutboxLeaseParams = {
   readonly externalId: string;
@@ -649,6 +662,8 @@ export type MessagesStoreClient = {
   };
   /** Persist lifecycle changes owned by a provider or reconciliation process. */
   readonly exchange: {
+    /** List one persisted lifecycle state across workspace mailboxes. */
+    readonly list: (params: ListExchangeItemsParams) => Promise<ListExchangeItemsResult>;
     readonly update: (params: UpdateExchangeItemParams) => Promise<ExchangeItem>;
   };
   /**

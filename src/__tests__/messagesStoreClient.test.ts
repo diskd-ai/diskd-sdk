@@ -730,6 +730,52 @@ test('messagesStore.outbox writes a terminal Failed reason', async () => {
   );
 });
 
+test('messagesStore.exchange lists a persisted lifecycle state', async () => {
+  /* REQ-EXCHANGE-SDK-006: Consumers can reload canonical Outbox, Sent, and Failed projections through the SDK. */
+  await withFetchMock(
+    (_url, init) => {
+      const request = parseBody(init);
+      assert.equal(request.method, 'messages_store/exchange/list');
+      assert.deepEqual(request.params, {
+        state: 'sent',
+        limit: 25,
+        cursor: 'cursor-1',
+      });
+      return jsonRpcResponse({
+        items: [
+          {
+            external_id: 'send-1',
+            account: 'work@example.com',
+            mailbox_id: 'exchange-work-example-com',
+            state: 'sent',
+            payload: { subject: 'Delivered' },
+            result: { providerId: 'provider-message-1' },
+            revision: '5',
+            delivery_attempts: 1,
+            lease_owner: null,
+            lease_expires_at: null,
+            failure_reason: null,
+            created_at: '2026-08-29T10:00:00+00:00',
+            updated_at: '2026-08-29T10:05:00+00:00',
+          },
+        ],
+        next_cursor: null,
+      });
+    },
+    async () => {
+      const client = diskd.os.messagesStore({ auth: makeAuth(), url: 'http://drive:8000/api/v1' });
+      const persisted = await client.exchange.list({
+        state: 'sent',
+        limit: 25,
+        cursor: 'cursor-1',
+      });
+
+      assert.equal(persisted.items[0]?.state, 'sent');
+      assert.equal(persisted.items[0]?.revision, '5');
+    }
+  );
+});
+
 test('messagesStore.exchange updates by expected revision', async () => {
   /* REQ-EXCHANGE-SDK-003: Lifecycle updates carry the caller revision and one generic patch without transport policy. */
   await withFetchMock(

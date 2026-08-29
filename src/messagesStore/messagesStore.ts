@@ -35,10 +35,10 @@ import type {
   FolderSummary,
   IncomingMessage,
   InitMailboxResult,
+  ListExchangeItemsResult,
   ListMessagesParams,
   ListMessagesResult,
   ListPendingOutboxParams,
-  ListPendingOutboxResult,
   ListReviewItemsParams,
   ListReviewItemsResult,
   ListSendersParams,
@@ -323,7 +323,7 @@ const decodeExchangeEnvelope = (o: unknown): ExchangeItem => {
   return decodeExchangeItem(item);
 };
 
-const decodeExchangeList = (o: unknown): ListPendingOutboxResult => {
+const decodeExchangeList = (o: unknown): ListExchangeItemsResult => {
   const r = raw(o);
   return {
     items: arr(r, 'items').map(decodeExchangeItem),
@@ -563,6 +563,15 @@ const makeOutboxScoped = (call: CallFn): MessagesStoreClient['outbox'] => ({
 });
 
 const makeExchangeScoped = (call: CallFn): MessagesStoreClient['exchange'] => ({
+  list: async (p) => {
+    const result = await call('messages_store/exchange/list', {
+      state: p.state,
+      ...optional('limit', p.limit),
+      ...optional('cursor', p.cursor),
+    });
+    return decodeExchangeList(result);
+  },
+
   update: async (p: UpdateExchangeItemParams) => {
     const result = await call('messages_store/exchange/update', {
       external_id: p.externalId,
