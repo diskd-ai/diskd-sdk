@@ -2,6 +2,12 @@
 
 ## 2026-08-29
 
+- `enabling:dev/platform-api/sdk/messages-store`: added a non-empty outbound
+  email attachment variant using canonical Drive paths, filenames, and content
+  types. Motivation: provider adapters must hydrate attachment artifacts through
+  the Drive SDK without embedding bytes, provider DTOs, or storage identifiers
+  in Exchange events.
+
 - `enabling:dev/platform-api/sdk/drive`: routed determinate-length stream uploads
   through the installed Undici transport and added a large multi-chunk Bun
   regression to the release gate. Motivation: Bun's Node HTTP compatibility

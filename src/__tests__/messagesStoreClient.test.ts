@@ -512,6 +512,34 @@ test('messagesStore.outbox creates the canonical item with an account', async ()
   );
 });
 
+/* REQ-EXCHANGE-SDK-006: Outbound email attachments use canonical Drive paths without embedding provider or storage internals. */
+test('EmailOutboxPayload represents non-empty Drive attachment references', () => {
+  const payload: EmailOutboxPayload = {
+    messageId: 'message-with-attachment',
+    account: 'work',
+    threadId: null,
+    inReplyTo: null,
+    from: { name: 'Agent', address: 'agent@example.com' },
+    to: [{ name: 'Recipient', address: 'recipient@example.com' }],
+    cc: [],
+    bcc: [],
+    subject: 'Invoice',
+    bodyText: 'Attached.',
+    bodyHtml: '',
+    hasAttachments: true,
+    attachments: [
+      {
+        path: '/Projects/acme/invoice.pdf',
+        filename: 'invoice.pdf',
+        contentType: 'application/pdf',
+      },
+    ],
+  };
+
+  assert.equal(payload.hasAttachments, true);
+  assert.equal(payload.attachments[0].path, '/Projects/acme/invoice.pdf');
+});
+
 test('messagesStore review approval and outbox lifecycle use one canonical item', async () => {
   /* REQ-EXCHANGE-SDK-004: Approval, reads, leases, and terminal writes use the Drive-owned lifecycle contract. */
   const seenMethods: string[] = [];

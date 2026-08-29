@@ -184,11 +184,14 @@ export type EmailOutboxContact = {
   readonly address: string;
 };
 
-/**
- * Current outbound email payload shared by Review producers and the email
- * delivery adapter. Drive stores this object opaquely and never interprets it.
- */
-export type EmailOutboxPayload = {
+/** One immutable Drive artifact referenced by an outbound email payload. */
+export type EmailOutboxAttachment = {
+  readonly path: string;
+  readonly filename: string;
+  readonly contentType: string;
+};
+
+type EmailOutboxPayloadFields = {
   readonly messageId: string;
   readonly account: string;
   readonly threadId: string | null;
@@ -200,9 +203,25 @@ export type EmailOutboxPayload = {
   readonly subject: string;
   readonly bodyText: string;
   readonly bodyHtml: string;
-  readonly hasAttachments: false;
-  readonly attachments: readonly [];
 };
+
+/**
+ * Current outbound email payload shared by Review producers and the email
+ * delivery adapter. Drive stores this object opaquely and never interprets it.
+ * The attachment variants prevent the flag and non-empty reference list from
+ * disagreeing at compile time.
+ */
+export type EmailOutboxPayload = EmailOutboxPayloadFields &
+  (
+    | {
+        readonly hasAttachments: false;
+        readonly attachments: readonly [];
+      }
+    | {
+        readonly hasAttachments: true;
+        readonly attachments: readonly [EmailOutboxAttachment, ...EmailOutboxAttachment[]];
+      }
+  );
 
 /** Storage lifecycle state for one canonical outbound item. */
 export type ExchangeState = 'review' | 'outbox' | 'sent' | 'failed' | 'reconciliation_required';
