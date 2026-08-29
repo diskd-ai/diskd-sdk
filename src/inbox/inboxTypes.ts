@@ -97,6 +97,7 @@ export type InboxAccountItem =
   | {
       readonly status: 'searchable';
       readonly account: string;
+      readonly connectorAccountId?: string;
       readonly email: string;
       readonly displayName: string;
     }

@@ -88,7 +88,10 @@ test('platform.inbox.listAccounts excludes the Drive review mailbox', async () =
           {
             mailbox_id: 'exchange-google-personal',
             display_name: 'Personal',
-            metadata: { email: 'owner@example.com' },
+            metadata: {
+              connectorAccountId: 'google__personal',
+              email: 'owner@example.com',
+            },
             db_inode: null,
             record_count: 12,
             size_bytes: 1024,
@@ -120,6 +123,7 @@ test('platform.inbox.listAccounts excludes the Drive review mailbox', async () =
           {
             status: 'searchable',
             account: 'exchange-google-personal',
+            connectorAccountId: 'google__personal',
             email: 'owner@example.com',
             displayName: 'Personal',
           },

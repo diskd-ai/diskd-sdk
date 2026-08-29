@@ -160,9 +160,15 @@ const inboxAccountFromMailbox = (mailbox: MailboxSummary): InboxAccountList['ite
       reason: 'invalid-email-metadata',
     };
   }
+  const rawConnectorAccountId = mailbox.metadata.connectorAccountId;
+  const connectorAccountId =
+    typeof rawConnectorAccountId === 'string' && rawConnectorAccountId.trim().length > 0
+      ? rawConnectorAccountId.trim()
+      : undefined;
   return {
     status: 'searchable',
     account: mailbox.mailboxId,
+    ...(connectorAccountId ? { connectorAccountId } : {}),
     email,
     displayName: mailbox.displayName,
   };
