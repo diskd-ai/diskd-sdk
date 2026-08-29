@@ -1,6 +1,5 @@
-import { request as httpRequest, type IncomingHttpHeaders } from 'node:http';
-import { request as httpsRequest } from 'node:https';
 import { Readable } from 'node:stream';
+import { request as undiciRequest } from 'undici/index.js';
 import type { AuthModule } from '../auth/types.js';
 import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import { createDriveCrontabClient } from './crontab.js';
@@ -485,44 +484,29 @@ const sha256hex = async (data: Uint8Array | ArrayBuffer): Promise<string> => {
 
 type DriveUploadHttpResponse = {
   readonly statusCode: number;
-  readonly headers: IncomingHttpHeaders;
+  readonly etag: string | undefined;
   readonly text: string;
 };
 
 /** Send upload bytes with a determinate length in Node and Bun runtimes. */
-const putDriveUpload = (
+const putDriveUpload = async (
   url: string,
   headers: Readonly<Record<string, string>>,
   body: ArrayBuffer | ReadableStream<Uint8Array>
-): Promise<DriveUploadHttpResponse> =>
-  new Promise((resolve, reject) => {
-    const target = new URL(url);
-    const request = target.protocol === 'https:' ? httpsRequest : httpRequest;
-    const outgoing = request(target, { method: 'PUT', headers }, (response) => {
-      const chunks: Buffer[] = [];
-      response.on('data', (chunk: Buffer) => chunks.push(chunk));
-      response.on('error', reject);
-      response.on('end', () => {
-        resolve({
-          statusCode: response.statusCode ?? 0,
-          headers: response.headers,
-          text: Buffer.concat(chunks).toString('utf8'),
-        });
-      });
-    });
-    outgoing.on('error', reject);
-
-    if (body instanceof ArrayBuffer) {
-      outgoing.end(Buffer.from(body));
-      return;
-    }
-
-    const readable = Readable.fromWeb(
-      body as unknown as import('node:stream/web').ReadableStream<Uint8Array>
-    );
-    readable.on('error', (error) => outgoing.destroy(error));
-    readable.pipe(outgoing);
-  });
+): Promise<DriveUploadHttpResponse> => {
+  const requestBody =
+    body instanceof ArrayBuffer
+      ? Buffer.from(body)
+      : Readable.fromWeb(body as unknown as import('node:stream/web').ReadableStream<Uint8Array>);
+  // Use the installed package entrypoint explicitly so Bun does not select its node:http shim.
+  const response = await undiciRequest(url, { method: 'PUT', headers, body: requestBody });
+  const rawEtag = response.headers.etag;
+  return {
+    statusCode: response.statusCode,
+    etag: Array.isArray(rawEtag) ? rawEtag[0] : rawEtag,
+    text: await response.body.text(),
+  };
+};
 
 // ---------------------------------------------------------------------------
 // Client factory
@@ -679,8 +663,7 @@ export const createDriveClient = (params: {
 
         const putBody: unknown = putResponse.text ? JSON.parse(putResponse.text) : {};
         const responseEtag = isObject(putBody) ? str(putBody, 'etag') : null;
-        const headerEtag = putResponse.headers.etag;
-        const etag = responseEtag ?? (Array.isArray(headerEtag) ? headerEtag[0] : headerEtag) ?? '';
+        const etag = responseEtag ?? putResponse.etag ?? '';
         if (!etag) {
           throw new Error('Upload PUT response missing etag');
         }
