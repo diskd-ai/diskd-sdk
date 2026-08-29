@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { AuthModule } from '../auth/types.js';
+import type { EmailOutboxPayload } from '../messagesStore/messagesStoreTypes.js';
 import { diskd } from '../sdk/diskd.js';
 
 type FetchCall = { readonly url: string; readonly init?: RequestInit };
@@ -455,22 +456,37 @@ test('messagesStore.review create/list/get/delete use the single workspace revie
 
 test('messagesStore.outbox creates the canonical item with an account', async () => {
   /* REQ-EXCHANGE-SDK-002: Outbox creation forwards canonical identity and decodes Drive lifecycle metadata. */
+  const payload: EmailOutboxPayload = {
+    messageId: 'message-1',
+    account: 'work',
+    threadId: null,
+    inReplyTo: null,
+    from: { name: 'Agent', address: 'work' },
+    to: [{ name: '', address: 'recipient@example.com' }],
+    cc: [],
+    bcc: [{ name: '', address: 'audit@example.com' }],
+    subject: 'Ready',
+    bodyText: 'Ready to send',
+    bodyHtml: '',
+    hasAttachments: false,
+    attachments: [],
+  };
   await withFetchMock(
     (_url, init) => {
       const request = parseBody(init);
       assert.equal(request.method, 'messages_store/outbox/create');
       assert.deepEqual(request.params, {
         external_id: 'send-1',
-        account: 'work@example.com',
-        payload: { subject: 'Ready' },
+        account: 'work',
+        payload,
       });
       return jsonRpcResponse({
         item: {
           external_id: 'send-1',
-          account: 'work@example.com',
+          account: 'work',
           mailbox_id: 'exchange-work-example-com',
           state: 'outbox',
-          payload: { subject: 'Ready' },
+          payload,
           result: null,
           revision: '1',
           delivery_attempts: 0,
@@ -486,8 +502,8 @@ test('messagesStore.outbox creates the canonical item with an account', async ()
       const client = diskd.os.messagesStore({ auth: makeAuth(), url: 'http://drive:8000/api/v1' });
       const item = await client.outbox.create({
         externalId: 'send-1',
-        account: 'work@example.com',
-        payload: { subject: 'Ready' },
+        account: 'work',
+        payload,
       });
       assert.equal(item.state, 'outbox');
       assert.equal(item.revision, '1');

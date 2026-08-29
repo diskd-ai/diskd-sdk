@@ -178,6 +178,32 @@ export type ListSendersResult = {
 
 // -- Boundary 3b: canonical outbound Exchange item --
 
+/** One email address carried by the provider-neutral outbound email contract. */
+export type EmailOutboxContact = {
+  readonly name: string;
+  readonly address: string;
+};
+
+/**
+ * Current outbound email payload shared by Review producers and the email
+ * delivery adapter. Drive stores this object opaquely and never interprets it.
+ */
+export type EmailOutboxPayload = {
+  readonly messageId: string;
+  readonly account: string;
+  readonly threadId: string | null;
+  readonly inReplyTo: string | null;
+  readonly from: EmailOutboxContact;
+  readonly to: readonly EmailOutboxContact[];
+  readonly cc: readonly EmailOutboxContact[];
+  readonly bcc: readonly EmailOutboxContact[];
+  readonly subject: string;
+  readonly bodyText: string;
+  readonly bodyHtml: string;
+  readonly hasAttachments: false;
+  readonly attachments: readonly [];
+};
+
 /** Storage lifecycle state for one canonical outbound item. */
 export type ExchangeState = 'review' | 'outbox' | 'sent' | 'failed' | 'reconciliation_required';
 

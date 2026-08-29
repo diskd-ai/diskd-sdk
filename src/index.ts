@@ -379,6 +379,8 @@ export type {
   DeleteFolderResult,
   DeleteMailboxResult,
   DeleteReviewItemResult,
+  EmailOutboxContact,
+  EmailOutboxPayload,
   ExchangeItem,
   ExchangePatch,
   ExchangeState,
