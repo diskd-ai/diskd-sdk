@@ -718,6 +718,13 @@ const makeFolderScoped = (
       folder_id: folderId,
       items: p.items.map(encodeIncomingMessage),
       ...optional('auto_commit', p.autoCommit),
+      ...(p.publishInboxCreated == null
+        ? {}
+        : {
+            publish_inbox_created: {
+              account_id: p.publishInboxCreated.accountId,
+            },
+          }),
     });
     return decodeUpsertBatch(result);
   },

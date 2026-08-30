@@ -144,6 +144,34 @@ test('messagesStore.folder.listMessages forwards orderBy as order_by', async () 
   );
 });
 
+/* REQ-3126-004: The canonical SDK explicitly marks acknowledged live Inbox publication without exposing workspace identity. */
+test('messagesStore.folder.upsertBatch forwards Inbox publication intent', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = parseBody(init);
+      assert.equal(request.method, 'messages_store/upsert-batch');
+      assert.deepEqual(request.params, {
+        mailbox_id: 'exchange-work',
+        folder_id: 'INBOX',
+        items: [{ external_id: '42:101', payload: { subject: 'private' } }],
+        publish_inbox_created: { account_id: 'work' },
+      });
+      return jsonRpcResponse({ inserted: 1, updated: 0 });
+    },
+    async () => {
+      const client = diskd.os.messagesStore({ auth: makeAuth(), url: 'http://drive:8000/api/v1' });
+
+      await client
+        .mailbox({ mailboxId: 'exchange-work' })
+        .folder({ folderId: 'INBOX' })
+        .upsertBatch({
+          items: [{ externalId: '42:101', payload: { subject: 'private' } }],
+          publishInboxCreated: { accountId: 'work' },
+        });
+    }
+  );
+});
+
 /* REQ-3088-SEARCH-PREFILTER-004: SDK search forwards chronological index order without exposing Drive cursors. */
 test('messagesStore.folder.searchMessages forwards oldest order as order_by', async () => {
   await withFetchMock(

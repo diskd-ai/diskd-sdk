@@ -98,6 +98,10 @@ export type IncomingMessage = {
 export type UpsertBatchParams = {
   readonly items: readonly IncomingMessage[];
   readonly autoCommit?: boolean | null;
+  /** Request acknowledged publication for a live forward Inbox batch. */
+  readonly publishInboxCreated?: {
+    readonly accountId: string;
+  } | null;
 };
 
 /** Counts split between insertions and updates; commit is implicit. */
