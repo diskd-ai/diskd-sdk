@@ -275,6 +275,18 @@ export type ListExchangeItemsResult = {
   readonly nextCursor: string | null;
 };
 
+/** Revision-guarded deletion of one terminal Exchange item. */
+export type DeleteExchangeItemParams = {
+  readonly externalId: string;
+  readonly expectedRevision: string;
+};
+
+/** Result of deleting one terminal Exchange item. */
+export type DeleteExchangeItemResult = {
+  readonly externalId: string;
+  readonly deleted: boolean;
+};
+
 /** Common optimistic lease mutation parameters. */
 export type OutboxLeaseParams = {
   readonly externalId: string;
@@ -664,6 +676,8 @@ export type MessagesStoreClient = {
   readonly exchange: {
     /** List one persisted lifecycle state across workspace mailboxes. */
     readonly list: (params: ListExchangeItemsParams) => Promise<ListExchangeItemsResult>;
+    /** Delete one Sent or Failed item under an optimistic revision guard. */
+    readonly delete: (params: DeleteExchangeItemParams) => Promise<DeleteExchangeItemResult>;
     readonly update: (params: UpdateExchangeItemParams) => Promise<ExchangeItem>;
   };
   /**

@@ -776,6 +776,30 @@ test('messagesStore.exchange lists a persisted lifecycle state', async () => {
   );
 });
 
+test('messagesStore.exchange deletes a terminal item by expected revision', async () => {
+  /* REQ-EXCHANGE-SDK-DELETE-001: Terminal deletion carries canonical identity and the optimistic revision guard. */
+  await withFetchMock(
+    (_url, init) => {
+      const request = parseBody(init);
+      assert.equal(request.method, 'messages_store/exchange/delete');
+      assert.deepEqual(request.params, {
+        external_id: 'send-1',
+        expected_revision: '5',
+      });
+      return jsonRpcResponse({ external_id: 'send-1', deleted: true });
+    },
+    async () => {
+      const client = diskd.os.messagesStore({ auth: makeAuth(), url: 'http://drive:8000/api/v1' });
+      const deleted = await client.exchange.delete({
+        externalId: 'send-1',
+        expectedRevision: '5',
+      });
+
+      assert.deepEqual(deleted, { externalId: 'send-1', deleted: true });
+    }
+  );
+});
+
 test('messagesStore.exchange updates by expected revision', async () => {
   /* REQ-EXCHANGE-SDK-003: Lifecycle updates carry the caller revision and one generic patch without transport policy. */
   await withFetchMock(

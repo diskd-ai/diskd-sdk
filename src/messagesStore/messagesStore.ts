@@ -28,6 +28,7 @@ import type {
   CreateOutboxItemParams,
   DeleteBatchParams,
   DeleteBatchResult,
+  DeleteExchangeItemResult,
   DeleteFolderResult,
   DeleteMailboxResult,
   ExchangeItem,
@@ -358,6 +359,14 @@ const decodeReviewDelete = (
   };
 };
 
+const decodeExchangeDelete = (o: unknown): DeleteExchangeItemResult => {
+  const r = raw(o);
+  return {
+    externalId: strRequired(r, 'external_id'),
+    deleted: bool(r, 'deleted'),
+  };
+};
+
 const decodeAttachmentUploadStart = (o: unknown): AttachmentUploadStartResult => {
   const r = raw(o);
   if (bool(r, 'already_uploaded')) {
@@ -570,6 +579,14 @@ const makeExchangeScoped = (call: CallFn): MessagesStoreClient['exchange'] => ({
       ...optional('cursor', p.cursor),
     });
     return decodeExchangeList(result);
+  },
+
+  delete: async (p) => {
+    const result = await call('messages_store/exchange/delete', {
+      external_id: p.externalId,
+      expected_revision: p.expectedRevision,
+    });
+    return decodeExchangeDelete(result);
   },
 
   update: async (p: UpdateExchangeItemParams) => {

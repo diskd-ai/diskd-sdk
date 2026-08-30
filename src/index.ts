@@ -376,6 +376,8 @@ export type {
   CreateReviewItemParams,
   DeleteBatchParams,
   DeleteBatchResult,
+  DeleteExchangeItemParams,
+  DeleteExchangeItemResult,
   DeleteFolderResult,
   DeleteMailboxResult,
   DeleteReviewItemResult,

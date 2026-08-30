@@ -1,5 +1,13 @@
 # LOG
 
+## 2026-08-30
+
+- `enabling:dev/platform-api/sdk/messages-store`: exposed revision-guarded
+  deletion of terminal Sent and Failed Exchange items through the canonical
+  typed SDK. Motivation: app-service must remove completed Review history
+  through Drive's owner contract without duplicating JSON-RPC wire shapes or
+  weakening lifecycle protection.
+
 ## 2026-08-29
 
 - `enabling:dev/platform-api/sdk/messages-store`: added a non-empty outbound
