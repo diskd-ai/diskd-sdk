@@ -1435,11 +1435,35 @@ test('platform.inbox.search stops paging after reaching result limit', async () 
   );
 });
 
-test('platform.inbox.markRead updates Exchange messages by account plus UID', async () => {
+type MarkReadFixture = {
+  readonly isRead: boolean;
+  readonly byUid?: boolean;
+  readonly mode?: 'provider-error' | 'mirror-error' | 'unchanged-mirror' | 'stale-uid';
+};
+
+/** Model the serialized provider mutation and fresh Drive read independently; direct mirror writes are rejected. */
+const withMarkReadFixture = async (
+  options: MarkReadFixture,
+  verify: (inbox: ReturnType<typeof diskd.platform.inbox>, calls: FetchCall[]) => Promise<void>
+): Promise<void> => {
+  let applied = false;
   await withFetchMock(
     (_url, init) => {
       const request = body(init);
-      if (request.method === 'messages_store/folder/list') {
+      const original = messageRow('loaded', 'Body').message;
+      const flags =
+        applied && options.mode !== 'unchanged-mirror'
+          ? options.isRead
+            ? ['\\Seen', '\\Flagged']
+            : ['\\Flagged']
+          : options.isRead
+            ? ['\\Flagged']
+            : ['\\Seen', '\\Flagged'];
+      const stored = {
+        ...original,
+        payload: { ...original.payload, flags, isRead: !options.isRead },
+      };
+      if (request.method === 'messages_store/folder/list')
         return rpc(request.id, {
           folders: [
             {
@@ -1447,103 +1471,129 @@ test('platform.inbox.markRead updates Exchange messages by account plus UID', as
               display_name: 'Inbox',
               metadata: {},
               message_count: 1,
-              updated_at: '2026-05-04T10:00:00.000Z',
+              updated_at: original.updated_at,
             },
           ],
         });
-      }
       if (request.method === 'messages_store/get') {
-        assert.deepEqual(request.params, {
-          mailbox_id: 'exchange-mail-personal',
-          folder_id: 'INBOX',
-          external_id: '864',
-        });
-        return rpcError(request.id, 'MESSAGE_NOT_FOUND');
+        const params = request.params as { external_id: string };
+        return options.byUid && params.external_id === '42'
+          ? rpcError(request.id, 'MESSAGE_NOT_FOUND')
+          : rpc(request.id, { message: stored });
       }
-      if (request.method === 'messages_store/list') {
-        const row = messageRow('loaded', 'Body by UID').message;
+      if (request.method === 'messages_store/list')
+        return rpc(request.id, { items: [stored], next_cursor: null });
+      if (request.method === 'initialize') return rpc(request.id, {});
+      if (request.method === 'tools/list')
         return rpc(request.id, {
-          items: [
+          tools: [
             {
-              ...row,
-              external_id: '1728649431:864',
-              payload: { ...row.payload, accountId: 'mail__personal', uid: 864 },
+              name: 'email_fixture__set_email_attributes',
+              description: 'Set provider flags',
+              inputSchema: { type: 'object', properties: {} },
             },
           ],
-          next_cursor: null,
         });
-      }
-      if (request.method === 'messages_store/upsert-batch') {
+      if (request.method === 'tools/call') {
         assert.deepEqual(request.params, {
-          mailbox_id: 'exchange-mail-personal',
-          folder_id: 'INBOX',
-          items: [
+          name: 'email_fixture__set_email_attributes',
+          arguments: {
+            account: 'google__personal',
+            mailbox: 'INBOX',
+            uids: [42],
+            attributes: { read: options.isRead },
+          },
+        });
+        applied = true;
+        return rpc(request.id, {
+          isError: options.mode === 'provider-error',
+          content: [
             {
-              external_id: '1728649431:864',
-              payload: {
-                ...messageRow('loaded', 'Body by UID').message.payload,
-                accountId: 'mail__personal',
-                uid: 864,
-                isRead: true,
-              },
+              type: 'text',
+              text: JSON.stringify({
+                imap: { succeeded: 1, failedUids: [] },
+                messages: [
+                  {
+                    uid: options.mode === 'stale-uid' ? 43 : 42,
+                    flags: options.isRead ? ['\\Seen', '\\Flagged'] : ['\\Flagged'],
+                  },
+                ],
+                mirrorPatch:
+                  options.mode === 'mirror-error'
+                    ? { tag: 'failed', error: 'Drive unavailable' }
+                    : { tag: 'patched' },
+              }),
             },
           ],
         });
-        return rpc(request.id, { inserted: 0, updated: 1 });
       }
-      throw new Error(`unexpected method ${String(request.method)}`);
+      throw new Error(`Unexpected boundary write ${String(request.method)}`);
     },
-    async () => {
-      const inbox = diskd.platform.inbox({
-        auth: makeAuth(),
-        driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
-      });
-
-      const result = await inbox.markRead({
-        account: 'mail__personal',
-        messageId: '864',
-        isRead: true,
-      });
-
-      assert.equal(result.messageId, '1728649431:864');
-      assert.equal(result.isRead, true);
-      assert.equal('messageRef' in result, false);
-    }
+    (calls) =>
+      verify(
+        diskd.platform.inbox({
+          auth: makeAuth(),
+          driveUrl: 'http://drive/api/v1',
+          mcpUrl: 'http://mcp',
+        }),
+        calls
+      )
   );
-});
+};
 
-test('platform.inbox.markRead updates only isRead for Exchange payload', async () => {
+/* REQ-INBOX-MARK-READ-001: Provider flags and a fresh persisted Drive row must both confirm read/unread changes, including UID-only lookup. */
+for (const isRead of [true, false]) {
+  test(`platform.inbox.markRead persists provider state ${isRead} and preserves message content`, async () => {
+    await withMarkReadFixture({ isRead, byUid: true }, async (inbox, calls) => {
+      const result = await inbox.markRead({ account: 'google__personal', messageId: '42', isRead });
+      assert.equal(result.messageId, '14:42');
+      assert.equal(result.isRead, isRead);
+      assert.equal(result.isFlagged, true);
+      assert.equal(result.bodyText, 'Body');
+      assert(calls.some((call) => body(call.init).method === 'tools/call'));
+      assert(calls.every((call) => body(call.init).method !== 'messages_store/upsert-batch'));
+    });
+  });
+}
+
+/* REQ-INBOX-MARK-READ-002: Provider failures, missing mirror persistence and wrong message results must never be reported as successful mutations. */
+for (const mode of ['provider-error', 'mirror-error', 'unchanged-mirror', 'stale-uid'] as const) {
+  test(`platform.inbox.markRead rejects ${mode}`, async () => {
+    await withMarkReadFixture({ isRead: true, mode }, async (inbox) => {
+      await assert.rejects(
+        inbox.markRead({
+          account: 'google__personal',
+          folderId: 'INBOX',
+          messageId: '14:42',
+          isRead: true,
+        }),
+        /provider|mirror|flags|uid|set_email_attributes/i
+      );
+    });
+  });
+}
+
+/* REQ-INBOX-MARK-READ-003: Stored-only clients cannot mutate provider state through an optimistic local write. */
+test('platform.inbox.markRead rejects mutation without a provider boundary', async () => {
   await withFetchMock(
-    (_url, init) => {
-      const request = body(init);
-      if (request.method === 'messages_store/get')
-        return rpc(request.id, messageRow('loaded', 'Body'));
-      if (request.method === 'messages_store/upsert-batch') {
-        const params = request.params as {
-          readonly items: readonly { readonly payload: Record<string, unknown> }[];
-        };
-        assert.equal(params.items[0]?.payload.uid, 42);
-        assert.equal(params.items[0]?.payload.bodyText, 'Body');
-        assert.equal(params.items[0]?.payload.isRead, true);
-        return rpc(request.id, { inserted: 0, updated: 1 });
-      }
-      throw new Error(`unexpected method ${String(request.method)}`);
+    () => {
+      throw new Error('Unexpected IO');
     },
     async () => {
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        contentMode: 'stored-only',
       });
-      const result = await inbox.markRead({
-        account: 'google__personal',
-        folderId: 'INBOX',
-        messageId: '14:42',
-        isRead: true,
-      });
-      assert.equal(result.isRead, true);
-      assert.equal(result.bodyText, 'Body');
+      await assert.rejects(
+        inbox.markRead({
+          account: 'google__personal',
+          folderId: 'INBOX',
+          messageId: '14:42',
+          isRead: true,
+        }),
+        /stored-only|provider/i
+      );
     }
   );
 });

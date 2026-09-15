@@ -7,6 +7,7 @@ import type {
   MessagesStoreClient,
   StoredMessage,
 } from '../messagesStore/messagesStoreTypes.js';
+import { resolveEmailFlagTarget, validateEmailFlagOutcome } from './inboxMarkRead.js';
 import {
   Err,
   formatInboxMessageSearchQuery,
@@ -39,6 +40,7 @@ const MAX_SEARCH_PAGE_SIZE = 100;
 const MESSAGE_LOOKUP_SCAN_LIMIT = 100;
 const SYSTEM_HYDRATE_EMAIL_BODIES_TOOL = 'system_hydrate_email_bodies';
 const SYSTEM_HYDRATE_EMAIL_ATTACHMENT_TOOL = 'system_hydrate_email_attachment';
+const SET_EMAIL_ATTRIBUTES_TOOL = 'set_email_attributes';
 
 type RawObject = { readonly [key: string]: unknown };
 
@@ -275,8 +277,12 @@ const exchangeStoredEmail = (
         )
       : [],
     labels: stringArray(payload.labels),
-    isRead: isBool(payload.isRead) ? payload.isRead : hasFlag(payload, '\\Seen'),
-    isFlagged: isBool(payload.isFlagged) ? payload.isFlagged : hasFlag(payload, '\\Flagged'),
+    isRead: Array.isArray(payload.flags)
+      ? hasFlag(payload, '\\Seen')
+      : isBool(payload.isRead) && payload.isRead,
+    isFlagged: Array.isArray(payload.flags)
+      ? hasFlag(payload, '\\Flagged')
+      : isBool(payload.isFlagged) && payload.isFlagged,
     priority: isString(payload.priority) ? payload.priority : 'normal',
     webhookEvent: 'exchange.messagesStore',
     rule: null,
@@ -444,6 +450,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
       : createMcpToolsClient({ auth: params.auth, url: params.mcpUrl });
   let hydrateBodyToolName: string | null = null;
   let hydrateAttachmentToolName: string | null = null;
+  let setEmailAttributesToolName: string | null = null;
 
   const listExchangeFolders = async (
     account: string,
@@ -506,26 +513,46 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
     return exchangeStoredEmail(row, account, resolved.folderId);
   };
 
+  /** Mutate through the provider adapter and verify the persisted mirror before reporting success. */
   const markExchangeRead = async (
     account: string,
     folderId: string | undefined,
     messageId: string,
     isRead: boolean
   ): Promise<StoredEmail> => {
+    if (!mcpTools)
+      throw new Error(
+        'markRead requires a provider boundary; stored-only Inbox cannot mutate mail'
+      );
     const resolved = await resolveExchangeMessage(account, messageId, folderId);
+    const target = resolveEmailFlagTarget(resolved.row.payload, resolved.folderId);
+    if (target.tag === 'Err') throw new Error(target.error);
+    setEmailAttributesToolName ??= await findSystemToolName(mcpTools, SET_EMAIL_ATTRIBUTES_TOOL);
+    const result = await mcpTools.call(setEmailAttributesToolName, {
+      account: target.value.account,
+      mailbox: target.value.mailbox,
+      uids: [target.value.uid],
+      attributes: { read: isRead },
+    });
+    if (result.isError) throw new Error(`${SET_EMAIL_ATTRIBUTES_TOOL} returned a provider error`);
+    const text = result.content.find((item) => item.type === 'text')?.text;
+    if (!text) throw new Error(`${SET_EMAIL_ATTRIBUTES_TOOL} omitted the provider result`);
+    let raw: unknown;
+    try {
+      raw = JSON.parse(text);
+    } catch (cause) {
+      throw new Error(`${SET_EMAIL_ATTRIBUTES_TOOL} returned invalid JSON`, { cause });
+    }
+    const outcome = validateEmailFlagOutcome(raw, target.value.uid, isRead);
+    if (outcome.tag === 'Err') throw new Error(outcome.error);
     const folder = messagesStore
       .mailbox({ mailboxId: resolved.mailboxId })
       .folder({ folderId: resolved.folderId });
-    await folder.upsertBatch({
-      items: [
-        { externalId: resolved.row.externalId, payload: { ...resolved.row.payload, isRead } },
-      ],
-    });
-    return exchangeStoredEmail(
-      { ...resolved.row, payload: { ...resolved.row.payload, isRead } },
-      account,
-      resolved.folderId
-    );
+    const stored = await folder.getMessage({ externalId: resolved.row.externalId });
+    if (!Array.isArray(stored.payload.flags) || hasFlag(stored.payload, '\\Seen') !== isRead) {
+      throw new Error('Provider read flags were not persisted in the Drive mirror');
+    }
+    return exchangeStoredEmail(stored, account, resolved.folderId);
   };
 
   const hydrateAttachment = async (

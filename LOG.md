@@ -1,5 +1,15 @@
 # LOG
 
+## 2026-09-15
+
+- `enabling:dev/platform-api/inbox`: route mark-read through the existing email
+  attribute adapter and require both provider flags and fresh persisted Drive
+  state. The browser previously saw unread while the tool claimed success
+  because the SDK only wrote a legacy boolean. Keep provider flags authoritative
+  in projections and reject mutation on stored-only clients. Seven regressions
+  fail before correction; all 54 affected Inbox client/query tests pass. Release
+  and deployed browser acceptance remain pending.
+
 ## 2026-08-30
 
 - `enabling:dev/platform-api/sdk/messages-store`: exposed revision-guarded

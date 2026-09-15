@@ -286,6 +286,14 @@ Use it to persist email (IMAP / JMAP), Telegram, WhatsApp, or any other
 channel where messages live in folders inside per-account mailboxes. Message
 `payload` is opaque JSON; the store never inspects it.
 
+For email read/unread changes, use `diskd.platform.inbox({ auth }).markRead(...)`.
+It resolves the persisted provider identity, calls the configured email adapter's
+`set_email_attributes`, and verifies the provider flags and a fresh Drive mirror
+read before returning. Provider `flags` take precedence over legacy `isRead` and
+`isFlagged` booleans. A client configured with `contentMode: 'stored-only'` rejects
+mark-read because it has no provider mutation boundary. The public method and
+argument shape are unchanged; no stored-data migration is required.
+
 The client exposes four boundaries -- mailboxes, folders, messages, attachments
 -- via a **functional scoping pattern**: each level returns a client that
 captures its identifiers in a closure, so callers never repeat
