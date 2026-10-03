@@ -191,10 +191,11 @@ test('platform.inbox.listAccounts validates explicit mailbox email metadata', as
   );
 });
 
+/* REQ-INBOX-WORKERS-001: Body hydration completes through a queued worker before rereading canonical Drive content. */
 test('platform.inbox.read hydrates unloaded Exchange body and rereads messagesStore', async () => {
   let getCount = 0;
   await withFetchMock(
-    (_url, init) => {
+    (url, init) => {
       const request = body(init);
       if (request.method === 'messages_store/folder/list') {
         return rpc(request.id, {
@@ -216,26 +217,30 @@ test('platform.inbox.read hydrates unloaded Exchange body and rereads messagesSt
           getCount === 1 ? messageRow('not_loaded', null) : messageRow('loaded', 'Hydrated body')
         );
       }
-      if (request.method === 'initialize') return rpc(request.id, {});
-      if (request.method === 'tools/list') {
-        return rpc(request.id, {
-          tools: [
-            {
-              name: 'email_client__system_hydrate_email_bodies',
-              description: '',
-              inputSchema: { type: 'object', properties: {} },
-            },
-          ],
+      if (url.endsWith('/commands')) return Response.json({ jobId: 'body-job' }, { status: 202 });
+      if (url.endsWith('/jobs/body-job'))
+        return Response.json({
+          status: 'succeeded',
+          result: {
+            loaded: [
+              { mailboxId: 'exchange-google-personal', folderId: 'INBOX', externalId: '14:42' },
+            ],
+            skipped: [],
+            failedRetryable: [],
+            failedPermanent: [],
+          },
         });
-      }
-      if (request.method === 'tools/call') return rpc(request.id, { content: [], isError: false });
       throw new Error(`unexpected method ${String(request.method)}`);
     },
     async (calls) => {
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
+        emailAuth: {
+          ...makeAuth(),
+          getRequestHeaders: async () => ({ 'X-Api-Key': 'workers-key' }),
+        },
       });
 
       const result = await inbox.read({ account: 'google__personal', messageId: '14:42' });
@@ -243,31 +248,26 @@ test('platform.inbox.read hydrates unloaded Exchange body and rereads messagesSt
       assert.equal(result.messageId, '14:42');
       assert.equal(result.bodyText, 'Hydrated body');
       assert.equal('messageRef' in result, false);
-      const methods = calls.map((call) => body(call.init).method);
-      assert.deepEqual(methods, [
-        'messages_store/folder/list',
-        'messages_store/get',
-        'initialize',
-        'tools/list',
-        'tools/call',
-        'messages_store/get',
-      ]);
-      const hydrateCall = calls
-        .map((call) => body(call.init))
-        .find((item) => item.method === 'tools/call');
-      assert.deepEqual(hydrateCall?.params, {
-        name: 'email_client__system_hydrate_email_bodies',
-        arguments: {
-          messages: [
-            {
-              mailboxId: 'exchange-google-personal',
-              folderId: 'INBOX',
-              externalId: '14:42',
-            },
-          ],
-          maxMessages: 1,
-        },
+      assert.deepEqual(
+        calls
+          .filter((call) => !call.url.startsWith('http://email'))
+          .map((call) => body(call.init).method),
+        ['messages_store/folder/list', 'messages_store/get', 'messages_store/get']
+      );
+      for (const call of calls)
+        assert.equal(
+          new Headers(call.init?.headers).get('x-api-key'),
+          call.url.startsWith('http://email') ? 'workers-key' : null
+        );
+      const hydrateCall = calls.find((call) => call.url.endsWith('/commands'));
+      assert.deepEqual(body(hydrateCall?.init), {
+        operation: 'hydrate_bodies',
+        messages: [
+          { mailboxId: 'exchange-google-personal', folderId: 'INBOX', externalId: '14:42' },
+        ],
+        maxMessages: 1,
       });
+      assert(calls.findIndex((call) => call.url.endsWith('/jobs/body-job')) < calls.length - 1);
     }
   );
 });
@@ -393,7 +393,7 @@ test('platform.inbox.read returns synthesized attachmentId for unloaded Exchange
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       const result = await inbox.read({
@@ -458,7 +458,7 @@ test('platform.inbox.read resolves Exchange messages by account plus UID', async
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       const result = await inbox.read({ account: 'mail__personal', messageId: '864' });
@@ -502,7 +502,7 @@ test('platform.inbox.read does not fallback to legacy Drive mail storage', async
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       await assert.rejects(
@@ -559,7 +559,7 @@ test('platform.inbox.search forwards Gmail-style criteria to Drive', async () =>
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       const result = await inbox.search({
@@ -613,7 +613,7 @@ test('platform.inbox.search returns Drive body matches without getMessage fan-ou
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       const result = await inbox.search({
@@ -649,7 +649,7 @@ test('platform.inbox.search does not hydrate candidates outside Drive search', a
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       const result = await inbox.search({
@@ -682,7 +682,7 @@ test('platform.inbox.search surfaces unsupported Gmail-style operators from Driv
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       await assert.rejects(
@@ -743,7 +743,7 @@ test('platform.inbox.search follows Drive search pages to reach older mail', asy
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       const result = await inbox.search({
@@ -810,7 +810,7 @@ test('platform.inbox.search forwards AbortSignal through folder discovery and Dr
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       await inbox.search(
@@ -907,7 +907,7 @@ test('platform.inbox.search deduplicates and orders matches across folders', asy
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       const result = await inbox.search({
@@ -986,7 +986,7 @@ test('platform.inbox.search selects the oldest distinct senders before limit', a
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       const result = await inbox.search({
@@ -1336,7 +1336,7 @@ test('platform.inbox.search traverses 6500 messages with default Drive pages', a
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       const result = await inbox.search({
@@ -1367,7 +1367,7 @@ test('platform.inbox.search validates pageSize bounds', async () => {
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       await assert.rejects(
@@ -1416,7 +1416,7 @@ test('platform.inbox.search stops paging after reaching result limit', async () 
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       const result = await inbox.search({
@@ -1448,7 +1448,7 @@ const withMarkReadFixture = async (
 ): Promise<void> => {
   let applied = false;
   await withFetchMock(
-    (_url, init) => {
+    (url, init) => {
       const request = body(init);
       const original = messageRow('loaded', 'Body').message;
       const flags =
@@ -1483,48 +1483,40 @@ const withMarkReadFixture = async (
       }
       if (request.method === 'messages_store/list')
         return rpc(request.id, { items: [stored], next_cursor: null });
-      if (request.method === 'initialize') return rpc(request.id, {});
-      if (request.method === 'tools/list')
-        return rpc(request.id, {
-          tools: [
-            {
-              name: 'email_fixture__set_email_attributes',
-              description: 'Set provider flags',
-              inputSchema: { type: 'object', properties: {} },
-            },
-          ],
+      if (url.endsWith('/commands')) {
+        assert.deepEqual(request, {
+          operation: 'set_attributes',
+          account: 'google__personal',
+          mailbox: 'INBOX',
+          uids: [42],
+          attributes: { read: options.isRead },
         });
-      if (request.method === 'tools/call') {
-        assert.deepEqual(request.params, {
-          name: 'email_fixture__set_email_attributes',
-          arguments: {
+        return Response.json({ jobId: 'flags-job' }, { status: 202 });
+      }
+      if (url.endsWith('/jobs/flags-job')) {
+        applied = true;
+        if (options.mode === 'provider-error') return Response.json({ status: 'failed' });
+        return Response.json({
+          status: 'succeeded',
+          result: {
             account: 'google__personal',
             mailbox: 'INBOX',
             uids: [42],
-            attributes: { read: options.isRead },
+            applied: { read: options.isRead },
+            imap: { succeeded: 1, failedUids: [] },
+            messages: [
+              {
+                uid: options.mode === 'stale-uid' ? 43 : 42,
+                externalId: '14:42',
+                flags: options.isRead ? ['\\Seen', '\\Flagged'] : ['\\Flagged'],
+                labels: [],
+              },
+            ],
+            mirrorPatch:
+              options.mode === 'mirror-error'
+                ? { tag: 'failed', error: 'Drive unavailable' }
+                : { tag: 'patched', patched: 1, missingExternalIds: [] },
           },
-        });
-        applied = true;
-        return rpc(request.id, {
-          isError: options.mode === 'provider-error',
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({
-                imap: { succeeded: 1, failedUids: [] },
-                messages: [
-                  {
-                    uid: options.mode === 'stale-uid' ? 43 : 42,
-                    flags: options.isRead ? ['\\Seen', '\\Flagged'] : ['\\Flagged'],
-                  },
-                ],
-                mirrorPatch:
-                  options.mode === 'mirror-error'
-                    ? { tag: 'failed', error: 'Drive unavailable' }
-                    : { tag: 'patched' },
-              }),
-            },
-          ],
         });
       }
       throw new Error(`Unexpected boundary write ${String(request.method)}`);
@@ -1534,7 +1526,7 @@ const withMarkReadFixture = async (
         diskd.platform.inbox({
           auth: makeAuth(),
           driveUrl: 'http://drive/api/v1',
-          mcpUrl: 'http://mcp',
+          emailUrl: 'http://email',
         }),
         calls
       )
@@ -1550,7 +1542,7 @@ for (const isRead of [true, false]) {
       assert.equal(result.isRead, isRead);
       assert.equal(result.isFlagged, true);
       assert.equal(result.bodyText, 'Body');
-      assert(calls.some((call) => body(call.init).method === 'tools/call'));
+      assert(calls.some((call) => call.url.endsWith('/commands')));
       assert(calls.every((call) => body(call.init).method !== 'messages_store/upsert-batch'));
     });
   });
@@ -1567,7 +1559,7 @@ for (const mode of ['provider-error', 'mirror-error', 'unchanged-mirror', 'stale
           messageId: '14:42',
           isRead: true,
         }),
-        /provider|mirror|flags|uid|set_email_attributes/i
+        /provider|mirror|flags|uid|set_email_attributes|failed/i
       );
     });
   });
@@ -1633,9 +1625,10 @@ const attachmentMessageRow = (storageState: string) => ({
   },
 });
 
+/* REQ-INBOX-WORKERS-002: Attachment hydration uses the owned queued worker and preserves canonical attachment locators. */
 test('platform.inbox.saveAttachment uses synthesized attachmentId for old unloaded Exchange payloads', async () => {
   await withFetchMock(
-    (_url, init) => {
+    (url, init) => {
       const request = body(init);
       if (request.method === 'messages_store/get') {
         const row = attachmentMessageRow('not_loaded').message;
@@ -1674,30 +1667,32 @@ test('platform.inbox.saveAttachment uses synthesized attachmentId for old unload
           ],
         });
       }
-      if (request.method === 'initialize') return rpc(request.id, {});
-      if (request.method === 'tools/list') {
-        return rpc(request.id, {
-          tools: [
-            {
-              name: 'email_client__system_hydrate_email_attachment',
-              description: '',
-              inputSchema: { type: 'object', properties: {} },
-            },
-          ],
-        });
-      }
-      if (request.method === 'tools/call') {
-        assert.deepEqual(request.params, {
-          name: 'email_client__system_hydrate_email_attachment',
-          arguments: {
+      if (url.endsWith('/commands')) {
+        assert.deepEqual(request, {
+          operation: 'hydrate_attachment',
+          ...{
             mailboxId: 'exchange-mail-personal',
             folderId: 'INBOX',
             externalId: '1728649431:864',
             attachmentId: '1728649431:864:2',
           },
         });
-        return rpc(request.id, { content: [], isError: false });
+        return Response.json({ jobId: 'attachment-job' }, { status: 202 });
       }
+      if (url.endsWith('/jobs/attachment-job'))
+        return Response.json({
+          status: 'succeeded',
+          result: {
+            ...{
+              mailboxId: 'exchange-mail-personal',
+              folderId: 'INBOX',
+              externalId: '1728649431:864',
+              attachmentId: '1728649431:864:2',
+            },
+            status: 'loaded',
+            error: null,
+          },
+        });
       if (request.method === 'messages_store/attachment/save-to-drive') {
         assert.deepEqual(request.params, {
           mailbox_id: 'exchange-mail-personal',
@@ -1727,7 +1722,7 @@ test('platform.inbox.saveAttachment uses synthesized attachmentId for old unload
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       const result = await inbox.saveAttachment({
@@ -1792,7 +1787,7 @@ test('platform.inbox.saveAttachment saves Exchange attachment by account, messag
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       const result = await inbox.saveAttachment({
@@ -1910,7 +1905,7 @@ test('platform.inbox.saveAttachment saves Exchange attachment by account plus UI
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       const result = await inbox.saveAttachment({
@@ -1985,7 +1980,7 @@ test('platform.inbox.saveAttachment does not fallback to legacy when Exchange ta
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       await assert.rejects(
@@ -2006,9 +2001,10 @@ test('platform.inbox.saveAttachment does not fallback to legacy when Exchange ta
   );
 });
 
+/* REQ-INBOX-WORKERS-002: Attachment hydration uses the owned queued worker and preserves canonical attachment locators. */
 test('platform.inbox.saveAttachment hydrates unloaded Exchange attachment before save', async () => {
   await withFetchMock(
-    (_url, init) => {
+    (url, init) => {
       const request = body(init);
       if (request.method === 'messages_store/get')
         return rpc(request.id, attachmentMessageRow('not_loaded'));
@@ -2026,19 +2022,32 @@ test('platform.inbox.saveAttachment hydrates unloaded Exchange attachment before
           ],
         });
       }
-      if (request.method === 'initialize') return rpc(request.id, {});
-      if (request.method === 'tools/list') {
-        return rpc(request.id, {
-          tools: [
-            {
-              name: 'email_client__system_hydrate_email_attachment',
-              description: '',
-              inputSchema: { type: 'object', properties: {} },
-            },
-          ],
+      if (url.endsWith('/commands')) {
+        assert.deepEqual(request, {
+          operation: 'hydrate_attachment',
+          ...{
+            mailboxId: 'exchange-google-personal',
+            folderId: 'INBOX',
+            externalId: '14:42',
+            attachmentId: 'part-1',
+          },
         });
+        return Response.json({ jobId: 'attachment-job' }, { status: 202 });
       }
-      if (request.method === 'tools/call') return rpc(request.id, { content: [], isError: false });
+      if (url.endsWith('/jobs/attachment-job'))
+        return Response.json({
+          status: 'succeeded',
+          result: {
+            ...{
+              mailboxId: 'exchange-google-personal',
+              folderId: 'INBOX',
+              externalId: '14:42',
+              attachmentId: 'part-1',
+            },
+            status: 'loaded',
+            error: null,
+          },
+        });
       if (request.method === 'messages_store/attachment/save-to-drive') {
         return rpc(request.id, {
           saved: true,
@@ -2061,7 +2070,7 @@ test('platform.inbox.saveAttachment hydrates unloaded Exchange attachment before
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       await inbox.saveAttachment({
@@ -2072,18 +2081,7 @@ test('platform.inbox.saveAttachment hydrates unloaded Exchange attachment before
         targetPath: '/Projects/p/docs/invoice.pdf',
       });
 
-      const hydrateCall = calls
-        .map((call) => body(call.init))
-        .find((item) => item.method === 'tools/call');
-      assert.deepEqual(hydrateCall?.params, {
-        name: 'email_client__system_hydrate_email_attachment',
-        arguments: {
-          mailboxId: 'exchange-google-personal',
-          folderId: 'INBOX',
-          externalId: '14:42',
-          attachmentId: 'part-1',
-        },
-      });
+      assert(calls.some((call) => call.url.endsWith('/commands')));
     }
   );
 });
@@ -2143,7 +2141,7 @@ test('platform.inbox.saveAttachment does not fallback to legacy Drive mail stora
       const inbox = diskd.platform.inbox({
         auth: makeAuth(),
         driveUrl: 'http://drive/api/v1',
-        mcpUrl: 'http://mcp',
+        emailUrl: 'http://email',
       });
 
       await assert.rejects(

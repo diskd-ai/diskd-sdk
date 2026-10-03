@@ -72,6 +72,23 @@ export type {
 
 export type { DriveClient, DrivePathEntry, DrivePathType } from '../drive/types.js';
 export type {
+  EmailAccount,
+  EmailAdmission,
+  EmailAttachmentRequest,
+  EmailAttachmentResult,
+  EmailAttributesRequest,
+  EmailAttributesResult,
+  EmailBodyRequest,
+  EmailBodyResult,
+  EmailClient,
+  EmailClientParams,
+  EmailConnectionResult,
+  EmailDeleteRequest,
+  EmailDeleteResult,
+  EmailMessageRef,
+  EmailSyncStatus,
+} from '../email/emailTypes.js';
+export type {
   CreateProjectNoteParams,
   ProjectNote,
   ProjectNoteHeader,

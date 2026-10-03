@@ -8,6 +8,7 @@ import type { DriveScopedSessionManager } from '../drive/sessionObject.js';
 import type { DriveSessionScopeRef } from '../drive/sessionTypes.js';
 import type { DriveDataSource, DriveDataSourceParams } from '../drive/typeorm/datasourceTypes.js';
 import type { DriveClient } from '../drive/types.js';
+import type { EmailClient, EmailClientParams } from '../email/emailTypes.js';
 import type { InboxClient, InboxClientParams } from '../inbox/inboxTypes.js';
 import type { LlmRouterClient } from '../llmRouter/llmRouterTypes.js';
 import type { McpHubClient } from '../mcpHub/mcpHubTypes.js';
@@ -32,6 +33,7 @@ export type DiskD = {
   };
 
   readonly os: {
+    readonly email: (params: EmailClientParams) => EmailClient;
     readonly drive: (params: {
       readonly version: 'v1';
       readonly auth: AuthModule;

@@ -6,7 +6,7 @@ import type { AuthModule } from '../auth/types.js';
 /** Controls whether Inbox may hydrate content missing from Drive messageboxes. */
 export type InboxContentMode = 'hydrate-missing' | 'stored-only';
 
-/** Keeps stored-only consumers structurally independent from Email MCP configuration. */
+/** Keeps stored-only consumers structurally independent from provider execution configuration. */
 export type InboxClientParams = {
   readonly auth: AuthModule;
   readonly driveUrl?: string;
@@ -16,7 +16,9 @@ export type InboxClientParams = {
     }
   | {
       readonly contentMode?: 'hydrate-missing';
-      readonly mcpUrl?: string;
+      readonly emailUrl?: string;
+      /** Internal callers can bind worker credentials separately from Drive credentials. */
+      readonly emailAuth?: AuthModule;
     }
 );
 

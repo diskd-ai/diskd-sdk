@@ -1,5 +1,4 @@
-import { createMcpToolsClient } from '../mcpTools/mcpTools.js';
-import type { McpToolsClient } from '../mcpTools/mcpToolsTypes.js';
+import { createEmailClient } from '../email/email.js';
 import { createMessagesStoreClient } from '../messagesStore/messagesStore.js';
 import type {
   FolderSummary,
@@ -38,9 +37,6 @@ const DEFAULT_EXCHANGE_FOLDER = 'INBOX';
 const DEFAULT_SEARCH_PAGE_SIZE = 20;
 const MAX_SEARCH_PAGE_SIZE = 100;
 const MESSAGE_LOOKUP_SCAN_LIMIT = 100;
-const SYSTEM_HYDRATE_EMAIL_BODIES_TOOL = 'system_hydrate_email_bodies';
-const SYSTEM_HYDRATE_EMAIL_ATTACHMENT_TOOL = 'system_hydrate_email_attachment';
-const SET_EMAIL_ATTRIBUTES_TOOL = 'set_email_attributes';
 
 type RawObject = { readonly [key: string]: unknown };
 
@@ -399,18 +395,6 @@ const isNotFound = (error: unknown): boolean =>
   error instanceof Error &&
   /not.?found|MAILBOX_NOT_FOUND|FOLDER_NOT_FOUND|MESSAGE_NOT_FOUND/i.test(error.message);
 
-const findSystemToolName = async (
-  mcpTools: McpToolsClient,
-  systemToolName: string
-): Promise<string> => {
-  const tools = await mcpTools.list();
-  const tool = tools.find((item) => item.name.endsWith(`__${systemToolName}`));
-  if (!tool) {
-    throw new Error(`${systemToolName} tool is not available`);
-  }
-  return tool.name;
-};
-
 const findAttachmentByHandle = (
   email: StoredEmail,
   attachmentId?: string,
@@ -444,13 +428,10 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
     auth: params.auth,
     url: params.driveUrl,
   });
-  const mcpTools: McpToolsClient | null =
+  const email =
     params.contentMode === 'stored-only'
       ? null
-      : createMcpToolsClient({ auth: params.auth, url: params.mcpUrl });
-  let hydrateBodyToolName: string | null = null;
-  let hydrateAttachmentToolName: string | null = null;
-  let setEmailAttributesToolName: string | null = null;
+      : createEmailClient({ auth: params.emailAuth ?? params.auth, url: params.emailUrl });
 
   const listExchangeFolders = async (
     account: string,
@@ -483,17 +464,13 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
     folderId: string,
     externalId: string
   ): Promise<void> => {
-    if (!mcpTools) {
-      throw new Error(`Inbox body is not stored in Drive messagebox: ${externalId}`);
-    }
-    hydrateBodyToolName ??= await findSystemToolName(mcpTools, SYSTEM_HYDRATE_EMAIL_BODIES_TOOL);
-    const result = await mcpTools.call(hydrateBodyToolName, {
+    if (!email) throw new Error(`Inbox body is not stored in Drive messagebox: ${externalId}`);
+    const result = await email.hydrateBodies({
       messages: [{ mailboxId, folderId, externalId }],
       maxMessages: 1,
     });
-    if (result.isError) {
-      throw new Error(`${SYSTEM_HYDRATE_EMAIL_BODIES_TOOL} returned error`);
-    }
+    if (result.failedRetryable.length || result.failedPermanent.length)
+      throw new Error('Email body hydration failed');
   };
 
   const readExchange = async (
@@ -520,29 +497,19 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
     messageId: string,
     isRead: boolean
   ): Promise<StoredEmail> => {
-    if (!mcpTools)
+    if (!email)
       throw new Error(
         'markRead requires a provider boundary; stored-only Inbox cannot mutate mail'
       );
     const resolved = await resolveExchangeMessage(account, messageId, folderId);
     const target = resolveEmailFlagTarget(resolved.row.payload, resolved.folderId);
     if (target.tag === 'Err') throw new Error(target.error);
-    setEmailAttributesToolName ??= await findSystemToolName(mcpTools, SET_EMAIL_ATTRIBUTES_TOOL);
-    const result = await mcpTools.call(setEmailAttributesToolName, {
+    const raw = await email.setAttributes({
       account: target.value.account,
       mailbox: target.value.mailbox,
       uids: [target.value.uid],
       attributes: { read: isRead },
     });
-    if (result.isError) throw new Error(`${SET_EMAIL_ATTRIBUTES_TOOL} returned a provider error`);
-    const text = result.content.find((item) => item.type === 'text')?.text;
-    if (!text) throw new Error(`${SET_EMAIL_ATTRIBUTES_TOOL} omitted the provider result`);
-    let raw: unknown;
-    try {
-      raw = JSON.parse(text);
-    } catch (cause) {
-      throw new Error(`${SET_EMAIL_ATTRIBUTES_TOOL} returned invalid JSON`, { cause });
-    }
     const outcome = validateEmailFlagOutcome(raw, target.value.uid, isRead);
     if (outcome.tag === 'Err') throw new Error(outcome.error);
     const folder = messagesStore
@@ -561,22 +528,11 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
     externalId: string,
     attachmentId: string
   ): Promise<void> => {
-    if (!mcpTools) {
+    if (!email)
       throw new Error(`Inbox attachment is not stored in Drive messagebox: ${attachmentId}`);
-    }
-    hydrateAttachmentToolName ??= await findSystemToolName(
-      mcpTools,
-      SYSTEM_HYDRATE_EMAIL_ATTACHMENT_TOOL
-    );
-    const result = await mcpTools.call(hydrateAttachmentToolName, {
-      mailboxId,
-      folderId,
-      externalId,
-      attachmentId,
-    });
-    if (result.isError) {
-      throw new Error(`${SYSTEM_HYDRATE_EMAIL_ATTACHMENT_TOOL} returned error`);
-    }
+    const result = await email.hydrateAttachment({ mailboxId, folderId, externalId, attachmentId });
+    if (result.status === 'failed_retryable' || result.status === 'failed_permanent')
+      throw new Error(result.error ?? 'Email attachment hydration failed');
   };
 
   const ensureExchangeAttachmentLoaded = async (

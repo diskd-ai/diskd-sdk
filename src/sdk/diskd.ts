@@ -9,6 +9,7 @@ import { createDriveDatabase } from '../drive/DriveRepository.js';
 import { createDriveClient } from '../drive/drive.js';
 import { createScopedDriveSessionManager } from '../drive/sessionObject.js';
 import type { DriveDataSource, DriveDataSourceParams } from '../drive/typeorm/datasourceTypes.js';
+import { createEmailClient } from '../email/email.js';
 import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import { createInboxClient } from '../inbox/inbox.js';
 import { createLlmRouterClient } from '../llmRouter/llmRouter.js';
@@ -43,6 +44,7 @@ export const diskd: DiskD = {
   },
 
   os: {
+    email: (params) => createEmailClient(params),
     drive: ({ version, auth, url }) => {
       if (version !== 'v1') {
         throw new Error('Unsupported Drive API version');

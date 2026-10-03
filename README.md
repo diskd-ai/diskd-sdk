@@ -274,6 +274,22 @@ const status = await crontab.getStatus();
 
 See `examples/node/drive-upload-download.ts`, `examples/node/drive-session-external.ts`, and `examples/node/drive-crontab.ts`.
 
+Email provider operations
+-------------------------
+
+`diskd.os.email({ auth })` uses `/v1/os/email` to submit durable provider commands
+and wait for workspace-scoped results. It supports account listing, five-minute
+sync enrollment/status, body and attachment hydration, flags, deletion, and
+independent SMTP/IMAP connection probes. Mail content remains in Drive; send mail
+through the existing Drive Exchange Outbox contract.
+
+`diskd.platform.inbox({ auth })` uses these workers automatically. For a custom
+worker gateway, replace the removed `mcpUrl` option with `emailUrl`. Existing
+Inbox methods and message locators are unchanged. Internal consumers can supply
+`emailAuth` when workers and Drive require different service credentials. The
+worker credential is then sent only to the email endpoint. A client deadline does not
+cancel an already accepted command.
+
 Messages Store API
 ------------------
 
@@ -287,8 +303,8 @@ channel where messages live in folders inside per-account mailboxes. Message
 `payload` is opaque JSON; the store never inspects it.
 
 For email read/unread changes, use `diskd.platform.inbox({ auth }).markRead(...)`.
-It resolves the persisted provider identity, calls the configured email adapter's
-`set_email_attributes`, and verifies the provider flags and a fresh Drive mirror
+It resolves the persisted provider identity, queues a shared email worker command,
+and verifies the provider flags and a fresh Drive mirror
 read before returning. Provider `flags` take precedence over legacy `isRead` and
 `isFlagged` booleans. A client configured with `contentMode: 'stored-only'` rejects
 mark-read because it has no provider mutation boundary. The public method and
