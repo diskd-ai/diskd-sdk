@@ -148,7 +148,7 @@ guard skips the publish step.
 5. **Verify published**: `npm view @diskd-ai/sdk version` should show the new version.
 6. **Update consumers**: bump `@diskd-ai/sdk` in each consumer's `package.json` to the exact
    new version (no `^`/`~`), run `npm install`, and verify typecheck + tests pass.
-   Common consumers: `pi-agent-service`, `email-client-mcp`, `app-service`.
+   Common consumers: `pi-agent-service`, `well-known-workers`, `app-service`.
 
 Alternative: open the *Release* workflow in the Actions tab and click *Run
 workflow* -- it re-runs the publish job against current `main` (useful for
