@@ -92,3 +92,26 @@ test('session client deleteMessages supports messageIds encoding', async () => {
     message_ids: ['m-2', 'm-3'],
   });
 });
+
+/* REQ-session-bounded-005: Session filters survive SDK encoding, including explicit false. */
+test('session page sends canonical row selectors', async () => {
+  const { calls, call } = makeRpcMock({ messages: [], has_more: false });
+  await createDriveSessionClient({ call }).getMessageRange({
+    projectId: 'p',
+    sessionId: 's',
+    limit: 20,
+    isSidechain: false,
+    participantId: 'child',
+    turnCorrelationId: 'turn',
+    subtype: 'control',
+  });
+  assert.deepEqual(calls[0]?.params, {
+    root_path: '/Projects/p',
+    session_id: 's',
+    limit: 20,
+    is_sidechain: false,
+    participant_id: 'child',
+    turn_correlation_id: 'turn',
+    subtype: 'control',
+  });
+});

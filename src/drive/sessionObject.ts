@@ -8,7 +8,10 @@ import type {
   DriveSessionClient,
   DriveSessionDeleteResult,
   DriveSessionDocument,
+  DriveSessionGetMessageRangeParams,
   DriveSessionGetMessageRangeResult,
+  DriveSessionGetPreviewParams,
+  DriveSessionGetPreviewResult,
   DriveSessionListResult,
   DriveSessionMessage,
   DriveSessionSaveParams,
@@ -36,6 +39,9 @@ export type DriveSession = {
 };
 
 export type DriveSessionManager = {
+  /** Read bounded pages without retaining a session transcript. */
+  readonly getPreview: DriveSessionClient['getPreview'];
+  readonly getMessageRange: DriveSessionClient['getMessageRange'];
   readonly start: (params: {
     readonly projectId: string;
     readonly title?: string;
@@ -56,6 +62,13 @@ export type DriveSessionManager = {
 };
 
 export type DriveScopedSessionManager = {
+  /** Derive project scope while exposing stateless selected reads. */
+  readonly getPreview: (
+    params: Omit<DriveSessionGetPreviewParams, 'projectId'>
+  ) => Promise<DriveSessionGetPreviewResult>;
+  readonly getMessageRange: (
+    params: Omit<DriveSessionGetMessageRangeParams, 'projectId'>
+  ) => Promise<DriveSessionGetMessageRangeResult>;
   readonly start: (params: DriveScopedSessionStartParams) => Promise<DriveSession>;
   readonly open: (params: DriveScopedSessionOpenParams) => Promise<DriveSession>;
   readonly save: (params: DriveScopedSessionSaveParams) => Promise<DriveSessionSaveResult>;
@@ -206,6 +219,8 @@ export const createDriveSessionManager = (params: {
   const { rpc } = params;
 
   return {
+    getPreview: rpc.getPreview,
+    getMessageRange: rpc.getMessageRange,
     start: async (startParams): Promise<DriveSession> => {
       const sessionId = generateUlid();
       const doc = buildMinimalDocument({
@@ -274,6 +289,8 @@ export const createScopedDriveSessionManager = (params: {
   const { manager, projectId } = params;
 
   return {
+    getPreview: (input) => manager.getPreview({ ...input, projectId }),
+    getMessageRange: (input) => manager.getMessageRange({ ...input, projectId }),
     start: async (startParams): Promise<DriveSession> => {
       return manager.start({ ...startParams, projectId });
     },

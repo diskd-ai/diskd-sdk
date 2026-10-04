@@ -19,6 +19,7 @@ import type {
   DriveSessionListParams,
   DriveSessionListResult,
   DriveSessionMessage,
+  DriveSessionMessageFilter,
   DriveSessionParticipant,
   DriveSessionSaveParams,
   DriveSessionSaveResult,
@@ -460,6 +461,16 @@ const decodeDeleteResult = (raw: unknown): DriveSessionDeleteResult => {
   };
 };
 
+/** Translate canonical read selectors without dropping explicit false. */
+const encodeMessageFilter = (filter: DriveSessionMessageFilter) => ({
+  ...(filter.isSidechain !== undefined ? { is_sidechain: filter.isSidechain } : {}),
+  ...(filter.participantId !== undefined ? { participant_id: filter.participantId } : {}),
+  ...(filter.turnCorrelationId !== undefined
+    ? { turn_correlation_id: filter.turnCorrelationId }
+    : {}),
+  ...(filter.subtype !== undefined ? { subtype: filter.subtype } : {}),
+});
+
 export const createDriveSessionClient = (params: {
   readonly call: RpcCall;
 }): DriveSessionClient => {
@@ -483,6 +494,7 @@ export const createDriveSessionClient = (params: {
 
     getPreview: async (p: DriveSessionGetPreviewParams): Promise<DriveSessionGetPreviewResult> => {
       const result = await params.call('drive/session/get-preview', {
+        ...encodeMessageFilter(p),
         root_path: projectRootPath(p.projectId),
         session_id: p.sessionId,
         ...(p.limit !== undefined ? { limit: p.limit } : {}),
@@ -494,6 +506,7 @@ export const createDriveSessionClient = (params: {
       p: DriveSessionGetMessageRangeParams
     ): Promise<DriveSessionGetMessageRangeResult> => {
       const result = await params.call('drive/session/get-message-range', {
+        ...encodeMessageFilter(p),
         root_path: projectRootPath(p.projectId),
         session_id: p.sessionId,
         limit: p.limit,

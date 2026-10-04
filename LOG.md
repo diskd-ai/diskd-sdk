@@ -1,5 +1,9 @@
 # LOG
 
+## 2026-10-04
+
+- `BUG enabling:dev/platform-api/drive` -- expose stateless preview/range reads with canonical message selectors so callers can page parent conversations and selected child journals without retaining full session objects. Omitted selectors preserve existing reads. Session client/object tests and the SDK build pass.
+
 ## 2026-09-15
 
 - `enabling:dev/platform-api/inbox`: route mark-read through the existing email

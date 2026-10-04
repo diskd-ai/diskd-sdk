@@ -114,7 +114,15 @@ export type DriveSessionGetResult = {
   readonly session: DriveSessionDocument;
 };
 
-export type DriveSessionGetPreviewParams = {
+/** Select existing message identities before paging; omitted fields keep the full journal. */
+export type DriveSessionMessageFilter = {
+  readonly isSidechain?: boolean;
+  readonly participantId?: string;
+  readonly turnCorrelationId?: string;
+  readonly subtype?: string;
+};
+
+export type DriveSessionGetPreviewParams = DriveSessionMessageFilter & {
   readonly projectId: string;
   readonly sessionId: string;
   readonly limit?: number;
@@ -126,7 +134,7 @@ export type DriveSessionGetPreviewResult = {
   readonly messageCount: number;
 };
 
-export type DriveSessionGetMessageRangeParams = {
+export type DriveSessionGetMessageRangeParams = DriveSessionMessageFilter & {
   readonly projectId: string;
   readonly sessionId: string;
   readonly limit: number;

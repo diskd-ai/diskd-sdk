@@ -386,3 +386,15 @@ test('manager.save is stateless, returns result without session object', async (
   assert.equal(result.sessionId, 'sess-1');
   assert.equal(result.messageCount, 1);
 });
+
+/* REQ-session-bounded-006: Stateless reads never open or retain the full session object. */
+test('manager exposes selected pages without a full get', async () => {
+  const { rpc, log } = makeMockRpc();
+  const manager = createDriveSessionManager({ rpc });
+  await manager.getMessageRange({ projectId: 'p', sessionId: 's', limit: 10, isSidechain: false });
+  assert.deepEqual(
+    log.map((item) => item.method),
+    ['getMessageRange']
+  );
+  assert.deepEqual(log[0]?.args, { projectId: 'p', sessionId: 's', limit: 10, isSidechain: false });
+});

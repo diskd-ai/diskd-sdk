@@ -251,6 +251,7 @@ export type {
   DriveSessionListParams,
   DriveSessionListResult,
   DriveSessionMessage,
+  DriveSessionMessageFilter,
   DriveSessionParticipant,
   DriveSessionProjectScopeRef,
   DriveSessionSaveParams,
