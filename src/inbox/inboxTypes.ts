@@ -64,8 +64,12 @@ export type StoredEmail = {
   readonly bodyHtml: string;
   readonly hasAttachments: boolean;
   readonly attachments: readonly StoredEmailAttachment[];
+  /** Provider labels plus platform labels (case-insensitively deduplicated). */
   readonly labels: readonly string[];
+  /** Platform-owned labels only; these are the ones setLabels can remove. */
+  readonly platformLabels: readonly string[];
   readonly isRead: boolean;
+  /** True when the provider mirror has \\Flagged or the platform star is set. */
   readonly isFlagged: boolean;
   readonly priority: string;
   readonly webhookEvent: string;
@@ -145,6 +149,17 @@ export type InboxMarkReadParams = InboxReadParams & {
   readonly isRead: boolean;
 };
 
+/** Set or clear the platform star on the Drive message (no provider call). */
+export type InboxSetFlaggedParams = InboxReadParams & {
+  readonly flagged: boolean;
+};
+
+/** Add/remove platform labels on the Drive message (no provider call). */
+export type InboxSetLabelsParams = InboxReadParams & {
+  readonly add?: readonly string[];
+  readonly remove?: readonly string[];
+};
+
 export type InboxSaveAttachmentParams = InboxReadParams & {
   /** Preferred Exchange attachment handle returned by read(). */
   readonly attachmentId?: string;
@@ -173,6 +188,8 @@ export type InboxClient = {
     signal?: AbortSignal
   ) => Promise<{ readonly results: readonly InboxEmailEnvelope[] }>;
   readonly markRead: (params: InboxMarkReadParams) => Promise<StoredEmail>;
+  readonly setFlagged: (params: InboxSetFlaggedParams) => Promise<StoredEmail>;
+  readonly setLabels: (params: InboxSetLabelsParams) => Promise<StoredEmail>;
   readonly saveAttachment: (
     params: InboxSaveAttachmentParams
   ) => Promise<InboxSaveAttachmentResult>;

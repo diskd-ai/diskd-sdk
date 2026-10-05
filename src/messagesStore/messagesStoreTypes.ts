@@ -146,6 +146,33 @@ export type StoredMessage = {
   readonly payload: Readonly<Record<string, unknown>>;
   readonly createdAt: string;
   readonly updatedAt: string;
+  /** Platform-owned flags (v1: "flagged"); never written by the provider mirror. */
+  readonly platformFlags: readonly string[];
+  /** Platform-owned labels set by operatives or the Exchange UI. */
+  readonly platformLabels: readonly string[];
+  /** Increases on every platform flag/label change; scopes flag event identity. */
+  readonly platformRevision: number;
+};
+
+/** The platform star flag accepted by messages_store/set-attributes. */
+export const PLATFORM_FLAGGED = 'flagged';
+
+/** Add/remove platform flags and labels on one message (messages_store/set-attributes). */
+export type SetMessageAttributesParams = {
+  readonly externalId: string;
+  readonly flagsAdd?: readonly string[];
+  readonly flagsRemove?: readonly string[];
+  readonly labelsAdd?: readonly string[];
+  readonly labelsRemove?: readonly string[];
+};
+
+/** Platform state after set-attributes; `changed` is false for an idempotent repeat. */
+export type SetMessageAttributesResult = {
+  readonly externalId: string;
+  readonly platformFlags: readonly string[];
+  readonly platformLabels: readonly string[];
+  readonly platformRevision: number;
+  readonly changed: boolean;
 };
 
 /** One page of messages plus the next cursor (null at end). */
@@ -575,6 +602,14 @@ export type FolderScopedClient = {
    * does not exist (server returns a `MESSAGE_NOT_FOUND` failure).
    */
   readonly getMessage: (params: { readonly externalId: string }) => Promise<StoredMessage>;
+  /**
+   * Add/remove platform-owned flags and labels on one message. Drive publishes
+   * `exchange.message.flagged` / `exchange.message.unflagged` after commit; the
+   * IMAP worker mirrors the star to the provider.
+   */
+  readonly setAttributes: (
+    params: SetMessageAttributesParams
+  ) => Promise<SetMessageAttributesResult>;
   /**
    * Bind a message-scoped client over `(mailboxId, folderId,
    * externalId)`. The returned client exposes attachment operations

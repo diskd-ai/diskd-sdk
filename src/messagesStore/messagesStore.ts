@@ -52,6 +52,7 @@ import type {
   OutboxTerminalOutcome,
   ReviewItem,
   SenderSummary,
+  SetMessageAttributesResult,
   StoredMessage,
   UpdateExchangeItemParams,
   UpsertBatchParams,
@@ -221,6 +222,16 @@ const decodeDeleteBatch = (o: unknown): DeleteBatchResult => {
   return { deleted: num(r, 'deleted') };
 };
 
+/** Platform lists are absent on Drive builds before set-attributes; absent means none were set. */
+const platformNames = (obj: RawObject, key: string): readonly string[] =>
+  arr(obj, key).filter((value): value is string => typeof value === 'string');
+
+/** Platform revision is absent on Drive builds before set-attributes; absent means revision 0. */
+const platformRevision = (obj: RawObject): number => {
+  const value = obj.platform_revision;
+  return typeof value === 'number' ? value : 0;
+};
+
 const decodeStoredMessage = (o: unknown): StoredMessage => {
   const r = raw(o);
   return {
@@ -228,6 +239,20 @@ const decodeStoredMessage = (o: unknown): StoredMessage => {
     payload: payloadObj(r, 'payload'),
     createdAt: strRequired(r, 'created_at'),
     updatedAt: strRequired(r, 'updated_at'),
+    platformFlags: platformNames(r, 'platform_flags'),
+    platformLabels: platformNames(r, 'platform_labels'),
+    platformRevision: platformRevision(r),
+  };
+};
+
+const decodeSetMessageAttributes = (o: unknown): SetMessageAttributesResult => {
+  const r = raw(o);
+  return {
+    externalId: strRequired(r, 'external_id'),
+    platformFlags: platformNames(r, 'platform_flags'),
+    platformLabels: platformNames(r, 'platform_labels'),
+    platformRevision: num(r, 'platform_revision'),
+    changed: bool(r, 'changed'),
   };
 };
 
@@ -777,6 +802,19 @@ const makeFolderScoped = (
       external_id: p.externalId,
     });
     return decodeGetMessage(result);
+  },
+
+  setAttributes: async (p) => {
+    const result = await call('messages_store/set-attributes', {
+      mailbox_id: mailboxId,
+      folder_id: folderId,
+      external_id: p.externalId,
+      ...optional('flags_add', p.flagsAdd === undefined ? undefined : [...p.flagsAdd]),
+      ...optional('flags_remove', p.flagsRemove === undefined ? undefined : [...p.flagsRemove]),
+      ...optional('labels_add', p.labelsAdd === undefined ? undefined : [...p.labelsAdd]),
+      ...optional('labels_remove', p.labelsRemove === undefined ? undefined : [...p.labelsRemove]),
+    });
+    return decodeSetMessageAttributes(result);
   },
 
   message: ({ externalId }) => makeMessageScoped(call, mailboxId, folderId, externalId),

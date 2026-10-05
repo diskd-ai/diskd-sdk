@@ -1,10 +1,12 @@
 import { createEmailClient } from '../email/email.js';
 import { createMessagesStoreClient } from '../messagesStore/messagesStore.js';
-import type {
-  FolderSummary,
-  MailboxSummary,
-  MessagesStoreClient,
-  StoredMessage,
+import {
+  type FolderSummary,
+  type MailboxSummary,
+  type MessagesStoreClient,
+  PLATFORM_FLAGGED,
+  type SetMessageAttributesParams,
+  type StoredMessage,
 } from '../messagesStore/messagesStoreTypes.js';
 import { resolveEmailFlagTarget, validateEmailFlagOutcome } from './inboxMarkRead.js';
 import {
@@ -28,6 +30,8 @@ import type {
   InboxSaveAttachmentParams,
   InboxSaveAttachmentResult,
   InboxSearchParams,
+  InboxSetFlaggedParams,
+  InboxSetLabelsParams,
   StoredEmail,
   StoredEmailAttachment,
   StoredEmailContact,
@@ -228,6 +232,15 @@ const parseAttachment = (value: unknown, attachmentId?: string | null): StoredEm
 
 const payloadObject = (row: StoredMessage): RawObject => (isObject(row.payload) ? row.payload : {});
 
+/** Provider labels first, then platform labels not already present (case-insensitive). */
+const mergeLabels = (
+  providerLabels: readonly string[],
+  platformLabels: readonly string[]
+): readonly string[] => {
+  const seen = new Set(providerLabels.map((label) => label.toLowerCase()));
+  return [...providerLabels, ...platformLabels.filter((label) => !seen.has(label.toLowerCase()))];
+};
+
 const exchangeStoredEmail = (
   row: StoredMessage,
   account: string,
@@ -272,13 +285,16 @@ const exchangeStoredEmail = (
           )
         )
       : [],
-    labels: stringArray(payload.labels),
+    labels: mergeLabels(stringArray(payload.labels), row.platformLabels),
+    platformLabels: [...row.platformLabels],
     isRead: Array.isArray(payload.flags)
       ? hasFlag(payload, '\\Seen')
       : isBool(payload.isRead) && payload.isRead,
-    isFlagged: Array.isArray(payload.flags)
-      ? hasFlag(payload, '\\Flagged')
-      : isBool(payload.isFlagged) && payload.isFlagged,
+    isFlagged:
+      row.platformFlags.includes(PLATFORM_FLAGGED) ||
+      (Array.isArray(payload.flags)
+        ? hasFlag(payload, '\\Flagged')
+        : isBool(payload.isFlagged) && payload.isFlagged),
     priority: isString(payload.priority) ? payload.priority : 'normal',
     webhookEvent: 'exchange.messagesStore',
     rule: null,
@@ -491,6 +507,25 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
   };
 
   /** Mutate through the provider adapter and verify the persisted mirror before reporting success. */
+  /**
+   * Write platform flags/labels on the Drive message and return the persisted row.
+   * Drive owns this state; the IMAP worker mirrors the star from Drive's event.
+   */
+  const setExchangeAttributes = async (
+    account: string,
+    messageId: string,
+    folderId: string | undefined,
+    attributes: Omit<SetMessageAttributesParams, 'externalId'>
+  ): Promise<StoredEmail> => {
+    const resolved = await resolveExchangeMessage(account, messageId, folderId);
+    const folder = messagesStore
+      .mailbox({ mailboxId: resolved.mailboxId })
+      .folder({ folderId: resolved.folderId });
+    await folder.setAttributes({ externalId: resolved.row.externalId, ...attributes });
+    const stored = await folder.getMessage({ externalId: resolved.row.externalId });
+    return exchangeStoredEmail(stored, account, resolved.folderId);
+  };
+
   const markExchangeRead = async (
     account: string,
     folderId: string | undefined,
@@ -814,6 +849,40 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
         nonEmpty(folderId) ?? undefined,
         resolvedMessageId,
         isRead
+      );
+    },
+    setFlagged: async ({ account, messageId, folderId, flagged }: InboxSetFlaggedParams) => {
+      const resolvedAccount = nonEmpty(account);
+      const resolvedMessageId = nonEmpty(messageId);
+      if (!resolvedAccount || !resolvedMessageId) {
+        throw new Error('account + messageId is required');
+      }
+      return setExchangeAttributes(
+        resolvedAccount,
+        resolvedMessageId,
+        nonEmpty(folderId) ?? undefined,
+        flagged ? { flagsAdd: [PLATFORM_FLAGGED] } : { flagsRemove: [PLATFORM_FLAGGED] }
+      );
+    },
+    setLabels: async ({ account, messageId, folderId, add, remove }: InboxSetLabelsParams) => {
+      const resolvedAccount = nonEmpty(account);
+      const resolvedMessageId = nonEmpty(messageId);
+      if (!resolvedAccount || !resolvedMessageId) {
+        throw new Error('account + messageId is required');
+      }
+      const labelsAdd = add ?? [];
+      const labelsRemove = remove ?? [];
+      if (labelsAdd.length === 0 && labelsRemove.length === 0) {
+        throw new Error('setLabels requires labels to add or remove');
+      }
+      return setExchangeAttributes(
+        resolvedAccount,
+        resolvedMessageId,
+        nonEmpty(folderId) ?? undefined,
+        {
+          ...(labelsAdd.length > 0 ? { labelsAdd } : {}),
+          ...(labelsRemove.length > 0 ? { labelsRemove } : {}),
+        }
       );
     },
 

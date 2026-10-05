@@ -311,6 +311,8 @@ export type {
   InboxSaveAttachmentParams,
   InboxSaveAttachmentResult,
   InboxSearchParams,
+  InboxSetFlaggedParams,
+  InboxSetLabelsParams,
   StoredEmail,
   StoredEmailAttachment,
   StoredEmailContact,
@@ -426,6 +428,8 @@ export type {
   OutboxTerminalOutcome,
   ReviewItem,
   SenderSummary,
+  SetMessageAttributesParams,
+  SetMessageAttributesResult,
   StoredMessage,
   UpdateExchangeItemParams,
   UpsertBatchParams,
@@ -434,6 +438,7 @@ export type {
   UpsertFolderResult,
   WriteOutboxTerminalParams,
 } from './messagesStore/messagesStoreTypes.js';
+export { PLATFORM_FLAGGED } from './messagesStore/messagesStoreTypes.js';
 // -- Notes --
 export { createProjectNotesClient } from './notes/notes.js';
 export type {

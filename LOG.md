@@ -2,6 +2,22 @@
 
 ## 2026-10-05
 
+- `TASK enabling:dev/platform-api/messagesStore` + `inbox` -- platform-owned
+  flags and labels on Exchange mailbox messages (Redmine #3143 G1/G2).
+  `StoredMessage` gains `platformFlags`, `platformLabels` and
+  `platformRevision` (absent on older Drive builds, decoded as empty / 0).
+  `folder.setAttributes({externalId, flagsAdd, flagsRemove, labelsAdd,
+  labelsRemove})` calls Drive `messages_store/set-attributes`;
+  `PLATFORM_FLAGGED` is the v1 flag. The inbox client adds
+  `setFlagged` and `setLabels`, which write Drive only (the IMAP worker
+  mirrors the star from Drive's `exchange.message.flagged/unflagged`
+  event), and `StoredEmail` now reports `isFlagged` as provider
+  `\Flagged` or the platform star, `labels` as provider plus platform
+  labels, and `platformLabels` as the removable ones. Motivation: the IMAP
+  worker rewrites provider flags/labels on every sync, so operatives and the
+  Exchange UI need their own state on the Drive entity.
+  Verification: messagePlatformAttributes, inboxClient and
+  messagesStoreClient node tests (61) pass; typecheck and biome clean.
 - `TASK enabling:dev/platform-api/agentHub` -- marked the Agent Hub client
   `@deprecated` in TSDoc (`createAgentHubClient`, `diskd.os.agents`,
   `AgentHubClient` and its package-exported types) and flagged it as
