@@ -59,6 +59,11 @@ export type DiskD = {
       readonly url?: string;
     }) => McpToolsClient;
 
+    /**
+     * @deprecated Agent Hub client; unrouted because apis-service declares no
+     * `/v1/os/agents` route. Agent turns run on pi-agent-service through the
+     * app-service sessions API (`/api/sessions`); see {@link AgentHubClient}.
+     */
     readonly agents: (params: {
       readonly auth: AuthModule;
       readonly url?: string;

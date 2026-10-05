@@ -13,7 +13,7 @@ src/
   sdk/            -- diskd factory (types.ts + diskd.ts)
   drive/          -- Drive API client (JSON-RPC 2.0, upload/download, sessions)
   llmRouter/      -- LLM Router client (JSON-RPC 2.0 + NDJSON streaming)
-  agentHub/       -- Agent Hub client (REST + SSE streaming via StreamProtocol)
+  agentHub/       -- Agent Hub client (REST + SSE via StreamProtocol); deprecated, unrouted
   mcpHub/         -- MCP Hub client (REST)
   tgUserbot/      -- Telegram Userbot client (REST, snake_case wire format)
   webNavigator/   -- Web Navigator client (REST)
@@ -42,7 +42,7 @@ const drive    = diskd.os.drive({ version: 'v1', auth });
 const db       = diskd.os.database({ auth, dbName, schema });
 const ds       = diskd.os.datasource({ auth, dbName, entities });  // requires typeorm peer
 const llm      = diskd.os.llm({ auth });
-const agents   = diskd.os.agents({ auth, workspaceId });
+const agents   = diskd.os.agents({ auth, workspaceId });  // deprecated, unrouted
 const mcp      = diskd.os.mcp({ auth, workspaceId });
 const sessions = diskd.platform.sessions({ auth, scope: { scopeType: 'project', projectId } });
 const crontab  = diskd.platform.crontab({ auth, scope: { scopeType: 'project', projectId } });
@@ -99,6 +99,11 @@ All clients accept an `AuthModule` with either:
 Workspace-scoped services also take `workspaceId` which is sent as `X-Workspace-Id`.
 
 ## Agent Hub streaming
+
+Deprecated: Agent Hub is deprecated and apis-service has no `/v1/os/agents`
+route, so `diskd.os.agents` is unrouted. It stays exported (no breaking change);
+do not build on it. Agent turns run on pi-agent-service through the app-service
+sessions API (`/api/sessions`), which this SDK does not wrap yet.
 
 The Agent Hub uses the StreamProtocol pattern from `@agent-hub/sdk`:
 

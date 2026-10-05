@@ -139,6 +139,11 @@ const httpRequest = async <T>(options: FetchOptions): Promise<T> => {
  *   .stop(() => console.log('closed'))
  *   .catch((err) => console.error(err));
  * ```
+ *
+ * @deprecated Agent Hub is deprecated and this client is unrouted: apis-service
+ * declares no `/v1/os/agents` route, so its calls cannot pass through the
+ * gateway. Agent turns run on pi-agent-service, reached through the app-service
+ * sessions API (`/api/sessions`); see {@link AgentHubClient}.
  */
 export const createAgentHubClient = (params: {
   readonly auth: AuthModule;

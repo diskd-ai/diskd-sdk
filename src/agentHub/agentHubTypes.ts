@@ -26,6 +26,7 @@ export type ChatCompletionMessageParam = {
   readonly content: string | readonly MessageContentPart[];
 };
 
+/** @deprecated Part of the unrouted Agent Hub client; see {@link AgentHubClient}. */
 export type AgentInvokeContext = {
   readonly history?: readonly ChatCompletionMessageParam[];
   readonly inodes?: readonly string[];
@@ -37,6 +38,7 @@ export type AgentInvokeContext = {
   readonly chatSessionId?: string;
 };
 
+/** @deprecated Part of the unrouted Agent Hub client; see {@link AgentHubClient}. */
 export type AgentOptions = {
   readonly routeKey?: string;
   readonly provider?: string;
@@ -48,6 +50,7 @@ export type AgentOptions = {
   readonly topP?: number;
 };
 
+/** @deprecated Part of the unrouted Agent Hub client; see {@link AgentHubClient}. */
 export type AgentHubInvokeParams = {
   readonly agentName: string;
   readonly query: string | readonly MessageContentPart[];
@@ -57,6 +60,7 @@ export type AgentHubInvokeParams = {
 
 // -- Supported agents --
 
+/** @deprecated Part of the unrouted Agent Hub client; see {@link AgentHubClient}. */
 export type AgentInfo = {
   readonly id: string;
   readonly displayName: string;
@@ -64,6 +68,7 @@ export type AgentInfo = {
 
 // -- Supported models --
 
+/** @deprecated Part of the unrouted Agent Hub client; see {@link AgentHubClient}. */
 export type AgentHubModelInfo = {
   readonly provider: string;
   readonly model: string;
@@ -73,12 +78,14 @@ export type AgentHubModelInfo = {
   readonly isStreamModel?: boolean;
 };
 
+/** @deprecated Part of the unrouted Agent Hub client; see {@link AgentHubClient}. */
 export type SupportedModelsResult = {
   readonly models: readonly AgentHubModelInfo[];
 };
 
 // -- Billing aliases --
 
+/** @deprecated Part of the unrouted Agent Hub client; see {@link AgentHubClient}. */
 export type BillingAliasModel = {
   readonly billingAlias: string;
   readonly provider: string;
@@ -90,6 +97,7 @@ export type BillingAliasModel = {
   readonly isStreamModel: boolean;
 };
 
+/** @deprecated Part of the unrouted Agent Hub client; see {@link AgentHubClient}. */
 export type BillingAliasesResult = {
   readonly models: readonly BillingAliasModel[];
   readonly providers: readonly { readonly id: string }[];
@@ -120,6 +128,13 @@ export type BillingAliasesResult = {
  *   .stop(() => console.log('stream closed'))
  *   .catch((err) => console.error(err));
  * ```
+ *
+ * @deprecated Agent Hub is deprecated and this client is unrouted: apis-service
+ * declares no `/v1/os/agents` route, so its calls cannot pass through the
+ * gateway. Agent turns run on pi-agent-service, reached through the app-service
+ * sessions API (`/api/sessions`); this SDK has no client for that API yet.
+ * `diskd.platform.sessions` is the Drive session store and does not invoke
+ * agents. Kept exported only to avoid a breaking change.
  */
 export type AgentHubClient = {
   /** POST /invoke -- stream agent response via SSE. Returns a StreamProtocolStream. */

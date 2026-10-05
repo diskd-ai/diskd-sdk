@@ -23,7 +23,7 @@ const crontab    = diskd.platform.crontab({
 const db         = diskd.os.database({ auth, dbName: '...', schema: { ... } });
 const ds         = diskd.os.datasource({ auth, dbName: '...', entities: [...] });
 const llm        = diskd.os.llm({ auth });
-const agents     = diskd.os.agents({ auth, workspaceId: '...' });
+const agents     = diskd.os.agents({ auth, workspaceId: '...' }); // deprecated, unrouted
 const mcp        = diskd.os.mcp({ auth, workspaceId: '...' });
 const messages   = diskd.os.messagesStore({ auth });
 const routines   = diskd.platform.routines({ auth });
@@ -175,7 +175,7 @@ Derived default paths:
 - `/v1/os/drive`
 - `/v1/os/database`
 - `/v1/os/llm`
-- `/v1/os/agents`
+- `/v1/os/agents` (deprecated Agent Hub client; apis-service has no such route)
 - `/v1/os/mcp`
 - `/v1/platform/sessions`
 - `/v1/platform/crontab`
@@ -957,6 +957,14 @@ See `examples/node/llm-router-example.ts`.
 
 Agent Hub API
 -------------
+
+**Deprecated and unrouted.** Agent Hub is deprecated, and apis-service declares
+no `/v1/os/agents` route, so `diskd.os.agents` (and `createAgentHubClient`)
+cannot reach it through the gateway. The client stays exported only to avoid a
+breaking change. Agent turns run on pi-agent-service, reached through the
+app-service sessions API (`/api/sessions`); this SDK has no client for that API
+yet. `diskd.platform.sessions` is the Drive session store and does not invoke
+agents.
 
 SSE streaming with `StreamProtocolHandler` + `StreamProtocolFetcher` for agent invocation:
 

@@ -64,7 +64,6 @@
     "scripts:drive-internal": "bun run scripts:build && node dist-scripts/scripts/validate-drive-internal.js",
     "scripts:llm-external": "bun run scripts:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-scripts/scripts/validate-llm-external.js",
     "scripts:llm-internal": "bun run scripts:build && node dist-scripts/scripts/validate-llm-internal.js",
-    "scripts:agents-external": "bun run scripts:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist-scripts/scripts/validate-agents-external.js",
     "scripts:agents-internal": "bun run scripts:build && node dist-scripts/scripts/validate-agents-internal.js"
   },
   "devDependencies": {

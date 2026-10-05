@@ -2,6 +2,16 @@
 
 ## 2026-10-05
 
+- `TASK enabling:dev/platform-api/agentHub` -- marked the Agent Hub client
+  `@deprecated` in TSDoc (`createAgentHubClient`, `diskd.os.agents`,
+  `AgentHubClient` and its package-exported types) and flagged it as
+  deprecated and unrouted in README and AGENTS.md. Removed
+  `scripts/validate-agents-external.ts`, its tracked compiled copy in
+  `dist-scripts/`, and the `scripts:agents-external` package script.
+  Motivation: apis-service declares no `/v1/os/agents` route and agent-hub is
+  deprecated; agent turns run on pi-agent-service through the app-service
+  sessions API, so the external validation could never pass through the
+  gateway. Exports kept, no version bump (no breaking change).
 - `TASK enabling:dev/platform-api/sdk` -- examples and README now request the
   gateway route scopes each client calls (`drive:*`, `sessions:*`,
   `crontab:*`, `calendar:*`, `contacts:*`) instead of only `openid`, and the
