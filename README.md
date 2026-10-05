@@ -77,7 +77,15 @@ Use `diskd.auth.credentials()` for OAuth2 service-account or PKCE browser flows:
 import { diskd } from '@diskd-ai/sdk';
 
 const auth = await diskd.auth.credentials({
-  scopes: ['openid'],
+  scopes: [
+    'openid',
+    'drive:read',
+    'drive:write',
+    'sessions:read',
+    'sessions:write',
+    'crontab:read',
+    'crontab:write',
+  ],
   keyfilePath: 'credentials.json',
 });
 
@@ -91,6 +99,45 @@ const crontab = diskd.platform.crontab({
   scope: { scopeType: 'project', projectId: 'proj-1' },
 });
 ```
+
+#### OAuth2 scopes
+
+The SDK forwards `scopes` unchanged to the token request. Request the scopes
+that the public APIS gateway route of every client you call declares
+(`required_scopes` in apis-service `config/routes.yaml`). The gateway compares
+the token against every scope the route declares, so request the full set for
+each route:
+
+| SDK client | Gateway route | Scopes |
+| --- | --- | --- |
+| `diskd.os.drive`, `diskd.os.messagesStore` | `/v1/os/drive` | `drive:read drive:write` |
+| `diskd.os.database` | `/v1/os/database` | `database:read database:write` |
+| `diskd.os.email` | `/v1/os/email` | `email:read email:write` |
+| `diskd.os.llm` | `/v1/os/llm` | `llm:invoke llm:models:read` |
+| `diskd.os.mcp`, `diskd.os.mcpTools` | `/v1/os/mcp` | `mcp:read mcp:execute` |
+| `diskd.platform.sessions` | `/v1/platform/sessions` | `sessions:read sessions:write` |
+| `diskd.platform.crontab` | `/v1/platform/crontab` | `crontab:read crontab:write` |
+| `diskd.platform.operatives` | `/v1/platform/operatives` | `operatives:read operatives:write` |
+| `diskd.platform.projects`, `diskd.platform.notes` | `/v1/platform/projects` | `projects:read projects:write` |
+| `diskd.platform.routines`, `diskd.platform.routineRuns` | `/v1/platform/routines` | `routines:read routines:write` |
+| `diskd.platform.events` | `/v1/platform/events` | `events:write` |
+| `diskd.platform.calendar` | `/v1/platform/calendar` | `calendar:read calendar:write` |
+| `diskd.platform.contacts` | `/v1/platform/contacts` | `contacts:read contacts:write` |
+| `diskd.platform.inbox` | `/v1/os/drive`, `/v1/os/email` | `drive:read drive:write email:read email:write` |
+| `diskd.utils.tgUserBot` | `/v1/utils/tg-userbot` | `tg-userbot:read tg-userbot:write` |
+| `diskd.utils.webNavigator` | `/v1/utils/web-navigator` | `web-navigator:read web-navigator:write` |
+
+Keep `openid` when you need an OIDC sign-in (browser PKCE flow); it is harmless
+for client-credentials keyfiles.
+
+Rollout status (2026-10-05): the gateway does not enforce scopes yet. It logs
+each OAuth2 request's `token_scopes` and whether they satisfy the route
+(`scopes_satisfied`). OAuth clients registered before the iam-service scope
+rollout only allow `openid`, so Hydra answers `invalid_scope` when they request
+route scopes. SDK/CLI credentials pick up the route scopes the next time
+credentials are fetched through the app's credentials flow (the workspace keeps
+the same client id and secret, so an existing `credentials.json` keeps working
+afterwards); self-service OAuth apps are reconciled by iam-service on startup.
 
 ### Internal services (API key)
 
@@ -483,9 +530,9 @@ Same as the rest of the SDK -- both work:
 // API key (internal services / Tilt / port-forward).
 const auth = diskd.auth.apiKey({ workspaceId: 'ws-...' });
 
-// OAuth2 client-credentials (external clients).
+// OAuth2 client-credentials (external clients); Messages Store calls /v1/os/drive.
 const auth = await diskd.auth.credentials({
-  scopes: ['openid'],
+  scopes: ['openid', 'drive:read', 'drive:write'],
   keyfilePath: '.agents/credentials.json',
 });
 

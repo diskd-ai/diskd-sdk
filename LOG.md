@@ -1,5 +1,14 @@
 # LOG
 
+## 2026-10-05
+
+- `TASK enabling:dev/platform-api/sdk` -- examples and README now request the
+  gateway route scopes each client calls (`drive:*`, `sessions:*`,
+  `crontab:*`, `calendar:*`, `contacts:*`) instead of only `openid`, and the
+  README maps every `diskd.*` client to its route scopes. Motivation: prepare
+  callers for apis-service scope enforcement; the gateway currently only logs
+  `token_scopes`/`scopes_satisfied`. No SDK code or version change.
+
 ## 2026-10-04
 
 - `BUG enabling:dev/platform-api/drive` -- expose stateless preview/range reads with canonical message selectors so callers can page parent conversations and selected child journals without retaining full session objects. Omitted selectors preserve existing reads. Session client/object tests and the SDK build pass.

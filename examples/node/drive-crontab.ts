@@ -13,7 +13,8 @@ import path from 'node:path';
 
 import { diskd } from '@diskd-ai/sdk';
 
-const scopes = ['openid'];
+// Gateway route scopes for /v1/os/drive and /v1/platform/crontab.
+const scopes = ['openid', 'drive:read', 'drive:write', 'crontab:read', 'crontab:write'];
 const credentialsPath =
   process.argv[2] ??
   process.env.DISKD_CREDENTIALS_PATH ??

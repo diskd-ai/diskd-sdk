@@ -222,7 +222,8 @@ const main = async (): Promise<void> => {
   // Auth
   console.log('Authenticating...');
   const auth = await diskd.auth.credentials({
-    scopes: ['openid'],
+    // Gateway route scopes for /v1/os/drive.
+    scopes: ['openid', 'drive:read', 'drive:write'],
     keyfilePath: credentialsPath,
   });
   const drive = diskd.os.drive({ version: 'v1', auth });

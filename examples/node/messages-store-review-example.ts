@@ -52,7 +52,8 @@ const main = async (): Promise<void> => {
 
   console.log('\n[auth] Authenticating...');
   const auth = await diskd.auth.credentials({
-    scopes: ['openid'],
+    // Messages Store calls the /v1/os/drive gateway route.
+    scopes: ['openid', 'drive:read', 'drive:write'],
     keyfilePath: credentialsPath,
   });
   const workspaceId = await auth.getWorkspaceId();

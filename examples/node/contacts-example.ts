@@ -35,7 +35,11 @@ if (apiKey && workspaceId) {
     process.env.DISKD_CREDENTIALS_PATH ??
     path.resolve(process.cwd(), 'credentials.json');
   console.log(`[auth] Using OAuth2 credentials: ${credentialsPath}`);
-  auth = await diskd.auth.credentials({ scopes: ['openid'], keyfilePath: credentialsPath });
+  // Gateway route scopes for /v1/platform/contacts.
+  auth = await diskd.auth.credentials({
+    scopes: ['openid', 'contacts:read', 'contacts:write'],
+    keyfilePath: credentialsPath,
+  });
 }
 
 console.log(`[info] Contacts URL: ${contactsUrl}`);

@@ -7,7 +7,8 @@ const env = import.meta.env;
 const CLIENT_ID = env.VITE_DISKD_CLIENT_ID ?? '<YOUR_CLIENT_ID>';
 const ISSUER = env.VITE_DISKD_OIDC_ISSUER ?? 'https://oauth2.diskd.local:8080';
 const AUDIENCE = env.VITE_DISKD_AUDIENCE ?? 'diskd-api';
-const SCOPES = ['openid'];
+// Gateway route scopes for /v1/os/drive; openid keeps the OIDC sign-in.
+const SCOPES = ['openid', 'drive:read', 'drive:write'];
 
 const APIS_BASE_URL = env.VITE_APIS_BASE_URL ?? 'https://apis.diskd.local:8080';
 window.APIS_BASE_URL = APIS_BASE_URL;

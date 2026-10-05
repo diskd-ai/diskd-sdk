@@ -56,6 +56,12 @@ Notes:
 
 - If you omit the argument, the script uses `./credentials.json` in the current directory.
 - You can also set `DISKD_CREDENTIALS_PATH` instead of passing a CLI arg.
+- Each example requests the gateway route scopes it calls (for example
+  `drive:read drive:write` for `/v1/os/drive`); see "OAuth2 scopes" in the
+  root `README.md`. Scopes are not enforced by the gateway yet, but a client
+  registered before the iam-service scope rollout only allows `openid` and the
+  token request fails with `invalid_scope`. Fetch credentials again through the
+  app's credentials flow to grant the route scopes to the workspace client.
 
 Drive crontab example
 ---------------------

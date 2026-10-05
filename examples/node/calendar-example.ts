@@ -12,7 +12,8 @@ import path from 'node:path';
 import type { CalendarEvent } from '@diskd-ai/sdk';
 import { diskd } from '@diskd-ai/sdk';
 
-const scopes = ['openid'];
+// Gateway route scopes for /v1/platform/calendar.
+const scopes = ['openid', 'calendar:read', 'calendar:write'];
 const credentialsPath =
   process.argv[2] ??
   process.env.DISKD_CREDENTIALS_PATH ??

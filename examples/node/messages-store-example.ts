@@ -179,7 +179,8 @@ const main = async (): Promise<void> => {
   // -- Auth --
   console.log('\n[auth] Authenticating...');
   const auth = await diskd.auth.credentials({
-    scopes: ['openid'],
+    // Messages Store and Drive both call the /v1/os/drive gateway route.
+    scopes: ['openid', 'drive:read', 'drive:write'],
     keyfilePath: credentialsPath,
   });
   console.log(`[auth] OK (APIS_BASE_URL=${process.env.APIS_BASE_URL ?? 'unset'})`);
