@@ -22,7 +22,9 @@ console.log(`Gateway: ${process.env.APIS_BASE_URL ?? 'https://apis.upgraide.dev'
 console.log(`Credentials: ${CREDENTIALS_PATH}\n`);
 
 const auth = await diskd.auth.credentials({
-  scopes: ['openid'],
+  // Gateway route scopes for /v1/os/llm (apis-service routes.yaml required_scopes),
+  // so the run keeps passing once the gateway enforces route scopes.
+  scopes: ['openid', 'llm:invoke', 'llm:models:read'],
   keyfilePath: CREDENTIALS_PATH,
 });
 h.ok('auth.credentials', 'OAuth2 token acquired');

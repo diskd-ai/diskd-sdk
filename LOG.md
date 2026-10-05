@@ -8,6 +8,14 @@
   README maps every `diskd.*` client to its route scopes. Motivation: prepare
   callers for apis-service scope enforcement; the gateway currently only logs
   `token_scopes`/`scopes_satisfied`. No SDK code or version change.
+- `TASK enabling:dev/platform-api/sdk` -- the OAuth2 validation scripts and the
+  keyfile Drive smoke test now request their route scopes too:
+  `validate-drive-external` and `drive.keyfile.smoke.test` ask for
+  `drive:read drive:write`, `validate-llm-external` for
+  `llm:invoke llm:models:read`. `validate-agents-external` stays `openid`-only
+  because apis-service has no `/v1/os/agents` route. Motivation: keep the
+  validation paths passing once apis-service enforces route scopes. No SDK code
+  or version change.
 
 ## 2026-10-04
 

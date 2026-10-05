@@ -20,6 +20,8 @@ console.log('=== Agent Hub validation (external / OAuth2) ===\n');
 console.log(`Credentials: ${CREDENTIALS_PATH}\n`);
 
 const auth = await diskd.auth.credentials({
+  // openid only: apis-service routes.yaml declares no /v1/os/agents route, so there
+  // are no route scopes to request for the Agent Hub client.
   scopes: ['openid'],
   keyfilePath: CREDENTIALS_PATH,
 });

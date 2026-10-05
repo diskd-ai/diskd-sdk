@@ -24,7 +24,9 @@ console.log('=== Drive validation (external / OAuth2) ===\n');
 console.log(`Credentials: ${CREDENTIALS_PATH}\n`);
 
 const auth = await diskd.auth.credentials({
-  scopes: ['openid'],
+  // Gateway route scopes for /v1/os/drive (apis-service routes.yaml required_scopes),
+  // so the run keeps passing once the gateway enforces route scopes.
+  scopes: ['openid', 'drive:read', 'drive:write'],
   keyfilePath: CREDENTIALS_PATH,
 });
 h.ok('auth.credentials', 'OAuth2 token acquired');
