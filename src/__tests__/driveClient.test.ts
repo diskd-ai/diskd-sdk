@@ -1426,19 +1426,32 @@ test('drive.tools.inodesQuery returns coverage and sends the file window', async
       next_offset: 200,
       warnings: [
         { code: 'FILES_WINDOWED', message: 'Covered files 1-200 of 647.' },
-        { code: 'RESULTS_TRUNCATED', message: '11 matched, 10 returned.', matched: 11, returned: 10 },
+        {
+          code: 'RESULTS_TRUNCATED',
+          message: '11 matched, 10 returned.',
+          matched: 11,
+          returned: 10,
+        },
         { code: 'FILES_NOT_SEARCHED', message: '2 files could not be searched.', count: 2 },
-        { code: 'PATHS_NOT_RESOLVED', message: '1 path could not be resolved.', inodes: ['inode-9'], paths: ['/missing.md'] },
+        {
+          code: 'PATHS_NOT_RESOLVED',
+          message: '1 path could not be resolved.',
+          inodes: ['inode-9'],
+          paths: ['/missing.md'],
+        },
       ],
     },
     { documents: [], tables: {} },
   ];
   const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     calls.push({ url: typeof input === 'string' ? input : input.toString(), init });
-    return new Response(JSON.stringify({ jsonrpc: '2.0', result: responses[calls.length - 1], id: calls.length }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ jsonrpc: '2.0', result: responses[calls.length - 1], id: calls.length }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   };
   (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
   const auth: AuthModule = {
@@ -1451,11 +1464,23 @@ test('drive.tools.inodesQuery returns coverage and sends the file window', async
   };
   try {
     const drive = diskd.os.drive({ version: 'v1', auth });
-    const windowed = await drive.tools.inodesQuery({ query: 'lists', paths: ['/articles'], fileOffset: 0, fileLimit: 200 });
+    const windowed = await drive.tools.inodesQuery({
+      query: 'lists',
+      paths: ['/articles'],
+      fileOffset: 0,
+      fileLimit: 200,
+    });
     assert.equal(windowed.total, 647);
     assert.equal(windowed.nextOffset, 200);
     assert.deepEqual(
-      windowed.warnings.map((warning) => [warning.code, warning.matched, warning.returned, warning.count, [...warning.inodes], [...warning.paths]]),
+      windowed.warnings.map((warning) => [
+        warning.code,
+        warning.matched,
+        warning.returned,
+        warning.count,
+        [...warning.inodes],
+        [...warning.paths],
+      ]),
       [
         ['FILES_WINDOWED', null, null, null, [], []],
         ['RESULTS_TRUNCATED', 11, 10, null, [], []],
