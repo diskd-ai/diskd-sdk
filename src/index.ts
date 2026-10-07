@@ -185,6 +185,7 @@ export type {
   DriveToolsGrepResult,
   DriveToolsInodesQueryParams,
   DriveToolsInodesQueryResult,
+  DriveToolsQueryWarning,
   DriveToolsLsParams,
   DriveToolsLsResult,
   DriveToolsReadFileParams,

@@ -352,11 +352,37 @@ export type DriveToolsInodesQueryParams = {
   readonly orderBy?: string;
   readonly limit?: number;
   readonly offset?: number;
+  /** First file of the queried window (files sorted by path after folder expansion); default 0. */
+  readonly fileOffset?: number;
+  /** Files per window, 1..200; default 200. */
+  readonly fileLimit?: number;
+};
+
+/** One coverage gap Drive reports instead of dropping it silently (Redmine #3186). */
+export type DriveToolsQueryWarning = {
+  /** FILES_WINDOWED, RESULTS_TRUNCATED, FILES_NOT_SEARCHED or PATHS_NOT_RESOLVED. */
+  readonly code: string;
+  readonly message: string;
+  /** RESULTS_TRUNCATED: documents that matched; otherwise null. */
+  readonly matched: number | null;
+  /** RESULTS_TRUNCATED: documents returned; otherwise null. */
+  readonly returned: number | null;
+  /** FILES_NOT_SEARCHED: files of the window that could not be searched; otherwise null. */
+  readonly count: number | null;
+  /** PATHS_NOT_RESOLVED: the inodes that did not resolve; otherwise empty. */
+  readonly inodes: readonly string[];
+  /** PATHS_NOT_RESOLVED: the requested paths that did not resolve; otherwise empty. */
+  readonly paths: readonly string[];
 };
 
 export type DriveToolsInodesQueryResult = {
   readonly documents: readonly DriveToolsDocument[];
   readonly tables: Readonly<Record<string, DriveToolsTableData>>;
+  /** Files the whole request covers; null from a Drive that does not report coverage. */
+  readonly total: number | null;
+  /** fileOffset of the next window, or null when this window was the last. */
+  readonly nextOffset: number | null;
+  readonly warnings: readonly DriveToolsQueryWarning[];
 };
 
 export type DriveToolsTgMessage = {

@@ -21,6 +21,7 @@ import type {
   DriveToolsGlobResult,
   DriveToolsGrepResult,
   DriveToolsInodesQueryResult,
+  DriveToolsQueryWarning,
   DriveToolsLsResult,
   DriveToolsTableData,
   DriveToolsTgMessage,
@@ -380,8 +381,35 @@ const decodeInodesQueryResult = (o: unknown): DriveToolsInodesQueryResult => {
       }
     }
   }
-  return { documents, tables };
+  return {
+    documents,
+    tables,
+    total: num(r, 'total'),
+    nextOffset: num(r, 'next_offset'),
+    warnings: decodeQueryWarnings(r.warnings),
+  };
 };
+
+/** Pure: the strings of a JSON array; anything else is left out. */
+const stringList = (value: unknown): readonly string[] =>
+  Array.isArray(value) ? value.filter((x): x is string => typeof x === 'string') : [];
+
+/** Decode Drive's coverage warnings; anything that is not a warning object is left out. */
+const decodeQueryWarnings = (value: unknown): readonly DriveToolsQueryWarning[] =>
+  Array.isArray(value)
+    ? value.filter(isObject).map((item) => {
+        const w = item as RawObject;
+        return {
+          code: str(w, 'code') ?? 'UNKNOWN',
+          message: str(w, 'message') ?? '',
+          matched: num(w, 'matched'),
+          returned: num(w, 'returned'),
+          count: num(w, 'count'),
+          inodes: stringList(w.inodes),
+          paths: stringList(w.paths),
+        };
+      })
+    : [];
 
 const decodeTgMessage = (o: unknown): DriveToolsTgMessage => {
   const r = raw(o);
@@ -873,6 +901,8 @@ export const createDriveClient = (params: {
           ...optional('order_by', p.orderBy),
           ...optional('limit', p.limit),
           ...optional('offset', p.offset),
+          ...optional('file_offset', p.fileOffset),
+          ...optional('file_limit', p.fileLimit),
         });
         return decodeInodesQueryResult(result);
       },

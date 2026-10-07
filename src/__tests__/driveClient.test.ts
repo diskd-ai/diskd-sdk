@@ -1413,6 +1413,72 @@ test('drive.tools.inodesQuery sends paths/tools/inodes-query with all options', 
   }
 });
 
+/* REQ-3186-SDK-1: inodesQuery sends the file window (file_offset, file_limit) and returns the coverage Drive reports (total, nextOffset, typed warnings); a response from an older Drive without them decodes to null, null and no warnings (Redmine #3186: an index query never drops coverage silently). */
+test('drive.tools.inodesQuery returns coverage and sends the file window', async () => {
+  process.env.APIS_BASE_URL = 'https://apis.example';
+  const calls: FetchCall[] = [];
+  const originalFetch = globalThis.fetch;
+  const responses = [
+    {
+      documents: [],
+      tables: {},
+      total: 647,
+      next_offset: 200,
+      warnings: [
+        { code: 'FILES_WINDOWED', message: 'Covered files 1-200 of 647.' },
+        { code: 'RESULTS_TRUNCATED', message: '11 matched, 10 returned.', matched: 11, returned: 10 },
+        { code: 'FILES_NOT_SEARCHED', message: '2 files could not be searched.', count: 2 },
+        { code: 'PATHS_NOT_RESOLVED', message: '1 path could not be resolved.', inodes: ['inode-9'], paths: ['/missing.md'] },
+      ],
+    },
+    { documents: [], tables: {} },
+  ];
+  const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    calls.push({ url: typeof input === 'string' ? input : input.toString(), init });
+    return new Response(JSON.stringify({ jsonrpc: '2.0', result: responses[calls.length - 1], id: calls.length }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+  (globalThis as { fetch: typeof fetch }).fetch = fetchMock;
+  const auth: AuthModule = {
+    signIn: async () => {},
+    signOut: () => {},
+    handleRedirectCallback: async () => {},
+    getAccessToken: async () => 'token-123',
+    getToken: () => ({ accessToken: 'token-123' }),
+    getWorkspaceId: async () => 'test-workspace',
+  };
+  try {
+    const drive = diskd.os.drive({ version: 'v1', auth });
+    const windowed = await drive.tools.inodesQuery({ query: 'lists', paths: ['/articles'], fileOffset: 0, fileLimit: 200 });
+    assert.equal(windowed.total, 647);
+    assert.equal(windowed.nextOffset, 200);
+    assert.deepEqual(
+      windowed.warnings.map((warning) => [warning.code, warning.matched, warning.returned, warning.count, [...warning.inodes], [...warning.paths]]),
+      [
+        ['FILES_WINDOWED', null, null, null, [], []],
+        ['RESULTS_TRUNCATED', 11, 10, null, [], []],
+        ['FILES_NOT_SEARCHED', null, null, 2, [], []],
+        ['PATHS_NOT_RESOLVED', null, null, null, ['inode-9'], ['/missing.md']],
+      ]
+    );
+    const body = JSON.parse(String(calls[0]?.init?.body));
+    assert.equal(body.params.file_offset, 0);
+    assert.equal(body.params.file_limit, 200);
+
+    const older = await drive.tools.inodesQuery({ query: 'lists', paths: ['/articles'] });
+    assert.equal(older.total, null);
+    assert.equal(older.nextOffset, null);
+    assert.deepEqual([...older.warnings], []);
+    const olderBody = JSON.parse(String(calls[1]?.init?.body));
+    assert.equal('file_offset' in olderBody.params, false);
+  } finally {
+    (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
+    delete process.env.APIS_BASE_URL;
+  }
+});
+
 test('drive.tools.tgSearch sends paths/tools/tg-search and returns typed messages', async () => {
   process.env.APIS_BASE_URL = 'https://apis.example';
 
