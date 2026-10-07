@@ -157,6 +157,27 @@ export type StoredMessage = {
 /** The platform star flag accepted by messages_store/set-attributes. */
 export const PLATFORM_FLAGGED = 'flagged';
 
+/**
+ * Flag colours (Exchange flag colours, 2026-10-07): the seven Apple Mail
+ * colours, stored by Drive as one `color:<name>` platform flag next to
+ * `flagged`. Drive keeps one colour, adds `flagged` with a colour and clears
+ * the colour on unflag.
+ */
+export const PLATFORM_FLAG_COLORS = [
+  'red',
+  'orange',
+  'yellow',
+  'green',
+  'blue',
+  'purple',
+  'gray',
+] as const;
+
+export type PlatformFlagColor = (typeof PLATFORM_FLAG_COLORS)[number];
+
+/** The platform flag that stores a flag colour. */
+export const platformColorFlag = (color: PlatformFlagColor): string => `color:${color}`;
+
 /** Add/remove platform flags and labels on one message (messages_store/set-attributes). */
 export type SetMessageAttributesParams = {
   readonly externalId: string;

@@ -241,12 +241,67 @@ for (const flagged of [true, false]) {
           flagged,
         });
         assert.equal(email.isFlagged, flagged);
+        /* REQ-SDK-FLAGCOLOR-002: a flagged message without a stored colour reads red; an unflagged one has no colour. */
+        assert.equal(email.flagColor, flagged ? 'red' : null);
         assert.equal(email.messageId, '7:42');
         assert(calls.every((call) => !call.url.startsWith('http://email')));
       }
     );
   });
 }
+
+/* REQ-SDK-FLAGCOLOR-001: setFlagged with a colour writes the `color:<name>` platform flag (Drive adds `flagged`) and the message reads back flagged in that colour (Exchange flag colours, 2026-10-07). */
+test('platform.inbox.setFlagged with a colour writes the colour flag', async () => {
+  await withInboxFixture(
+    {
+      expectedParams: {
+        mailbox_id: 'exchange-contact',
+        folder_id: 'INBOX',
+        external_id: '7:42',
+        flags_add: ['color:blue'],
+      },
+      after: { flags: ['flagged', 'color:blue'], labels: [], revision: 2 },
+    },
+    async (inbox) => {
+      const email = await inbox.setFlagged({
+        account: 'contact',
+        folderId: 'INBOX',
+        messageId: '7:42',
+        flagged: true,
+        color: 'blue',
+      });
+      assert.equal(email.isFlagged, true);
+      assert.equal(email.flagColor, 'blue');
+    }
+  );
+});
+
+/* REQ-SDK-FLAGCOLOR-003: a colour sent with flagged false is rejected before any call, since unflagging clears the colour. */
+test('platform.inbox.setFlagged rejects a colour with flagged false', async () => {
+  await withFetchMock(
+    () => {
+      throw new Error('no call expected');
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        emailUrl: 'http://email',
+      });
+      await assert.rejects(
+        inbox.setFlagged({
+          account: 'contact',
+          folderId: 'INBOX',
+          messageId: '7:42',
+          flagged: false,
+          color: 'blue',
+        }),
+        /colour/
+      );
+      assert.equal(calls.length, 0);
+    }
+  );
+});
 
 /* REQ-SDK-PLATFORM-ATTR-004: setLabels adds/removes platform labels; labels show provider and platform labels, platformLabels only the removable ones. */
 test('platform.inbox.setLabels writes platform labels and merges them for reads', async () => {

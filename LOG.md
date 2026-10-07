@@ -1,5 +1,17 @@
 # LOG
 
+## 2026-10-07
+
+- `TASK enabling:dev/platform-api/inbox` -- Exchange flag colours (SDK 7.3.0).
+  `PLATFORM_FLAG_COLORS` (red, orange, yellow, green, blue, purple, gray),
+  `PlatformFlagColor` and `platformColorFlag(color)` (`color:<name>`) are
+  exported. `inbox.setFlagged({..., flagged: true, color})` writes the colour
+  flag (Drive adds `flagged` and keeps one colour); a colour with
+  `flagged: false` is rejected. `StoredEmail` and `InboxEmailEnvelope` gain
+  `flagColor`: the stored colour, red for a flag without one, null when not
+  flagged. Why: operatives flag mail in colour through `messages__flag`, like
+  the Exchange app.
+
 ## 2026-10-05
 
 - `TASK enabling:dev/platform-api/messagesStore` + `inbox` -- platform-owned

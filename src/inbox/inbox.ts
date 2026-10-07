@@ -4,7 +4,10 @@ import {
   type FolderSummary,
   type MailboxSummary,
   type MessagesStoreClient,
+  PLATFORM_FLAG_COLORS,
   PLATFORM_FLAGGED,
+  type PlatformFlagColor,
+  platformColorFlag,
   type SetMessageAttributesParams,
   type StoredMessage,
 } from '../messagesStore/messagesStoreTypes.js';
@@ -241,6 +244,22 @@ const mergeLabels = (
   return [...providerLabels, ...platformLabels.filter((label) => !seen.has(label.toLowerCase()))];
 };
 
+/**
+ * Flag colour of a message (Exchange flag colours, 2026-10-07): its stored
+ * `color:<name>` platform flag, red for a flag without one (also a star set
+ * only on the mail server), null when not flagged.
+ */
+const resolveFlagColor = (
+  platformFlags: readonly string[],
+  isFlagged: boolean
+): PlatformFlagColor | null => {
+  if (!isFlagged) return null;
+  const stored = PLATFORM_FLAG_COLORS.find((color) =>
+    platformFlags.includes(platformColorFlag(color))
+  );
+  return stored ?? 'red';
+};
+
 const exchangeStoredEmail = (
   row: StoredMessage,
   account: string,
@@ -253,6 +272,11 @@ const exchangeStoredEmail = (
     : isString(payload.folderId)
       ? payload.folderId
       : folderId;
+  const isFlagged =
+    row.platformFlags.includes(PLATFORM_FLAGGED) ||
+    (Array.isArray(payload.flags)
+      ? hasFlag(payload, '\\Flagged')
+      : isBool(payload.isFlagged) && payload.isFlagged);
   return {
     folderId: folder,
     messageId,
@@ -290,11 +314,8 @@ const exchangeStoredEmail = (
     isRead: Array.isArray(payload.flags)
       ? hasFlag(payload, '\\Seen')
       : isBool(payload.isRead) && payload.isRead,
-    isFlagged:
-      row.platformFlags.includes(PLATFORM_FLAGGED) ||
-      (Array.isArray(payload.flags)
-        ? hasFlag(payload, '\\Flagged')
-        : isBool(payload.isFlagged) && payload.isFlagged),
+    isFlagged,
+    flagColor: resolveFlagColor(row.platformFlags, isFlagged),
     priority: isString(payload.priority) ? payload.priority : 'normal',
     webhookEvent: 'exchange.messagesStore',
     rule: null,
@@ -312,6 +333,7 @@ const envelopeFromStoredEmail = (email: StoredEmail): InboxEmailEnvelope => ({
   hasAttachments: email.hasAttachments,
   isRead: email.isRead,
   isFlagged: email.isFlagged,
+  flagColor: email.flagColor,
   priority: email.priority,
   labels: email.labels,
   drivePath: '',
@@ -851,17 +873,24 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
         isRead
       );
     },
-    setFlagged: async ({ account, messageId, folderId, flagged }: InboxSetFlaggedParams) => {
+    setFlagged: async ({ account, messageId, folderId, flagged, color }: InboxSetFlaggedParams) => {
       const resolvedAccount = nonEmpty(account);
       const resolvedMessageId = nonEmpty(messageId);
       if (!resolvedAccount || !resolvedMessageId) {
         throw new Error('account + messageId is required');
       }
+      if (color !== undefined && !flagged) {
+        throw new Error('A flag colour needs flagged: true; removing the flag clears the colour');
+      }
       return setExchangeAttributes(
         resolvedAccount,
         resolvedMessageId,
         nonEmpty(folderId) ?? undefined,
-        flagged ? { flagsAdd: [PLATFORM_FLAGGED] } : { flagsRemove: [PLATFORM_FLAGGED] }
+        !flagged
+          ? { flagsRemove: [PLATFORM_FLAGGED] }
+          : color !== undefined
+            ? { flagsAdd: [platformColorFlag(color)] }
+            : { flagsAdd: [PLATFORM_FLAGGED] }
       );
     },
     setLabels: async ({ account, messageId, folderId, add, remove }: InboxSetLabelsParams) => {

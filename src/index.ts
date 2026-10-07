@@ -438,7 +438,12 @@ export type {
   UpsertFolderResult,
   WriteOutboxTerminalParams,
 } from './messagesStore/messagesStoreTypes.js';
-export { PLATFORM_FLAGGED } from './messagesStore/messagesStoreTypes.js';
+export {
+  PLATFORM_FLAG_COLORS,
+  PLATFORM_FLAGGED,
+  type PlatformFlagColor,
+  platformColorFlag,
+} from './messagesStore/messagesStoreTypes.js';
 // -- Notes --
 export { createProjectNotesClient } from './notes/notes.js';
 export type {

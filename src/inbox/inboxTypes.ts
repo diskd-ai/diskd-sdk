@@ -1,4 +1,5 @@
 import type { AuthModule } from '../auth/types.js';
+import type { PlatformFlagColor } from '../messagesStore/messagesStoreTypes.js';
 
 // Stored email types and platform inbox client contracts.
 // Mail lives in Drive messagesStore mailboxes named exchange-<account-slug>.
@@ -71,6 +72,8 @@ export type StoredEmail = {
   readonly isRead: boolean;
   /** True when the provider mirror has \\Flagged or the platform star is set. */
   readonly isFlagged: boolean;
+  /** Flag colour (2026-10-07): the stored colour, red without one, null when not flagged. */
+  readonly flagColor: PlatformFlagColor | null;
   readonly priority: string;
   readonly webhookEvent: string;
   readonly rule: string | null;
@@ -87,6 +90,8 @@ export type InboxEmailEnvelope = {
   readonly hasAttachments: boolean;
   readonly isRead: boolean;
   readonly isFlagged: boolean;
+  /** Flag colour (2026-10-07); null when not flagged. */
+  readonly flagColor: PlatformFlagColor | null;
   readonly priority: string;
   readonly labels: readonly string[];
   readonly drivePath: string;
@@ -152,6 +157,8 @@ export type InboxMarkReadParams = InboxReadParams & {
 /** Set or clear the platform star on the Drive message (no provider call). */
 export type InboxSetFlaggedParams = InboxReadParams & {
   readonly flagged: boolean;
+  /** Flags in this colour (2026-10-07); only with `flagged: true`. */
+  readonly color?: PlatformFlagColor;
 };
 
 /** Add/remove platform labels on the Drive message (no provider call). */
