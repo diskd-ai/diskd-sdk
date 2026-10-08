@@ -139,6 +139,7 @@ export type InboxListParams = {
 
 export type InboxSearchParams = {
   readonly account: string;
+  /** Gmail-style criteria; label: matches a whole provider or platform label name, ignoring case. */
   readonly query: string;
   readonly folderId?: string;
   readonly limit?: number;

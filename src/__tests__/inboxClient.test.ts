@@ -577,6 +577,75 @@ test('platform.inbox.search forwards Gmail-style criteria to Drive', async () =>
   );
 });
 
+/* REQ-3132-LABEL-005: Label search keeps folder scope, pagination, and the visible provider/platform label union. */
+test('platform.inbox.search forwards label criteria on every scoped Drive page', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/folder/list') {
+        return rpc(request.id, {
+          folders: ['INBOX', 'Archive'].map((folderId) => ({
+            folder_id: folderId,
+            display_name: folderId,
+            metadata: { delimiter: '/' },
+            message_count: 1,
+            updated_at: '2026-10-08T10:00:00.000Z',
+          })),
+        });
+      }
+      assert.equal(request.method, 'messages_store/search');
+      const params = request.params as { readonly cursor?: string };
+      assert.deepEqual(request.params, {
+        mailbox_id: 'exchange-google-personal',
+        folder_id: 'INBOX',
+        query: 'from:alice@example.com label:"Needs Review"',
+        page_size: 7,
+        order_by: 'message_date_asc',
+        ...(params.cursor ? { cursor: 'cursor-2' } : {}),
+      });
+      if (!params.cursor) return rpc(request.id, { items: [], next_cursor: 'cursor-2' });
+      const row = messageRow('complete', 'Ready to review').message;
+      return rpc(request.id, {
+        items: [
+          {
+            ...row,
+            payload: { ...row.payload, labels: ['Provider Label', 'NEEDS REVIEW'] },
+            platform_labels: ['Needs Review', 'Platform Label'],
+          },
+        ],
+        next_cursor: null,
+      });
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        contentMode: 'stored-only',
+      });
+      const result = await inbox.search({
+        account: 'google__personal',
+        query: 'folder:INBOX recursive:false from:alice@example.com label:"Needs Review"',
+        limit: 1,
+        pageSize: 7,
+        order: 'oldest',
+      });
+      assert.deepEqual(
+        result.results.map((item) => item.messageId),
+        ['14:42']
+      );
+      assert.deepEqual(result.results[0]?.labels, [
+        'Provider Label',
+        'NEEDS REVIEW',
+        'Platform Label',
+      ]);
+      assert.deepEqual(
+        calls.map((call) => body(call.init).method),
+        ['messages_store/folder/list', 'messages_store/search', 'messages_store/search']
+      );
+    }
+  );
+});
+
 /* REQ-2912-SEARCH-012: Body-only matches come directly from Drive without per-message gets. */
 test('platform.inbox.search returns Drive body matches without getMessage fan-out', async () => {
   await withFetchMock(

@@ -18,7 +18,91 @@ const message: InboxSearchableMessage = {
   isRead: false,
   isFlagged: false,
   hasAttachments: false,
+  labels: [],
 };
+
+/* REQ-3132-LABEL-001: Label criteria preserve quoted whole names and case-insensitive matching through Drive serialization. */
+test('inbox search query parses and serializes label names with existing quote rules', () => {
+  for (const [query, expected] of [
+    ['LABEL:Invoices', 'label:Invoices'],
+    ['label:"Needs Review"', 'label:"Needs Review"'],
+    ['label:Stra\u00dfe', 'label:Stra\u00dfe'],
+    ['folder:INBOX recursive:false label:"Team: Finance"', 'label:"Team: Finance"'],
+  ]) {
+    const parsed = parseInboxSearchQuery(query);
+    assert.equal(parsed.tag, 'Ok');
+    if (parsed.tag !== 'Ok') return;
+    assert.deepEqual(parsed.value.textTerms, []);
+    assert.deepEqual(formatInboxMessageSearchQuery(parsed.value), { tag: 'Some', value: expected });
+    assert.equal(parsed.value.label?.tag, 'Some');
+  }
+  const parsed = parseInboxSearchQuery('subject:invoice');
+  assert.equal(parsed.tag, 'Ok');
+  if (parsed.tag !== 'Ok') return;
+  const { label, ...existingCriteria } = parsed.value;
+  assert.deepEqual(label, { tag: 'None' });
+  assert.deepEqual(formatInboxMessageSearchQuery(existingCriteria), {
+    tag: 'Some',
+    value: 'subject:invoice',
+  });
+  assert.equal(matchesInboxSearchQuery(message, existingCriteria), true);
+});
+
+/* REQ-3132-LABEL-002: Label criteria use the existing duplicate, empty, and malformed-value errors. */
+test('inbox search query validates label criteria and advertises the supported operator', () => {
+  assert.deepEqual(parseInboxSearchQuery('label:work LABEL:personal'), {
+    tag: 'Err',
+    error: { tag: 'DuplicateOperator', operator: 'label' },
+  });
+  for (const query of ['label:', 'label:""']) {
+    assert.deepEqual(parseInboxSearchQuery(query), {
+      tag: 'Err',
+      error: { tag: 'EmptyOperator', operator: 'label' },
+    });
+  }
+  assert.deepEqual(parseInboxSearchQuery('label:"Needs Review'), {
+    tag: 'Err',
+    error: { tag: 'InvalidQuotedValue', operator: 'label', value: '"Needs' },
+  });
+  assert.match(
+    formatInboxSearchQueryError({ tag: 'UnsupportedOperator', operator: 'category' }),
+    /supported operators.*label:/
+  );
+});
+
+/* REQ-3132-LABEL-003: Label search compares complete visible label names without matching substrings or message text. */
+test('inbox search query matches complete case-insensitive visible labels', () => {
+  const parsed = parseInboxSearchQuery('label:Invoices');
+  assert.equal(parsed.tag, 'Ok');
+  if (parsed.tag !== 'Ok') return;
+  for (const [labels, expected] of [
+    [['INVOICES', 'Needs Review'], true],
+    [['invoices'], true],
+    [['Paid Invoices'], false],
+    [['Invoice'], false],
+    [[], false],
+  ] as const) {
+    const labeledMessage = { ...message, labels, subject: 'Invoices' };
+    assert.equal(matchesInboxSearchQuery(labeledMessage, parsed.value), expected);
+  }
+});
+
+/* REQ-3132-LABEL-004: Labels compose with all other message criteria using AND semantics. */
+test('inbox search query combines label names with other criteria', () => {
+  const parsed = parseInboxSearchQuery(
+    'invoice label:"Needs Review" from:gmail.com to:estelle cc:bob subject:invoice after:2025-05-17 before:2025-05-19 is:unread is:unstarred'
+  );
+  assert.equal(parsed.tag, 'Ok');
+  if (parsed.tag !== 'Ok') return;
+  const labeledMessage = { ...message, labels: ['Needs Review'] };
+  assert.equal(matchesInboxSearchQuery(labeledMessage, parsed.value), true);
+  assert.equal(matchesInboxSearchQuery({ ...labeledMessage, labels: [] }, parsed.value), false);
+  assert.equal(matchesInboxSearchQuery({ ...labeledMessage, isRead: true }, parsed.value), false);
+  assert.equal(
+    matchesInboxSearchQuery({ ...labeledMessage, date: '2025-05-20T10:00:00.000Z' }, parsed.value),
+    false
+  );
+});
 
 /* REQUIREMENT REQ enabling:dev/platform-api/sdk/inbox: Inbox search parses Gmail-style from and after operators. */
 test('inbox search query parser accepts from and after operators with free text', () => {

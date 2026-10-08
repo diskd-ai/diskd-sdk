@@ -51,6 +51,8 @@ export type InboxSearchQuery = {
   readonly recipient: Option<string>;
   readonly cc: Option<string>;
   readonly subject: Option<string>;
+  /** Whole visible label name; optional so existing caller-built criteria remain assignable. */
+  readonly label?: Option<string>;
   readonly after: Option<InboxSearchAfterDate>;
   readonly before: Option<InboxSearchAfterDate>;
   readonly isRead: Option<boolean>;
@@ -75,6 +77,7 @@ export type InboxSearchableMessage = {
   readonly isRead: boolean;
   readonly isFlagged: boolean;
   readonly hasAttachments: boolean;
+  readonly labels: readonly string[];
 };
 
 const OPERATOR_TOKEN = /^([A-Za-z][A-Za-z0-9_-]*):/;
@@ -145,6 +148,7 @@ export const parseInboxSearchQuery = (
   if (tokens.length === 0) return Err({ tag: 'EmptyQuery' });
 
   const textTerms: string[] = [];
+  const labelValues: string[] = [];
   let sender: Option<string> = None();
   let recipient: Option<string> = None();
   let cc: Option<string> = None();
@@ -179,6 +183,14 @@ export const parseInboxSearchQuery = (
       else if (operator === 'to') recipient = Some(value);
       else if (operator === 'cc') cc = Some(value);
       else subject = Some(value);
+      continue;
+    }
+
+    if (operator === 'label') {
+      if (labelValues.length > 0) return Err({ tag: 'DuplicateOperator', operator });
+      const parsedValue = parseOperatorValue(operator, rawValue);
+      if (parsedValue.tag === 'Err') return parsedValue;
+      labelValues.push(parsedValue.value);
       continue;
     }
 
@@ -271,6 +283,7 @@ export const parseInboxSearchQuery = (
     recipient,
     cc,
     subject,
+    label: labelValues.length > 0 ? Some(labelValues[0]) : None(),
     after,
     before,
     isRead,
@@ -295,6 +308,7 @@ export const formatInboxMessageSearchQuery = (search: InboxSearchQuery): Option<
   if (search.cc.tag === 'Some') tokens.push(`cc:${formatOperatorValue(search.cc.value)}`);
   if (search.subject.tag === 'Some')
     tokens.push(`subject:${formatOperatorValue(search.subject.value)}`);
+  if (search.label?.tag === 'Some') tokens.push(`label:${formatOperatorValue(search.label.value)}`);
   if (search.after.tag === 'Some') tokens.push(`after:${search.after.value.value}`);
   if (search.before.tag === 'Some') tokens.push(`before:${search.before.value.value}`);
   if (search.isRead.tag === 'Some') tokens.push(`is:${search.isRead.value ? 'read' : 'unread'}`);
@@ -322,7 +336,7 @@ export const formatInboxSearchQueryError = (error: InboxSearchQueryError): strin
     case 'MissingOperatorDependency':
       return `INVALID_INBOX_SEARCH_QUERY: ${error.operator}: requires ${error.required}:`;
     case 'UnsupportedOperator':
-      return `INVALID_INBOX_SEARCH_QUERY: unsupported operator ${JSON.stringify(error.operator)}; supported operators are from:, to:, cc:, subject:, after:, before:, is:, has:, folder:, and recursive:`;
+      return `INVALID_INBOX_SEARCH_QUERY: unsupported operator ${JSON.stringify(error.operator)}; supported operators are from:, to:, cc:, subject:, label:, after:, before:, is:, has:, folder:, and recursive:`;
   }
 };
 
@@ -338,6 +352,12 @@ export const matchesInboxSearchQuery = (
   message: InboxSearchableMessage,
   search: InboxSearchQuery
 ): boolean => {
+  const label = search.label;
+  if (
+    label?.tag === 'Some' &&
+    !message.labels.some((value) => value.toLowerCase() === label.value.toLowerCase())
+  )
+    return false;
   const senderText = `${message.from.name} ${message.from.address}`.toLowerCase();
   if (search.sender.tag === 'Some' && !senderText.includes(search.sender.value)) return false;
   if (search.recipient.tag === 'Some' && !contactsText(message.to).includes(search.recipient.value))

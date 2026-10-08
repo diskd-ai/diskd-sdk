@@ -1,5 +1,19 @@
 # LOG
 
+## 2026-10-08
+
+- `BUG enabling:dev/platform-api/inbox` (Redmine #3132) -- accept `label:` in
+  the existing search query, match complete visible provider/platform label
+  names case-insensitively, and preserve quoted names when forwarding every
+  scoped Drive search page. Existing operators, folder selection and result
+  pagination retain their contracts. The parsed criterion is additive and
+  optional on the exported caller shape; the parser always supplies Some/None.
+  Motivation: mailbox-label searches previously failed SDK query validation
+  before reaching Drive. Verification: five new regression groups failed
+  before implementation; all 59 focused inbox tests pass in Bun and compiled
+  Node, with typecheck and changed-file Biome checks passing. No version bump
+  or package release; deployed verification remains pending.
+
 ## 2026-10-07
 
 - `BUG enabling:dev/platform-api/drive` (782c4a6, Redmine #3186) -- `drive.tools.inodesQuery` sends `fileOffset` and `fileLimit` and returns `total`, `nextOffset` and typed `warnings`; an older Drive decodes to null, null and no warnings. Released in SDK 7.4.0 (consent 2026-10-08).
