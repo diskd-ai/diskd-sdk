@@ -2,7 +2,7 @@
 
 ## 2026-10-07
 
-- `BUG enabling:dev/platform-api/drive` (782c4a6, Redmine #3186) -- `drive.tools.inodesQuery` sends `fileOffset` and `fileLimit` and returns `total`, `nextOffset` and typed `warnings`; an older Drive decodes to null, null and no warnings. Not released yet: the 7.4.0 release needs consent.
+- `BUG enabling:dev/platform-api/drive` (782c4a6, Redmine #3186) -- `drive.tools.inodesQuery` sends `fileOffset` and `fileLimit` and returns `total`, `nextOffset` and typed `warnings`; an older Drive decodes to null, null and no warnings. Released in SDK 7.4.0 (consent 2026-10-08).
 - `TASK enabling:dev/platform-api/inbox` -- Exchange flag colours (SDK 7.3.0).
   `PLATFORM_FLAG_COLORS` (red, orange, yellow, green, blue, purple, gray),
   `PlatformFlagColor` and `platformColorFlag(color)` (`color:<name>`) are
