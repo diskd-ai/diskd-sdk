@@ -1,5 +1,14 @@
 # LOG
 
+## 2026-10-09
+
+- `enabling:dev/platform-api/inbox` (#3132): release the reviewed mailbox-label
+  search correction as 7.4.1 after the user's prerequisite deployment request.
+  The existing GitHub workflow owns publication. Package metadata advances
+  without changing the endpoint, query fields, identity scope or pagination.
+  Build and all 59 affected inbox tests pass under Node and Bun; consumers
+  adopt the exact registry version only after publication is verified.
+
 ## 2026-10-08
 
 - `BUG enabling:dev/platform-api/inbox` (Redmine #3132) -- accept `label:` in
