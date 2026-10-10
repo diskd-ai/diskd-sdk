@@ -68,7 +68,23 @@ export function admission(value: unknown): EmailAdmission {
   if (row.status !== 'queued') throw new Error('InvalidEmailAdmission');
   return { jobId: text(row.jobId), requestId: text(row.requestId), status: 'queued' };
 }
-/** Decode the fixed offline scheduling state. */
+/** Require the worker's completed outcome, preserving actionable failure semantics. */
+function syncOutcome(value: unknown): EmailSyncStatus['lastSync'] {
+  if (value === null) return null;
+  const row = object(value);
+  const completedAt = number(row.completedAt);
+  if (completedAt < 0) throw new Error('InvalidEmailResponse');
+  if (row.status === 'succeeded') return { status: 'succeeded', completedAt };
+  if (row.status === 'failed')
+    return {
+      status: 'failed',
+      completedAt,
+      errorCode: text(row.errorCode),
+      requiresReconnect: boolean(row.requiresReconnect),
+    };
+  throw new Error('InvalidEmailResponse');
+}
+/** Decode scheduling and the latest actual completion independently. */
 export function syncStatus(value: unknown): EmailSyncStatus {
   const row = object(value);
   return {
@@ -77,6 +93,7 @@ export function syncStatus(value: unknown): EmailSyncStatus {
     intervalMs: number(row.intervalMs),
     nextDueAt: row.nextDueAt === null ? null : number(row.nextDueAt),
     running: boolean(row.running),
+    lastSync: syncOutcome(row.lastSync),
   };
 }
 /** Decode hydration metadata while content remains in canonical Drive storage. */

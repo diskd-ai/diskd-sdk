@@ -89,6 +89,15 @@ export type EmailSyncStatus = {
   readonly intervalMs: number;
   readonly nextDueAt: number | null;
   readonly running: boolean;
+  readonly lastSync:
+    | null
+    | { readonly status: 'succeeded'; readonly completedAt: number }
+    | {
+        readonly status: 'failed';
+        readonly completedAt: number;
+        readonly errorCode: string;
+        readonly requiresReconnect: boolean;
+      };
 };
 export type EmailAdmission = {
   readonly jobId: string;
