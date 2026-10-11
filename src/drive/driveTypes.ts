@@ -233,6 +233,46 @@ export type DriveToolsWriteResult = {
   readonly path: string;
 };
 
+// -- Tools: line files whose appends are queued through Drive's write-ahead log (ADR-036) --
+
+/** One line to append; `id` makes a retried append idempotent (^[0-9A-Za-z_-]{1,64}$). */
+export type DriveLineToAppend = {
+  readonly id: string;
+  readonly line: string;
+};
+
+export type DriveToolsAppendLinesParams = {
+  readonly path: string;
+  readonly lines: readonly DriveLineToAppend[];
+};
+
+/** appended: committed by this call; duplicate: an earlier call committed the same id and content. */
+export type DriveAppendedLineStatus = 'appended' | 'duplicate';
+
+export type DriveAppendedLine = {
+  readonly id: string;
+  readonly status: DriveAppendedLineStatus;
+};
+
+/** Every listed line is durably committed; the file shows it once Drive folds the log. */
+export type DriveToolsAppendLinesResult = {
+  readonly id: string;
+  readonly path: string;
+  readonly lines: readonly DriveAppendedLine[];
+};
+
+export type DriveToolsReadLinesParams = {
+  readonly path: string;
+  readonly cursor?: string;
+  readonly limit?: number;
+};
+
+/** Stored lines followed by acknowledged, not yet folded lines; `nextCursor` is null at end of file. */
+export type DriveToolsReadLinesResult = {
+  readonly lines: readonly string[];
+  readonly nextCursor: string | null;
+};
+
 // -- Upload file (convenience) --
 
 export type DriveUploadFileBaseParams = {

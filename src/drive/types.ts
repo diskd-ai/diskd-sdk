@@ -17,6 +17,8 @@ import type {
   DriveReadFileResult,
   DriveRenameParams,
   DriveResolveParams,
+  DriveToolsAppendLinesParams,
+  DriveToolsAppendLinesResult,
   DriveToolsApplyPatchParams,
   DriveToolsBiQueryParams,
   DriveToolsBiQueryResult,
@@ -30,6 +32,8 @@ import type {
   DriveToolsLsParams,
   DriveToolsLsResult,
   DriveToolsReadFileParams,
+  DriveToolsReadLinesParams,
+  DriveToolsReadLinesResult,
   DriveToolsTgSearchParams,
   DriveToolsTgSearchResult,
   DriveToolsVsearchParams,
@@ -96,6 +100,10 @@ export type DriveClient = {
     readonly readFile: (params: DriveToolsReadFileParams) => Promise<DriveReadFileResult>;
     readonly writeFile: (params: DriveToolsWriteFileParams) => Promise<DriveToolsWriteResult>;
     readonly applyPatch: (params: DriveToolsApplyPatchParams) => Promise<DriveToolsWriteResult>;
+    readonly appendLines: (
+      params: DriveToolsAppendLinesParams
+    ) => Promise<DriveToolsAppendLinesResult>;
+    readonly readLines: (params: DriveToolsReadLinesParams) => Promise<DriveToolsReadLinesResult>;
     readonly biQuery: (params: DriveToolsBiQueryParams) => Promise<DriveToolsBiQueryResult>;
     readonly inodesQuery: (
       params: DriveToolsInodesQueryParams

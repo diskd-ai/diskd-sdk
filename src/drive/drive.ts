@@ -5,6 +5,7 @@ import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import { createDriveCrontabClient } from './crontab.js';
 import { createDriveDbClient } from './driveDb.js';
 import type {
+  DriveAppendedLine,
   DriveDeleteResult,
   DriveDiskUsageResult,
   DriveDownloadFileResult,
@@ -15,6 +16,7 @@ import type {
   DrivePathType,
   DriveReadFilePart,
   DriveReadFileResult,
+  DriveToolsAppendLinesResult,
   DriveToolsBiQueryResult,
   DriveToolsDocument,
   DriveToolsDocumentPart,
@@ -23,6 +25,7 @@ import type {
   DriveToolsInodesQueryResult,
   DriveToolsLsResult,
   DriveToolsQueryWarning,
+  DriveToolsReadLinesResult,
   DriveToolsTableData,
   DriveToolsTgMessage,
   DriveToolsTgSearchResult,
@@ -250,6 +253,40 @@ const decodeWriteResult = (o: unknown): DriveToolsWriteResult => {
     id: strRequired(r, 'inode'),
     path: strRequired(r, 'path'),
   };
+};
+
+/** Decode one appended line, refusing statuses outside the contract. */
+const decodeAppendedLine = (o: unknown): DriveAppendedLine => {
+  const r = raw(o);
+  const status = strRequired(r, 'status');
+  if (status !== 'appended' && status !== 'duplicate') {
+    throw new Error(`Invalid Drive response: unknown line status ${status}`);
+  }
+  return { id: strRequired(r, 'id'), status };
+};
+
+/** Decode paths/tools/append-lines; the storage sequence stays inside Drive. */
+const decodeAppendLinesResult = (o: unknown): DriveToolsAppendLinesResult => {
+  const r = raw(o);
+  if (!Array.isArray(r.lines)) throw new Error('Invalid Drive response: lines must be array');
+  return {
+    id: strRequired(r, 'inode'),
+    path: strRequired(r, 'path'),
+    lines: r.lines.map(decodeAppendedLine),
+  };
+};
+
+/** Decode paths/tools/read-lines; lines may be empty strings, next_cursor is null at end of file. */
+const decodeReadLinesResult = (o: unknown): DriveToolsReadLinesResult => {
+  const r = raw(o);
+  if (!Array.isArray(r.lines) || !r.lines.every((line) => typeof line === 'string')) {
+    throw new Error('Invalid Drive response: lines must be an array of strings');
+  }
+  const next = r.next_cursor;
+  if (next !== null && typeof next !== 'string') {
+    throw new Error('Invalid Drive response: next_cursor must be a string or null');
+  }
+  return { lines: [...r.lines], nextCursor: next };
 };
 
 // -- Typed tools decoders --
@@ -882,6 +919,23 @@ export const createDriveClient = (params: {
           patch: p.patch,
         });
         return decodeWriteResult(result);
+      },
+
+      appendLines: async (p) => {
+        const result = await call('paths/tools/append-lines', {
+          path: p.path,
+          lines: p.lines.map((line) => ({ id: line.id, line: line.line })),
+        });
+        return decodeAppendLinesResult(result);
+      },
+
+      readLines: async (p) => {
+        const result = await call('paths/tools/read-lines', {
+          path: p.path,
+          ...optional('limit', p.limit),
+          ...optional('cursor', p.cursor),
+        });
+        return decodeReadLinesResult(result);
       },
 
       biQuery: async (p) => {

@@ -2,6 +2,15 @@
 
 ## 2026-10-11
 
+- `enabling:dev/platform-api/drive` (ADR-036): `drive.tools.appendLines` sends
+  `paths/tools/append-lines` and returns each line's `appended` / `duplicate`
+  status (Drive's storage sequence stays inside Drive); `drive.tools.readLines`
+  sends `paths/tools/read-lines` and returns `lines` plus `nextCursor` (null at
+  end of file). Owner errors keep the existing JSON-RPC transport, so
+  `FILE_NOT_FOUND`, `LINE_CONFLICT` and `LINE_FILE_APPEND_ONLY` reach callers.
+  Why: pi-agent loads and appends project memory through Drive's write-ahead
+  log (owner decision 2026-10-11). Released as 7.7.0 with consent.
+
 - `enabling:dev/platform-api/calendar` (#3000): `CreateEventParams` gains an
   optional `originEventId` naming the event a display copy shows in another
   local calendar, and `CalendarEvent` returns `originEventId` (null for an
