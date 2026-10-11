@@ -1,5 +1,15 @@
 # LOG
 
+## 2026-10-11
+
+- `enabling:dev/platform-api/calendar` (#3000): `CreateEventParams` gains an
+  optional `originEventId` naming the event a display copy shows in another
+  local calendar, and `CalendarEvent` returns `originEventId` (null for an
+  ordinary event). `UpdateEventParams` excludes it: the relation is set only at
+  creation. Why: App makes the original the only owner of a meeting's routine
+  triggers, and Pi needs the field to create the Lanteaume Agenda/CA copy.
+  Released as 7.6.0 with the owner's consent of 2026-10-11.
+
 ## 2026-10-09
 
 - `enabling:dev/platform-api/inbox` (#3132): release the reviewed mailbox-label

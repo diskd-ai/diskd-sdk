@@ -58,6 +58,8 @@ export type CalendarEvent = {
   readonly attachments: readonly EventAttachment[];
   readonly noteLinks: readonly EventNoteLink[];
   readonly metadata: CalendarEventMetadata | null;
+  /** Original event of a display copy; null for an ordinary event (#3000). */
+  readonly originEventId: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -122,9 +124,14 @@ export type CreateEventParams = {
   readonly color?: string;
   readonly visibility?: 'default' | 'public' | 'private';
   readonly transparency?: 'opaque' | 'transparent';
+  /**
+   * Event this one copies for display in another local calendar (#3000). The
+   * original keeps the meeting's routine triggers; set only at creation.
+   */
+  readonly originEventId?: string;
 };
 
-export type UpdateEventParams = Partial<Omit<CreateEventParams, 'calendarId'>> & {
+export type UpdateEventParams = Partial<Omit<CreateEventParams, 'calendarId' | 'originEventId'>> & {
   readonly status?: 'active' | 'cancelled';
   readonly metadata?: CalendarEventMetadata | null;
 };
