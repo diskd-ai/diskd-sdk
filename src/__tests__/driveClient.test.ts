@@ -641,6 +641,7 @@ test('drive.tools.readFile sends paths/tools/read and decodes parts', async () =
             },
           ],
           total_parts: 3,
+          etag: 'etag-read',
           parts_offset: 0,
           next_offset: 1,
           eof: false,
@@ -705,7 +706,7 @@ test('drive.tools.writeFile sends paths/tools/write with path and content', asyn
     return new Response(
       JSON.stringify({
         jsonrpc: '2.0',
-        result: { success: true, inode: 'inode-abc', path: '/docs/readme.md' },
+        result: { success: true, inode: 'inode-abc', path: '/docs/readme.md', etag: 'etag-1' },
         id: 1,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -1650,7 +1651,7 @@ test('drive.tools.excelWrite sends paths/tools/excel-write and returns write res
     return new Response(
       JSON.stringify({
         jsonrpc: '2.0',
-        result: { inode: 'inode-50', path: '/reports/q4.xlsx' },
+        result: { inode: 'inode-50', path: '/reports/q4.xlsx', etag: 'etag-x' },
         id: 1,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -1707,7 +1708,7 @@ test('drive.tools.excelWrite omits sheet_name when not provided', async () => {
     return new Response(
       JSON.stringify({
         jsonrpc: '2.0',
-        result: { inode: 'inode-51', path: '/data.xlsx' },
+        result: { inode: 'inode-51', path: '/data.xlsx', etag: 'etag-y' },
         id: 1,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -1751,7 +1752,7 @@ test('drive.tools.applyPatch sends paths/tools/apply-patch with path and patch',
     return new Response(
       JSON.stringify({
         jsonrpc: '2.0',
-        result: { success: true, inode: 'inode-xyz', path: '/docs/readme.md' },
+        result: { success: true, inode: 'inode-xyz', path: '/docs/readme.md', etag: 'etag-2' },
         id: 1,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }

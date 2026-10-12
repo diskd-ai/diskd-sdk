@@ -216,21 +216,29 @@ export type DriveReadFileResult = {
   readonly partsOffset?: number;
   readonly nextOffset?: number;
   readonly eof?: boolean;
+  /** The file version this read saw (null when the file has none); pass it as expectedEtag to write or patch only if unchanged (#3248). */
+  readonly etag: string | null;
 };
 
+/** expectedEtag: write only if the file still has this version; otherwise CONFLICT, reason STALE_ETAG (#3248). */
 export type DriveToolsWriteFileParams = {
   readonly path: string;
   readonly content: string;
+  readonly expectedEtag?: string;
 };
 
+/** expectedEtag: patch only if the file still has this version; otherwise CONFLICT, reason STALE_ETAG (#3248). */
 export type DriveToolsApplyPatchParams = {
   readonly path: string;
   readonly patch: string;
+  readonly expectedEtag?: string;
 };
 
+/** etag: the file version after this write (#3248). */
 export type DriveToolsWriteResult = {
   readonly id: string;
   readonly path: string;
+  readonly etag: string | null;
 };
 
 // -- Tools: line files whose appends are queued through Drive's write-ahead log (ADR-036) --
@@ -271,6 +279,8 @@ export type DriveToolsReadLinesParams = {
 export type DriveToolsReadLinesResult = {
   readonly lines: readonly string[];
   readonly nextCursor: string | null;
+  /** The file version this read saw, null when the file has none (#3248). */
+  readonly etag: string | null;
 };
 
 // -- Upload file (convenience) --

@@ -234,6 +234,14 @@ const decodeReadFilePart = (o: unknown): DriveReadFilePart => {
   };
 };
 
+/** A file etag: a non-empty string, or null for a file that has none (#3248); anything else is invalid. */
+const etagOf = (r: Record<string, unknown>): string | null => {
+  const value = r.etag;
+  if (value === null) return null;
+  if (typeof value === 'string' && value.length > 0) return value;
+  throw new Error("Invalid Drive response: 'etag' must be a non-empty string or null");
+};
+
 const decodeReadFileResult = (o: unknown): DriveReadFileResult => {
   const r = raw(o);
   const arr = r.parts;
@@ -244,6 +252,7 @@ const decodeReadFileResult = (o: unknown): DriveReadFileResult => {
     partsOffset: num(r, 'parts_offset') ?? num(r, 'partsOffset') ?? undefined,
     nextOffset: num(r, 'next_offset') ?? num(r, 'nextOffset') ?? undefined,
     eof: boolOptional(r, 'eof'),
+    etag: etagOf(r),
   };
 };
 
@@ -252,6 +261,7 @@ const decodeWriteResult = (o: unknown): DriveToolsWriteResult => {
   return {
     id: strRequired(r, 'inode'),
     path: strRequired(r, 'path'),
+    etag: etagOf(r),
   };
 };
 
@@ -286,7 +296,7 @@ const decodeReadLinesResult = (o: unknown): DriveToolsReadLinesResult => {
   if (next !== null && typeof next !== 'string') {
     throw new Error('Invalid Drive response: next_cursor must be a string or null');
   }
-  return { lines: [...r.lines], nextCursor: next };
+  return { lines: [...r.lines], nextCursor: next, etag: etagOf(r) };
 };
 
 // -- Typed tools decoders --
@@ -909,6 +919,7 @@ export const createDriveClient = (params: {
         const result = await call('paths/tools/write', {
           path: p.path,
           content: p.content,
+          ...optional('expected_etag', p.expectedEtag),
         });
         return decodeWriteResult(result);
       },
@@ -917,6 +928,7 @@ export const createDriveClient = (params: {
         const result = await call('paths/tools/apply-patch', {
           path: p.path,
           patch: p.patch,
+          ...optional('expected_etag', p.expectedEtag),
         });
         return decodeWriteResult(result);
       },

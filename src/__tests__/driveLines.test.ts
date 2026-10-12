@@ -110,8 +110,8 @@ test('appendLines refuses a response with an unknown line status', async () => {
 test('readLines pages with cursor and limit and decodes next_cursor, null at end of file', async () => {
   await withDrive(
     [
-      { jsonrpc: '2.0', id: 1, result: { lines: ['a', 'b'], next_cursor: '2' } },
-      { jsonrpc: '2.0', id: 2, result: { lines: ['c'], next_cursor: null } },
+      { jsonrpc: '2.0', id: 1, result: { lines: ['a', 'b'], next_cursor: '2', etag: 'e-1' } },
+      { jsonrpc: '2.0', id: 2, result: { lines: ['c'], next_cursor: null, etag: 'e-1' } },
     ],
     async (drive, calls) => {
       const first = await drive.tools.readLines({ path: '/m.jsonl', limit: 2 });
@@ -123,8 +123,8 @@ test('readLines pages with cursor and limit and decodes next_cursor, null at end
       assert.deepEqual(sent(calls[0]).params, { path: '/m.jsonl', limit: 2 });
       assert.equal(sent(calls[0]).method, 'paths/tools/read-lines');
       assert.deepEqual(sent(calls[1]).params, { path: '/m.jsonl', limit: 2, cursor: '2' });
-      assert.deepEqual(first, { lines: ['a', 'b'], nextCursor: '2' });
-      assert.deepEqual(second, { lines: ['c'], nextCursor: null });
+      assert.deepEqual(first, { lines: ['a', 'b'], nextCursor: '2', etag: 'e-1' });
+      assert.deepEqual(second, { lines: ['c'], nextCursor: null, etag: 'e-1' });
     }
   );
 });
