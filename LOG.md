@@ -1,5 +1,20 @@
 # LOG
 
+## 2026-10-22
+
+- `BUG enabling:dev/platform-api/drive` (#3526 review): route the existing
+  `diskd.os.drive(...).crontab` and `.session` subclients through
+  `/v1/platform/crontab/api/v1` and `/v1/platform/sessions/api/v1` by default.
+  Motivation: the gateway's per-module RPC allowlists reject these methods
+  on the shared Drive route. Explicit `url` overrides remain authoritative
+  for internal/custom endpoints; public SDK signatures, auth headers, RPC
+  payloads, request IDs and Drive database routing stay unchanged.
+  Verification: four default-route regressions first failed with HTTP 403;
+  all 58 affected Node tests, eight Bun routing tests, TypeScript build and
+  changed-file Biome checks pass. The gateway transition for installed SDK
+  versions is tracked in apis-service; package 7.8.0 remains unchanged and
+  already published. No package release or deployed SDK acceptance claimed.
+
 ## 2026-10-11
 
 - `enabling:dev/platform-api/drive` (ADR-036): `drive.tools.appendLines` sends

@@ -597,22 +597,29 @@ export const createDriveClient = (params: {
     : `${resolveDiskdGatewayUrl('os/drive')}/api/v1`;
   let nextId = 1;
 
-  const call = async (method: string, rpcParams: unknown): Promise<unknown> => {
-    const id = nextId;
-    nextId += 1;
+  const createCall =
+    (url: string) =>
+    async (method: string, rpcParams: unknown): Promise<unknown> => {
+      const id = nextId;
+      nextId += 1;
 
-    if (params.auth.getRequestHeaders) {
-      const headers = await params.auth.getRequestHeaders();
-      return jsonRpcCall({ url: rpcUrl, headers, method, rpcParams, id });
-    }
+      if (params.auth.getRequestHeaders) {
+        const headers = await params.auth.getRequestHeaders();
+        return jsonRpcCall({ url, headers, method, rpcParams, id });
+      }
 
-    const bearerToken = await params.auth.getAccessToken();
-    return jsonRpcCall({ url: rpcUrl, bearerToken, method, rpcParams, id });
-  };
+      const bearerToken = await params.auth.getAccessToken();
+      return jsonRpcCall({ url, bearerToken, method, rpcParams, id });
+    };
 
+  const call = createCall(rpcUrl);
   const db = createDriveDbClient({ call });
-  const crontab = createDriveCrontabClient({ call });
-  const sessionRpc = createDriveSessionClient({ call });
+  const crontab = createDriveCrontabClient({
+    call: createCall(params.url ? rpcUrl : `${resolveDiskdGatewayUrl('platform/crontab')}/api/v1`),
+  });
+  const sessionRpc = createDriveSessionClient({
+    call: createCall(params.url ? rpcUrl : `${resolveDiskdGatewayUrl('platform/sessions')}/api/v1`),
+  });
   const session = createDriveSessionManager({ rpc: sessionRpc });
 
   return {

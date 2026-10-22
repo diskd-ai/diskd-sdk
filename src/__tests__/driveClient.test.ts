@@ -232,7 +232,9 @@ test('drive.create forwards file_id for file-link creation', async () => {
   }
 });
 
-test('drive.crontab.getStatus uses the drive JSON-RPC endpoint', async () => {
+/* REQ-DRIVE-GATEWAY-004: The Drive crontab convenience client uses its dedicated
+ * gateway route while preserving the scheduler response and scope payload. */
+test('drive.crontab.getStatus uses the crontab JSON-RPC endpoint', async () => {
   process.env.APIS_BASE_URL = 'https://apis.example';
 
   const calls: FetchCall[] = [];
@@ -280,7 +282,7 @@ test('drive.crontab.getStatus uses the drive JSON-RPC endpoint', async () => {
       nextRunAt: null,
       updatedAt: '2026-03-13T10:00:00Z',
     });
-    assert.equal(calls[0]?.url, 'https://apis.example/v1/os/drive/api/v1');
+    assert.equal(calls[0]?.url, 'https://apis.example/v1/platform/crontab/api/v1');
     assert.ok(String(calls[0]?.init?.body).includes('"method":"drive/crontab/get-status"'));
     assert.ok(String(calls[0]?.init?.body).includes('"scope_type":"workspace"'));
   } finally {
