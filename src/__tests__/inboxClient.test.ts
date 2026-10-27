@@ -1,3 +1,4 @@
+/* REQ-MAILBOX-SDK-INBOX-001: Inbox operations retain the returned mailbox identity verbatim; provider mutation selectors remain separately sourced from persisted payloads. */
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { AuthModule } from '../auth/types.js';
@@ -86,7 +87,7 @@ test('platform.inbox.listAccounts excludes the Drive review mailbox', async () =
       return rpc(request.id, {
         mailboxes: [
           {
-            mailbox_id: 'exchange-google-personal',
+            mailbox_id: 'owner@example.com',
             display_name: 'Personal',
             metadata: {
               connectorAccountId: 'google__personal',
@@ -118,11 +119,11 @@ test('platform.inbox.listAccounts excludes the Drive review mailbox', async () =
       const result = await inbox.listAccounts();
 
       assert.deepEqual(result, {
-        accounts: ['exchange-google-personal'],
+        accounts: ['owner@example.com'],
         items: [
           {
             status: 'searchable',
-            account: 'exchange-google-personal',
+            account: 'owner@example.com',
             connectorAccountId: 'google__personal',
             email: 'owner@example.com',
             displayName: 'Personal',
@@ -141,16 +142,16 @@ test('platform.inbox.listAccounts validates explicit mailbox email metadata', as
       return rpc(request.id, {
         mailboxes: [
           {
-            mailbox_id: 'exchange-imap-missing',
+            mailbox_id: 'missing@example.com',
             display_name: 'Missing address',
-            metadata: {},
+            metadata: { connectorAccountId: 'imap__missing' },
             db_inode: null,
             record_count: 0,
             size_bytes: 0,
             updated_at: '2026-08-05T10:00:00.000Z',
           },
           {
-            mailbox_id: 'exchange-imap-invalid',
+            mailbox_id: 'invalid@example.com',
             display_name: 'Invalid address',
             metadata: { email: 'not-an-address' },
             db_inode: null,
@@ -171,17 +172,17 @@ test('platform.inbox.listAccounts validates explicit mailbox email metadata', as
       const result = await inbox.listAccounts();
 
       assert.deepEqual(result, {
-        accounts: ['exchange-imap-invalid', 'exchange-imap-missing'],
+        accounts: ['invalid@example.com', 'missing@example.com'],
         items: [
           {
             status: 'unavailable',
-            account: 'exchange-imap-invalid',
+            account: 'invalid@example.com',
             displayName: 'Invalid address',
             reason: 'invalid-email-metadata',
           },
           {
             status: 'unavailable',
-            account: 'exchange-imap-missing',
+            account: 'missing@example.com',
             displayName: 'Missing address',
             reason: 'missing-email-metadata',
           },
@@ -222,9 +223,7 @@ test('platform.inbox.read hydrates unloaded Exchange body and rereads messagesSt
         return Response.json({
           status: 'succeeded',
           result: {
-            loaded: [
-              { mailboxId: 'exchange-google-personal', folderId: 'INBOX', externalId: '14:42' },
-            ],
+            loaded: [{ mailboxId: 'owner@example.com', folderId: 'INBOX', externalId: '14:42' }],
             skipped: [],
             failedRetryable: [],
             failedPermanent: [],
@@ -243,7 +242,7 @@ test('platform.inbox.read hydrates unloaded Exchange body and rereads messagesSt
         },
       });
 
-      const result = await inbox.read({ account: 'google__personal', messageId: '14:42' });
+      const result = await inbox.read({ account: 'owner@example.com', messageId: '14:42' });
 
       assert.equal(result.messageId, '14:42');
       assert.equal(result.bodyText, 'Hydrated body');
@@ -262,9 +261,7 @@ test('platform.inbox.read hydrates unloaded Exchange body and rereads messagesSt
       const hydrateCall = calls.find((call) => call.url.endsWith('/commands'));
       assert.deepEqual(body(hydrateCall?.init), {
         operation: 'hydrate_bodies',
-        messages: [
-          { mailboxId: 'exchange-google-personal', folderId: 'INBOX', externalId: '14:42' },
-        ],
+        messages: [{ mailboxId: 'owner@example.com', folderId: 'INBOX', externalId: '14:42' }],
         maxMessages: 1,
       });
       assert(calls.findIndex((call) => call.url.endsWith('/jobs/body-job')) < calls.length - 1);
@@ -303,7 +300,7 @@ test('platform.inbox.read rejects unloaded stored-only bodies without Email MCP 
       });
 
       await assert.rejects(
-        () => inbox.read({ account: 'google__personal', messageId: '14:42' }),
+        () => inbox.read({ account: 'owner@example.com', messageId: '14:42' }),
         /Inbox body is not stored in Drive messagebox: 14:42/
       );
       assert.deepEqual(
@@ -332,7 +329,7 @@ test('platform.inbox.read returns loaded stored-only bodies directly from Drive'
       });
 
       const result = await inbox.read({
-        account: 'google__personal',
+        account: 'owner@example.com',
         folderId: 'INBOX',
         messageId: '14:42',
       });
@@ -397,7 +394,7 @@ test('platform.inbox.read returns synthesized attachmentId for unloaded Exchange
       });
 
       const result = await inbox.read({
-        account: 'mail__personal',
+        account: 'mail@example.com',
         folderId: 'INBOX',
         messageId: '1728649431:864',
       });
@@ -428,7 +425,7 @@ test('platform.inbox.read resolves Exchange messages by account plus UID', async
       }
       if (request.method === 'messages_store/get') {
         assert.deepEqual(request.params, {
-          mailbox_id: 'exchange-mail-personal',
+          mailbox_id: 'mail@example.com',
           folder_id: 'INBOX',
           external_id: '864',
         });
@@ -436,7 +433,7 @@ test('platform.inbox.read resolves Exchange messages by account plus UID', async
       }
       if (request.method === 'messages_store/list') {
         assert.deepEqual(request.params, {
-          mailbox_id: 'exchange-mail-personal',
+          mailbox_id: 'mail@example.com',
           folder_id: 'INBOX',
           limit: 100,
         });
@@ -461,7 +458,7 @@ test('platform.inbox.read resolves Exchange messages by account plus UID', async
         emailUrl: 'http://email',
       });
 
-      const result = await inbox.read({ account: 'mail__personal', messageId: '864' });
+      const result = await inbox.read({ account: 'mail@example.com', messageId: '864' });
 
       assert.equal(result.messageId, '1728649431:864');
       assert.equal(result.uid, 864);
@@ -524,7 +521,7 @@ test('platform.inbox.search forwards Gmail-style criteria to Drive', async () =>
       const request = body(init);
       if (request.method === 'messages_store/search') {
         assert.deepEqual(request.params, {
-          mailbox_id: 'exchange-google-personal',
+          mailbox_id: 'owner@example.com',
           folder_id: 'INBOX',
           query: 'invoice from:gmail.com after:2025-05-17',
           page_size: 20,
@@ -563,7 +560,7 @@ test('platform.inbox.search forwards Gmail-style criteria to Drive', async () =>
       });
 
       const result = await inbox.search({
-        account: 'google__personal',
+        account: 'owner@example.com',
         folderId: 'INBOX',
         query: 'invoice from:gmail.com after:2025-05-17',
         limit: 10,
@@ -596,7 +593,7 @@ test('platform.inbox.search forwards label criteria on every scoped Drive page',
       assert.equal(request.method, 'messages_store/search');
       const params = request.params as { readonly cursor?: string };
       assert.deepEqual(request.params, {
-        mailbox_id: 'exchange-google-personal',
+        mailbox_id: 'owner@example.com',
         folder_id: 'INBOX',
         query: 'from:alice@example.com label:"Needs Review"',
         page_size: 7,
@@ -623,7 +620,7 @@ test('platform.inbox.search forwards label criteria on every scoped Drive page',
         contentMode: 'stored-only',
       });
       const result = await inbox.search({
-        account: 'google__personal',
+        account: 'owner@example.com',
         query: 'folder:INBOX recursive:false from:alice@example.com label:"Needs Review"',
         limit: 1,
         pageSize: 7,
@@ -686,7 +683,7 @@ test('platform.inbox.search returns Drive body matches without getMessage fan-ou
       });
 
       const result = await inbox.search({
-        account: 'exchange-google-aileron',
+        account: 'ceo@aileron-tech.fr',
         folderId: 'INBOX',
         query: 'Luna',
         limit: 20,
@@ -722,7 +719,7 @@ test('platform.inbox.search does not hydrate candidates outside Drive search', a
       });
 
       const result = await inbox.search({
-        account: 'exchange-google-aileron',
+        account: 'ceo@aileron-tech.fr',
         folderId: 'INBOX',
         query: 'Luna',
         limit: 20,
@@ -757,7 +754,7 @@ test('platform.inbox.search surfaces unsupported Gmail-style operators from Driv
       await assert.rejects(
         () =>
           inbox.search({
-            account: 'google__personal',
+            account: 'owner@example.com',
             folderId: 'INBOX',
             query: 'category:promotions',
             limit: 10,
@@ -816,7 +813,7 @@ test('platform.inbox.search follows Drive search pages to reach older mail', asy
       });
 
       const result = await inbox.search({
-        account: 'google__personal',
+        account: 'owner@example.com',
         folderId: 'INBOX',
         query: 'to:estelle',
         limit: 10,
@@ -832,14 +829,14 @@ test('platform.inbox.search follows Drive search pages to reach older mail', asy
       );
       assert.equal(searchCalls.length, 2);
       assert.deepEqual(body(searchCalls[0]?.init).params, {
-        mailbox_id: 'exchange-google-personal',
+        mailbox_id: 'owner@example.com',
         folder_id: 'INBOX',
         query: 'to:estelle',
         page_size: 7,
         order_by: 'message_date_desc',
       });
       assert.deepEqual(body(searchCalls[1]?.init).params, {
-        mailbox_id: 'exchange-google-personal',
+        mailbox_id: 'owner@example.com',
         folder_id: 'INBOX',
         query: 'to:estelle',
         page_size: 7,
@@ -883,7 +880,7 @@ test('platform.inbox.search forwards AbortSignal through folder discovery and Dr
       });
 
       await inbox.search(
-        { account: 'google__personal', query: 'Luna', limit: 1, pageSize: 20 },
+        { account: 'owner@example.com', query: 'Luna', limit: 1, pageSize: 20 },
         controller.signal
       );
 
@@ -980,7 +977,7 @@ test('platform.inbox.search deduplicates and orders matches across folders', asy
       });
 
       const result = await inbox.search({
-        account: 'google__personal',
+        account: 'owner@example.com',
         query: 'after:2026-07-29 before:2026-08-06',
         limit: 10,
       });
@@ -1009,7 +1006,7 @@ test('platform.inbox.search selects the oldest distinct senders before limit', a
         throw new Error(`unexpected method ${String(request.method)}`);
       }
       assert.deepEqual(request.params, {
-        mailbox_id: 'exchange-google-personal',
+        mailbox_id: 'owner@example.com',
         folder_id: 'INBOX',
         query: 'after:2023-01-01 before:2023-02-01',
         page_size: 100,
@@ -1059,7 +1056,7 @@ test('platform.inbox.search selects the oldest distinct senders before limit', a
       });
 
       const result = await inbox.search({
-        account: 'google__personal',
+        account: 'owner@example.com',
         folderId: 'INBOX',
         query: 'after:2023-01-01 before:2023-02-01',
         limit: 3,
@@ -1143,7 +1140,7 @@ test('platform.inbox.search resolves a recursive folder query without matching p
       });
 
       const result = await inbox.search({
-        account: 'google__personal',
+        account: 'owner@example.com',
         query: 'folder:Aix subject:invoice',
         limit: 10,
       });
@@ -1196,7 +1193,7 @@ test('platform.inbox.search supports folder-only non-recursive queries', async (
       }
       if (request.method === 'messages_store/list') {
         assert.deepEqual(request.params, {
-          mailbox_id: 'exchange-google-personal',
+          mailbox_id: 'owner@example.com',
           folder_id: 'Aix',
           limit: 20,
           order_by: 'message_date_desc',
@@ -1229,7 +1226,7 @@ test('platform.inbox.search supports folder-only non-recursive queries', async (
       });
 
       const result = await inbox.search({
-        account: 'google__personal',
+        account: 'owner@example.com',
         query: 'folder:Aix recursive:false',
         limit: 10,
       });
@@ -1283,7 +1280,7 @@ test('platform.inbox.search rejects ambiguous folder display names before messag
       await assert.rejects(
         () =>
           inbox.search({
-            account: 'google__personal',
+            account: 'owner@example.com',
             query: 'folder:Aix recursive:false',
           }),
         /INBOX_FOLDER_AMBIGUOUS/
@@ -1321,7 +1318,7 @@ test('platform.inbox.search rejects missing folder selectors before message I/O'
       });
 
       await assert.rejects(
-        () => inbox.search({ account: 'google__personal', query: 'folder:Aix' }),
+        () => inbox.search({ account: 'owner@example.com', query: 'folder:Aix' }),
         /INBOX_FOLDER_NOT_FOUND/
       );
       assert.equal(calls.length, 1);
@@ -1357,7 +1354,7 @@ test('platform.inbox.search rejects recursive folder selection without delimiter
       });
 
       await assert.rejects(
-        () => inbox.search({ account: 'google__personal', query: 'folder:Aix' }),
+        () => inbox.search({ account: 'owner@example.com', query: 'folder:Aix' }),
         /INBOX_FOLDER_DELIMITER_MISSING/
       );
     }
@@ -1409,7 +1406,7 @@ test('platform.inbox.search traverses 6500 messages with default Drive pages', a
       });
 
       const result = await inbox.search({
-        account: 'google__personal',
+        account: 'owner@example.com',
         folderId: 'INBOX',
         query: 'Luna',
         limit: 1,
@@ -1442,7 +1439,7 @@ test('platform.inbox.search validates pageSize bounds', async () => {
       await assert.rejects(
         () =>
           inbox.search({
-            account: 'google__personal',
+            account: 'owner@example.com',
             folderId: 'INBOX',
             query: 'Luna',
             pageSize: 101,
@@ -1489,7 +1486,7 @@ test('platform.inbox.search stops paging after reaching result limit', async () 
       });
 
       const result = await inbox.search({
-        account: 'google__personal',
+        account: 'owner@example.com',
         folderId: 'INBOX',
         query: 'Luna',
         limit: 1,
@@ -1606,7 +1603,11 @@ const withMarkReadFixture = async (
 for (const isRead of [true, false]) {
   test(`platform.inbox.markRead persists provider state ${isRead} and preserves message content`, async () => {
     await withMarkReadFixture({ isRead, byUid: true }, async (inbox, calls) => {
-      const result = await inbox.markRead({ account: 'google__personal', messageId: '42', isRead });
+      const result = await inbox.markRead({
+        account: 'owner@example.com',
+        messageId: '42',
+        isRead,
+      });
       assert.equal(result.messageId, '14:42');
       assert.equal(result.isRead, isRead);
       assert.equal(result.isFlagged, true);
@@ -1623,7 +1624,7 @@ for (const mode of ['provider-error', 'mirror-error', 'unchanged-mirror', 'stale
     await withMarkReadFixture({ isRead: true, mode }, async (inbox) => {
       await assert.rejects(
         inbox.markRead({
-          account: 'google__personal',
+          account: 'owner@example.com',
           folderId: 'INBOX',
           messageId: '14:42',
           isRead: true,
@@ -1648,7 +1649,7 @@ test('platform.inbox.markRead rejects mutation without a provider boundary', asy
       });
       await assert.rejects(
         inbox.markRead({
-          account: 'google__personal',
+          account: 'owner@example.com',
           folderId: 'INBOX',
           messageId: '14:42',
           isRead: true,
@@ -1740,7 +1741,7 @@ test('platform.inbox.saveAttachment uses synthesized attachmentId for old unload
         assert.deepEqual(request, {
           operation: 'hydrate_attachment',
           ...{
-            mailboxId: 'exchange-mail-personal',
+            mailboxId: 'mail@example.com',
             folderId: 'INBOX',
             externalId: '1728649431:864',
             attachmentId: '1728649431:864:2',
@@ -1753,7 +1754,7 @@ test('platform.inbox.saveAttachment uses synthesized attachmentId for old unload
           status: 'succeeded',
           result: {
             ...{
-              mailboxId: 'exchange-mail-personal',
+              mailboxId: 'mail@example.com',
               folderId: 'INBOX',
               externalId: '1728649431:864',
               attachmentId: '1728649431:864:2',
@@ -1764,7 +1765,7 @@ test('platform.inbox.saveAttachment uses synthesized attachmentId for old unload
         });
       if (request.method === 'messages_store/attachment/save-to-drive') {
         assert.deepEqual(request.params, {
-          mailbox_id: 'exchange-mail-personal',
+          mailbox_id: 'mail@example.com',
           folder_id: 'INBOX',
           external_id: '1728649431:864',
           attachment_id: '1728649431:864:2',
@@ -1795,7 +1796,7 @@ test('platform.inbox.saveAttachment uses synthesized attachmentId for old unload
       });
 
       const result = await inbox.saveAttachment({
-        account: 'mail__personal',
+        account: 'mail@example.com',
         folderId: 'INBOX',
         messageId: '1728649431:864',
         attachmentId: '1728649431:864:2',
@@ -1829,7 +1830,7 @@ test('platform.inbox.saveAttachment saves Exchange attachment by account, messag
       }
       if (request.method === 'messages_store/attachment/save-to-drive') {
         assert.deepEqual(request.params, {
-          mailbox_id: 'exchange-google-personal',
+          mailbox_id: 'owner@example.com',
           folder_id: 'INBOX',
           external_id: '14:42',
           attachment_id: 'part-1',
@@ -1860,7 +1861,7 @@ test('platform.inbox.saveAttachment saves Exchange attachment by account, messag
       });
 
       const result = await inbox.saveAttachment({
-        account: 'exchange-google-personal',
+        account: 'owner@example.com',
         folderId: 'INBOX',
         messageId: '14:42',
         attachmentId: 'part-1',
@@ -1907,7 +1908,7 @@ test('platform.inbox.saveAttachment saves Exchange attachment by account plus UI
       }
       if (request.method === 'messages_store/get') {
         assert.deepEqual(request.params, {
-          mailbox_id: 'exchange-mail-personal',
+          mailbox_id: 'mail@example.com',
           folder_id: 'INBOX',
           external_id: '864',
         });
@@ -1915,7 +1916,7 @@ test('platform.inbox.saveAttachment saves Exchange attachment by account plus UI
       }
       if (request.method === 'messages_store/list') {
         assert.deepEqual(request.params, {
-          mailbox_id: 'exchange-mail-personal',
+          mailbox_id: 'mail@example.com',
           folder_id: 'INBOX',
           limit: 100,
         });
@@ -1947,7 +1948,7 @@ test('platform.inbox.saveAttachment saves Exchange attachment by account plus UI
       }
       if (request.method === 'messages_store/attachment/save-to-drive') {
         assert.deepEqual(request.params, {
-          mailbox_id: 'exchange-mail-personal',
+          mailbox_id: 'mail@example.com',
           folder_id: 'INBOX',
           external_id: '1728649431:864',
           attachment_id: 'part-1',
@@ -1978,7 +1979,7 @@ test('platform.inbox.saveAttachment saves Exchange attachment by account plus UI
       });
 
       const result = await inbox.saveAttachment({
-        account: 'mail__personal',
+        account: 'mail@example.com',
         messageId: '864',
         filename: 'invoice.pdf',
         targetPath: '/Projects/p/docs/invoice.pdf',
@@ -2055,7 +2056,7 @@ test('platform.inbox.saveAttachment does not fallback to legacy when Exchange ta
       await assert.rejects(
         () =>
           inbox.saveAttachment({
-            account: 'mail__personal',
+            account: 'mail@example.com',
             messageId: '14:42',
             filename: 'invoice.pdf',
             targetPath: '/Projects/p/missing/invoice.pdf',
@@ -2095,7 +2096,7 @@ test('platform.inbox.saveAttachment hydrates unloaded Exchange attachment before
         assert.deepEqual(request, {
           operation: 'hydrate_attachment',
           ...{
-            mailboxId: 'exchange-google-personal',
+            mailboxId: 'owner@example.com',
             folderId: 'INBOX',
             externalId: '14:42',
             attachmentId: 'part-1',
@@ -2108,7 +2109,7 @@ test('platform.inbox.saveAttachment hydrates unloaded Exchange attachment before
           status: 'succeeded',
           result: {
             ...{
-              mailboxId: 'exchange-google-personal',
+              mailboxId: 'owner@example.com',
               folderId: 'INBOX',
               externalId: '14:42',
               attachmentId: 'part-1',
@@ -2143,7 +2144,7 @@ test('platform.inbox.saveAttachment hydrates unloaded Exchange attachment before
       });
 
       await inbox.saveAttachment({
-        account: 'exchange-google-personal',
+        account: 'owner@example.com',
         folderId: 'INBOX',
         messageId: '14:42',
         attachmentId: 'part-1',
@@ -2175,7 +2176,7 @@ test('platform.inbox.saveAttachment rejects unloaded stored-only attachments wit
       await assert.rejects(
         () =>
           inbox.saveAttachment({
-            account: 'exchange-google-personal',
+            account: 'owner@example.com',
             folderId: 'INBOX',
             messageId: '14:42',
             attachmentId: 'part-1',
@@ -2230,3 +2231,174 @@ test('platform.inbox.saveAttachment does not fallback to legacy Drive mail stora
     }
   );
 });
+
+const mailboxEmails = [
+  'ceo@aileron-tech.fr',
+  'Work+Inbox/Notes@Example.com',
+  "!#$%&'*+-/=?^_`{|}~@example.com",
+  '"first last"@[IPv6:2001:db8::1]',
+  '"first@last"@example.com',
+];
+
+/* REQ-MAILBOX-SDK-INBOX-002: Inbox discovery uses explicit metadata and preserves every email character without slug-prefix filtering. */
+for (const email of mailboxEmails) {
+  test(`platform.inbox.listAccounts preserves email identity ${email}`, async () => {
+    await withFetchMock(
+      (_url, init) => {
+        const request = body(init);
+        return rpc(request.id, {
+          mailboxes: [
+            {
+              mailbox_id: email,
+              display_name: email,
+              metadata: { connectorAccountId: 'google__owner', email },
+              db_inode: '',
+              record_count: 1,
+              size_bytes: 1,
+              updated_at: '2026-10-27T00:00:00Z',
+            },
+          ],
+        });
+      },
+      async () => {
+        const inbox = diskd.platform.inbox({
+          auth: makeAuth(),
+          driveUrl: 'http://drive/api/v1',
+          contentMode: 'stored-only',
+        });
+        assert.deepEqual(await inbox.listAccounts(), {
+          accounts: [email],
+          items: [
+            {
+              status: 'searchable',
+              account: email,
+              email,
+              connectorAccountId: 'google__owner',
+              displayName: email,
+            },
+          ],
+        });
+      }
+    );
+  });
+}
+
+/* REQ-MAILBOX-SDK-INBOX-003: Reads, folder discovery, search, lists and flags send the exact email locator and return it for follow-up operations. */
+for (const account of mailboxEmails) {
+  test(`platform.inbox transports exact mailbox identity ${account}`, async () => {
+    const folderId = '[Gmail]/Sent Mail';
+    let flagged = false;
+    const source = messageRow('loaded', 'Stored body').message;
+    await withFetchMock(
+      (_url, init) => {
+        const request = body(init);
+        const params = request.params;
+        assert(params !== null && typeof params === 'object' && 'mailbox_id' in params);
+        assert.equal(params.mailbox_id, account);
+        if (request.method === 'messages_store/folder/list') {
+          return rpc(request.id, {
+            folders: [
+              {
+                folder_id: folderId,
+                display_name: 'Sent Mail',
+                metadata: { delimiter: '/' },
+                message_count: 1,
+                updated_at: source.updated_at,
+              },
+            ],
+          });
+        }
+        assert('folder_id' in params);
+        assert.equal(params.folder_id, folderId);
+        const stored = {
+          ...source,
+          payload: { ...source.payload, mailbox: folderId },
+          platform_flags: flagged ? ['flagged'] : [],
+        };
+        if (request.method === 'messages_store/get') return rpc(request.id, { message: stored });
+        if (request.method === 'messages_store/list' || request.method === 'messages_store/search')
+          return rpc(request.id, { items: [stored], next_cursor: null });
+        if (request.method === 'messages_store/set-attributes') {
+          flagged = true;
+          return rpc(request.id, {
+            external_id: source.external_id,
+            platform_flags: ['flagged'],
+            platform_labels: [],
+            platform_revision: 1,
+            changed: true,
+          });
+        }
+        throw new Error(`Unexpected method ${String(request.method)}`);
+      },
+      async () => {
+        const inbox = diskd.platform.inbox({
+          auth: makeAuth(),
+          driveUrl: 'http://drive/api/v1',
+          contentMode: 'stored-only',
+        });
+        const read = await inbox.read({ account, messageId: '14:42' });
+        assert.equal(read.account, account);
+        assert.equal(read.folderId, folderId);
+        const listed = await inbox.list({ account: read.account, folderId });
+        assert.equal(listed.items[0]?.account, account);
+        const searched = await inbox.search({ account: read.account, query: 'Hello' });
+        assert.equal(searched.results[0]?.account, account);
+        const marked = await inbox.setFlagged({
+          account: read.account,
+          messageId: read.messageId,
+          folderId,
+          flagged: true,
+        });
+        assert.equal(marked.account, account);
+        assert.equal(marked.isFlagged, true);
+      }
+    );
+  });
+}
+
+/* REQ-MAILBOX-SDK-INBOX-004: Invalid metadata stays unavailable and identity is never repaired by trimming. */
+for (const email of [
+  'not-an-address',
+  'owner@alias@example.com',
+  ' owner@example.com ',
+  'owner\n@example.com',
+]) {
+  test(`platform.inbox keeps invalid email metadata unavailable ${JSON.stringify(email)}`, async () => {
+    await withFetchMock(
+      (_url, init) => {
+        const request = body(init);
+        return rpc(request.id, {
+          mailboxes: [
+            {
+              mailbox_id: 'owner@example.com',
+              display_name: 'Owner',
+              metadata: { connectorAccountId: 'mail__owner', email },
+              db_inode: '',
+              record_count: 0,
+              size_bytes: 0,
+              updated_at: '',
+            },
+          ],
+        });
+      },
+      async () => {
+        const inbox = diskd.platform.inbox({
+          auth: makeAuth(),
+          driveUrl: 'http://drive/api/v1',
+          contentMode: 'stored-only',
+        });
+        assert.deepEqual(await inbox.listAccounts(), {
+          accounts: ['owner@example.com'],
+          items: [
+            {
+              status: 'unavailable',
+              account: 'owner@example.com',
+              displayName: 'Owner',
+              reason: 'invalid-email-metadata',
+            },
+          ],
+        });
+      }
+    );
+  });
+}

@@ -699,13 +699,11 @@ export type MailboxScopedClient = {
  */
 export type MessagesStoreClient = {
   /**
-   * Allocate a new mailbox SQLite file at
-   * `/Mailboxes/<mailboxId>.mailbox`. `mailboxId` is a workspace-
-   * unique slug (`[a-z0-9-]{1,64}`). `metadata` is opaque JSON
-   * stashed on the underlying drive_databases record.
-   *
-   * The mailbox SQLite schema is bootstrapped lazily by
-   * {@link MailboxScopedClient.init}, not by this call.
+   * Allocate a segmented mailbox. `mailboxId` is a workspace-unique,
+   * lossless identifier (1-320 UTF-8 bytes of printable text). Email
+   * accounts use their exact email, including case and punctuation.
+   * Storage path encoding belongs to Drive; no extension is appended.
+   * `metadata` is opaque JSON stored with the mailbox.
    */
   readonly createMailbox: (params: CreateMailboxParams) => Promise<CreateMailboxResult>;
   /** Workspace-scoped mailbox enumeration. Read-only. */

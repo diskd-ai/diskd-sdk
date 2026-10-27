@@ -1,3 +1,4 @@
+/* REQ-MAILBOX-EMAIL-014: Platform attribute mutations retain exact mailbox IDs and provider payload selectors. */
 /**
  * Platform-owned flags and labels on Exchange mailbox messages (Redmine #3143 G1/G2).
  *
@@ -226,7 +227,7 @@ for (const flagged of [true, false]) {
     await withInboxFixture(
       {
         expectedParams: {
-          mailbox_id: 'exchange-contact',
+          mailbox_id: 'Contact+flags@example.test',
           folder_id: 'INBOX',
           external_id: '7:42',
           ...(flagged ? { flags_add: ['flagged'] } : { flags_remove: ['flagged'] }),
@@ -235,12 +236,13 @@ for (const flagged of [true, false]) {
       },
       async (inbox, calls) => {
         const email = await inbox.setFlagged({
-          account: 'contact',
+          account: 'Contact+flags@example.test',
           folderId: 'INBOX',
           messageId: '7:42',
           flagged,
         });
         assert.equal(email.isFlagged, flagged);
+        assert.equal(email.account, 'Contact+flags@example.test');
         /* REQ-SDK-FLAGCOLOR-002: a flagged message without a stored colour reads red; an unflagged one has no colour. */
         assert.equal(email.flagColor, flagged ? 'red' : null);
         assert.equal(email.messageId, '7:42');
@@ -255,7 +257,7 @@ test('platform.inbox.setFlagged with a colour writes the colour flag', async () 
   await withInboxFixture(
     {
       expectedParams: {
-        mailbox_id: 'exchange-contact',
+        mailbox_id: 'Contact+flags@example.test',
         folder_id: 'INBOX',
         external_id: '7:42',
         flags_add: ['color:blue'],
@@ -264,7 +266,7 @@ test('platform.inbox.setFlagged with a colour writes the colour flag', async () 
     },
     async (inbox) => {
       const email = await inbox.setFlagged({
-        account: 'contact',
+        account: 'Contact+flags@example.test',
         folderId: 'INBOX',
         messageId: '7:42',
         flagged: true,
@@ -290,7 +292,7 @@ test('platform.inbox.setFlagged rejects a colour with flagged false', async () =
       });
       await assert.rejects(
         inbox.setFlagged({
-          account: 'contact',
+          account: 'Contact+flags@example.test',
           folderId: 'INBOX',
           messageId: '7:42',
           flagged: false,
@@ -308,7 +310,7 @@ test('platform.inbox.setLabels writes platform labels and merges them for reads'
   await withInboxFixture(
     {
       expectedParams: {
-        mailbox_id: 'exchange-contact',
+        mailbox_id: 'Contact+flags@example.test',
         folder_id: 'INBOX',
         external_id: '7:42',
         labels_add: ['FMB'],
@@ -318,7 +320,7 @@ test('platform.inbox.setLabels writes platform labels and merges them for reads'
     },
     async (inbox) => {
       const email = await inbox.setLabels({
-        account: 'contact',
+        account: 'Contact+flags@example.test',
         folderId: 'INBOX',
         messageId: '7:42',
         add: ['FMB'],
@@ -337,5 +339,8 @@ test('platform.inbox.setLabels rejects an empty change', async () => {
     driveUrl: 'http://drive/api/v1',
     emailUrl: 'http://email',
   });
-  await assert.rejects(inbox.setLabels({ account: 'contact', messageId: '7:42' }), /add or remove/);
+  await assert.rejects(
+    inbox.setLabels({ account: 'Contact+flags@example.test', messageId: '7:42' }),
+    /add or remove/
+  );
 });

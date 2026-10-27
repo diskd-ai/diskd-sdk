@@ -68,6 +68,10 @@ const nonEmpty = (value: string | undefined): string | null => {
   return trimmed && trimmed.length > 0 ? trimmed : null;
 };
 
+/** Identity is validated for presence without rewriting its stored value. */
+const nonEmptyIdentity = (value: string | undefined): string | null =>
+  value !== undefined && value.trim().length > 0 ? value : null;
+
 /** Keep Inbox first while preserving the provider's remaining folder order. */
 const orderExchangeFolders = (folders: readonly FolderSummary[]): readonly FolderSummary[] => {
   const inbox = folders.find((folder) => folder.folderId === DEFAULT_EXCHANGE_FOLDER);
@@ -131,19 +135,28 @@ const resolveSearchPageSize = (pageSize: number | undefined): number => {
   return value;
 };
 
-const exchangeMailboxId = (account: string): string => {
-  const lower = account.toLowerCase();
-  const slug = lower.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  if (slug.length === 0) return 'exchange-default';
-  if (slug.startsWith('exchange-')) return slug.slice(0, 64);
-  return `exchange-${slug.slice(0, 55)}`;
-};
-
-/** Keep the Inbox account projection limited to mailboxes owned by Exchange ingestion. */
+/** Email ingestion declares its mailbox through metadata, independently of storage naming. */
 const isConnectedInboxMailbox = (mailbox: MailboxSummary): boolean =>
-  mailbox.mailboxId.startsWith('exchange-');
+  Object.hasOwn(mailbox.metadata, 'email') || Object.hasOwn(mailbox.metadata, 'connectorAccountId');
 
-const EMAIL_ADDRESS_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAILBOX_ID_CHARACTERS = /^[\u0020-\u007e\u00a0-\ud7ff\ue000-\u{10ffff}]+$/u;
+
+/** Validate metadata identity without restricting it to HTML email syntax or normalizing it. */
+const isEmailIdentity = (email: string): boolean => {
+  const separator = email.lastIndexOf('@');
+  const localPart = email.slice(0, separator);
+  const domain = email.slice(separator + 1);
+  const quotedLocalPart = localPart.startsWith('"') && localPart.endsWith('"');
+  return (
+    separator > 0 &&
+    separator < email.length - 1 &&
+    email === email.trim() &&
+    MAILBOX_ID_CHARACTERS.test(email) &&
+    new TextEncoder().encode(email).length <= 320 &&
+    !/\s/u.test(domain) &&
+    (quotedLocalPart || (!localPart.includes('@') && !/\s/u.test(localPart)))
+  );
+};
 
 /** Validate opaque Drive metadata at the typed Inbox projection boundary. */
 const inboxAccountFromMailbox = (mailbox: MailboxSummary): InboxAccountList['items'][number] => {
@@ -156,8 +169,8 @@ const inboxAccountFromMailbox = (mailbox: MailboxSummary): InboxAccountList['ite
       reason: 'missing-email-metadata',
     };
   }
-  const email = rawEmail.trim();
-  if (!EMAIL_ADDRESS_PATTERN.test(email)) {
+  const email = rawEmail;
+  if (!isEmailIdentity(email)) {
     return {
       status: 'unavailable',
       account: mailbox.mailboxId,
@@ -167,8 +180,8 @@ const inboxAccountFromMailbox = (mailbox: MailboxSummary): InboxAccountList['ite
   }
   const rawConnectorAccountId = mailbox.metadata.connectorAccountId;
   const connectorAccountId =
-    typeof rawConnectorAccountId === 'string' && rawConnectorAccountId.trim().length > 0
-      ? rawConnectorAccountId.trim()
+    typeof rawConnectorAccountId === 'string'
+      ? (nonEmptyIdentity(rawConnectorAccountId) ?? undefined)
       : undefined;
   return {
     status: 'searchable',
@@ -281,11 +294,7 @@ const exchangeStoredEmail = (
     folderId: folder,
     messageId,
     uid: isNumber(payload.uid) ? payload.uid : null,
-    account: isString(payload.accountId)
-      ? payload.accountId
-      : isString(payload.account)
-        ? payload.account
-        : account,
+    account,
     folder,
     from: parseContact(payload.from),
     to: parseContactList(payload.to),
@@ -475,9 +484,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
     account: string,
     signal?: AbortSignal
   ): Promise<readonly FolderSummary[]> => {
-    const folders = await messagesStore
-      .mailbox({ mailboxId: exchangeMailboxId(account) })
-      .listFolders(signal);
+    const folders = await messagesStore.mailbox({ mailboxId: account }).listFolders(signal);
     if (folders.length > 0) return orderExchangeFolders(folders);
     return [
       {
@@ -651,7 +658,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
     readonly folderId: string;
     readonly row: StoredMessage;
   }> => {
-    const mailboxId = exchangeMailboxId(account);
+    const mailboxId = account;
     const folderIds = folderId ? [folderId] : await listExchangeFolderIds(account);
     let lastError: unknown = null;
 
@@ -732,7 +739,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
     }: InboxListParams): Promise<InboxPage> => {
       const selectedFolder = nonEmpty(folderId) ?? DEFAULT_EXCHANGE_FOLDER;
       const page = await messagesStore
-        .mailbox({ mailboxId: exchangeMailboxId(account) })
+        .mailbox({ mailboxId: account })
         .folder({ folderId: selectedFolder })
         .listMessages({ limit, ...(cursor ? { cursor } : {}) });
       return {
@@ -743,7 +750,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
     },
 
     read: async ({ account, messageId, folderId }: InboxReadParams): Promise<StoredEmail> => {
-      const resolvedAccount = nonEmpty(account);
+      const resolvedAccount = nonEmptyIdentity(account);
       const resolvedMessageId = nonEmpty(messageId);
       if (!resolvedAccount || !resolvedMessageId) {
         throw new Error('account + messageId is required');
@@ -756,7 +763,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
       signal?: AbortSignal
     ) => {
       const uniqueResults = new Map<string, InboxEmailEnvelope>();
-      const mailboxId = exchangeMailboxId(account);
+      const mailboxId = account;
       const resolvedPageSize = resolveSearchPageSize(pageSize);
       const parsedQuery = parseInboxSearchQuery(query);
       if (parsedQuery.tag === 'Err') {
@@ -861,7 +868,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
     },
 
     markRead: async ({ account, messageId, folderId, isRead }: InboxMarkReadParams) => {
-      const resolvedAccount = nonEmpty(account);
+      const resolvedAccount = nonEmptyIdentity(account);
       const resolvedMessageId = nonEmpty(messageId);
       if (!resolvedAccount || !resolvedMessageId) {
         throw new Error('account + messageId is required');
@@ -874,7 +881,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
       );
     },
     setFlagged: async ({ account, messageId, folderId, flagged, color }: InboxSetFlaggedParams) => {
-      const resolvedAccount = nonEmpty(account);
+      const resolvedAccount = nonEmptyIdentity(account);
       const resolvedMessageId = nonEmpty(messageId);
       if (!resolvedAccount || !resolvedMessageId) {
         throw new Error('account + messageId is required');
@@ -894,7 +901,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
       );
     },
     setLabels: async ({ account, messageId, folderId, add, remove }: InboxSetLabelsParams) => {
-      const resolvedAccount = nonEmpty(account);
+      const resolvedAccount = nonEmptyIdentity(account);
       const resolvedMessageId = nonEmpty(messageId);
       if (!resolvedAccount || !resolvedMessageId) {
         throw new Error('account + messageId is required');
@@ -923,7 +930,7 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
       filename,
       targetPath,
     }: InboxSaveAttachmentParams): Promise<InboxSaveAttachmentResult> => {
-      const resolvedAccount = nonEmpty(account);
+      const resolvedAccount = nonEmptyIdentity(account);
       const resolvedMessageId = nonEmpty(messageId);
       if (!resolvedAccount || !resolvedMessageId) {
         throw new Error('account + messageId is required');

@@ -2,7 +2,8 @@ import type { AuthModule } from '../auth/types.js';
 import type { PlatformFlagColor } from '../messagesStore/messagesStoreTypes.js';
 
 // Stored email types and platform inbox client contracts.
-// Mail lives in Drive messagesStore mailboxes named exchange-<account-slug>.
+// Account is the exact Drive mailbox ID; email mailboxes retain the configured email verbatim.
+// Canonical provider selectors are carried separately by connectorAccountId.
 
 /** Controls whether Inbox may hydrate content missing from Drive messageboxes. */
 export type InboxContentMode = 'hydrate-missing' | 'stored-only';

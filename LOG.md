@@ -1,5 +1,21 @@
 # LOG
 
+## 2026-10-27
+
+- `BUG enabling:dev/platform-api/inbox`: preserve the exact Drive mailbox ID in
+  discovery, reads, folder access, search, flags, body hydration and attachments.
+  Discover email mailboxes from their explicit metadata; quoted local parts,
+  address literals, case and punctuation survive unchanged. Missing or invalid
+  email metadata remains unavailable. Returned message account IDs stay usable
+  for follow-up Inbox operations; provider mutations still use their stored
+  connector selector.
+  Motivation: mailbox slug derivation and exchange-prefix filtering would hide
+  and misaddress mailboxes after the email-identity migration.
+  Verification: regression tests failed before implementation; focused Inbox
+  tests and TypeScript typecheck pass. Package version remains 7.8.0. Publishing
+  and adoption by Inbox consumers are required before migrating deployed IDs;
+  no release or deployed acceptance is claimed.
+
 ## 2026-10-22
 
 - `BUG enabling:dev/platform-api/drive` (#3526 review): route the existing

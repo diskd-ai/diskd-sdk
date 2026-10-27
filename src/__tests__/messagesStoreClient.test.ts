@@ -43,6 +43,23 @@ const jsonRpcResponse = (result: unknown): Response =>
 const parseBody = (init?: RequestInit): Record<string, unknown> =>
   JSON.parse(typeof init?.body === 'string' ? init.body : '{}') as Record<string, unknown>;
 
+/* REQ-MAILBOX-EMAIL-009: JSON-RPC preserves email punctuation and case without suffixes. */
+test('messagesStore carries the exact email as mailbox identity', async () => {
+  const email = "Case.!#$%&'*+-/=?^_`{|}~@example.com";
+  await withFetchMock(
+    () => jsonRpcResponse({ mailbox_id: email, db_inode: '', drive_path: '' }),
+    async (calls) => {
+      const client = diskd.os.messagesStore({ auth: makeAuth(), url: 'http://drive:8000/api/v1' });
+      const result = await client.createMailbox({ mailboxId: email, displayName: email });
+      assert.equal(result.mailboxId, email);
+      assert.deepEqual(parseBody(calls[0]?.init).params, {
+        mailbox_id: email,
+        display_name: email,
+      });
+    }
+  );
+});
+
 test('messagesStore.createMailbox forwards storageVersion and accepts null legacy location fields', async () => {
   await withFetchMock(
     () =>
