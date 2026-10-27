@@ -52,6 +52,12 @@ export type StoredEmailAttachment = {
 export type StoredEmail = {
   readonly folderId?: string;
   readonly messageId: string;
+  /**
+   * Provider RFC Message-ID (`<...@...>`) from the stored payload, trimmed; null when the
+   * provider gave none. `messageId` stays the store locator; consumers merge folder copies
+   * of one message by this value (#3603).
+   */
+  readonly providerMessageId: string | null;
   readonly uid: number | null;
   readonly account: string;
   readonly folder: string;
@@ -84,6 +90,12 @@ export type InboxEmailEnvelope = {
   readonly folderId?: string;
   readonly account: string;
   readonly messageId: string;
+  /**
+   * Provider RFC Message-ID (`<...@...>`) from the stored payload, trimmed; null when the
+   * provider gave none. `messageId` stays the store locator; consumers merge folder copies
+   * of one message by this value (#3603).
+   */
+  readonly providerMessageId: string | null;
   readonly from: StoredEmailContact;
   readonly subject: string;
   readonly snippet: string;

@@ -273,6 +273,12 @@ const resolveFlagColor = (
   return stored ?? 'red';
 };
 
+/** The stored payload's provider RFC Message-ID, trimmed; null when absent or blank (#3603). */
+const providerMessageIdOf = (payload: RawObject): string | null =>
+  isString(payload.messageId) && payload.messageId.trim().length > 0
+    ? payload.messageId.trim()
+    : null;
+
 const exchangeStoredEmail = (
   row: StoredMessage,
   account: string,
@@ -293,6 +299,7 @@ const exchangeStoredEmail = (
   return {
     folderId: folder,
     messageId,
+    providerMessageId: providerMessageIdOf(payload),
     uid: isNumber(payload.uid) ? payload.uid : null,
     account,
     folder,
@@ -335,6 +342,7 @@ const envelopeFromStoredEmail = (email: StoredEmail): InboxEmailEnvelope => ({
   folderId: email.folderId,
   account: email.account,
   messageId: email.messageId,
+  providerMessageId: email.providerMessageId,
   from: email.from,
   subject: email.subject,
   snippet: email.snippet,
@@ -356,11 +364,10 @@ const exchangeEnvelope = (
 
 /** Identify one RFC message across its repeated folder projections. */
 const storedMessageIdentity = (row: StoredMessage, folderId: string): string => {
-  const providerMessageId = payloadObject(row).messageId;
-  if (isString(providerMessageId) && providerMessageId.trim().length > 0) {
-    return `rfc:${providerMessageId.trim().toLowerCase()}`;
-  }
-  return `stored:${folderId}:${row.externalId}`;
+  const providerMessageId = providerMessageIdOf(payloadObject(row));
+  return providerMessageId === null
+    ? `stored:${folderId}:${row.externalId}`
+    : `rfc:${providerMessageId.toLowerCase()}`;
 };
 
 /** Order mailbox-wide search envelopes by received time with stable ties. */

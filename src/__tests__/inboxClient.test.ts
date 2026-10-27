@@ -245,6 +245,8 @@ test('platform.inbox.read hydrates unloaded Exchange body and rereads messagesSt
       const result = await inbox.read({ account: 'owner@example.com', messageId: '14:42' });
 
       assert.equal(result.messageId, '14:42');
+      /* REQ-3603-002: a read keeps the store locator and also exposes the provider RFC Message-ID (#3603). */
+      assert.equal(result.providerMessageId, '<rfc@example.com>');
       assert.equal(result.bodyText, 'Hydrated body');
       assert.equal('messageRef' in result, false);
       assert.deepEqual(
@@ -988,6 +990,11 @@ test('platform.inbox.search deduplicates and orders matches across folders', asy
           ['SPAM', 'spam-newer'],
           ['INBOX', 'inbox-copy'],
         ]
+      );
+      /* REQ-3603-001: every search envelope carries the provider RFC Message-ID so consumers can merge folder copies (#3603). */
+      assert.deepEqual(
+        result.results.map((item) => item.providerMessageId),
+        ['<newer@example.com>', '<same@example.com>']
       );
       assert.equal(
         calls.filter((call) => body(call.init).method === 'messages_store/search').length,
@@ -2402,3 +2409,71 @@ for (const email of [
     );
   });
 }
+
+/* REQ-3603-003: a stored message without a provider Message-ID exposes null, never undefined or an empty string (#3603). */
+test('platform.inbox.search exposes a null providerMessageId when the stored payload has none', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      if (request.method === 'messages_store/folder/list') {
+        return rpc(request.id, {
+          folders: [
+            {
+              folder_id: 'INBOX',
+              display_name: 'Inbox',
+              metadata: {},
+              message_count: 2,
+              updated_at: '2026-08-05T00:00:00.000Z',
+            },
+          ],
+        });
+      }
+      if (request.method === 'messages_store/search') {
+        return rpc(request.id, {
+          items: [
+            {
+              external_id: 'no-id',
+              payload: {
+                mailbox: 'INBOX',
+                from: { name: 'A', address: 'a@example.com' },
+                subject: 'No id',
+                date: '2026-08-02T10:00:00.000Z',
+              },
+              created_at: '2026-08-02T10:00:00.000Z',
+              updated_at: '2026-08-02T10:00:00.000Z',
+            },
+            {
+              external_id: 'blank-id',
+              payload: {
+                messageId: '   ',
+                mailbox: 'INBOX',
+                from: { name: 'B', address: 'b@example.com' },
+                subject: 'Blank id',
+                date: '2026-08-01T10:00:00.000Z',
+              },
+              created_at: '2026-08-01T10:00:00.000Z',
+              updated_at: '2026-08-01T10:00:00.000Z',
+            },
+          ],
+          next_cursor: null,
+        });
+      }
+      throw new Error(`unexpected method ${String(request.method)}`);
+    },
+    async () => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        emailUrl: 'http://email',
+      });
+      const result = await inbox.search({ account: 'owner@example.com', query: 'id', limit: 10 });
+      assert.deepEqual(
+        result.results.map((item) => [item.messageId, item.providerMessageId]),
+        [
+          ['no-id', null],
+          ['blank-id', null],
+        ]
+      );
+    }
+  );
+});

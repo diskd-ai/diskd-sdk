@@ -2,6 +2,16 @@
 
 ## 2026-10-27
 
+- `TASK enabling:dev/platform-api/inbox` (#3603): Inbox envelopes and stored
+  emails carry `providerMessageId`, the provider RFC Message-ID from the stored
+  payload (trimmed; `null` when absent or blank). `messageId` stays the store
+  locator. The internal all-folders identity uses the same reader.
+  Motivation: Pi merged folder copies by sender, subject and date, which can
+  merge two different messages; it needs the RFC Message-ID, which the envelope
+  dropped.
+  Verification: three regression assertions failed to compile before the field
+  existed; typecheck, lint and all 274 Node tests pass.
+
 - `BUG enabling:dev/platform-api/inbox`: preserve the exact Drive mailbox ID in
   discovery, reads, folder access, search, flags, body hydration and attachments.
   Discover email mailboxes from their explicit metadata; quoted local parts,
