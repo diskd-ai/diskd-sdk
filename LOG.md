@@ -10,7 +10,8 @@
   merge two different messages; it needs the RFC Message-ID, which the envelope
   dropped.
   Verification: three regression assertions failed to compile before the field
-  existed; typecheck, lint and all 274 Node tests pass.
+  existed; typecheck, lint and all 274 Node tests pass. Released as 7.8.2
+  (patch: a new field on existing types), approved by the owner on 2026-10-27.
 
 - `BUG enabling:dev/platform-api/inbox`: preserve the exact Drive mailbox ID in
   discovery, reads, folder access, search, flags, body hydration and attachments.
