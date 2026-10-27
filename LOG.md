@@ -12,9 +12,10 @@
   Motivation: mailbox slug derivation and exchange-prefix filtering would hide
   and misaddress mailboxes after the email-identity migration.
   Verification: regression tests failed before implementation; focused Inbox
-  tests and TypeScript typecheck pass. Package version remains 7.8.0. Publishing
-  and adoption by Inbox consumers are required before migrating deployed IDs;
-  no release or deployed acceptance is claimed.
+  tests and TypeScript typecheck pass. The owner approved release 7.8.1, including
+  the existing session/crontab routing correction. Publication and adoption by
+  Inbox consumers precede the coordinated mailbox migration; deployed acceptance
+  remains a separate gate.
 
 ## 2026-10-22
 
