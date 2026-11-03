@@ -13,12 +13,14 @@ import {
 } from '../messagesStore/messagesStoreTypes.js';
 import { resolveEmailFlagTarget, validateEmailFlagOutcome } from './inboxMarkRead.js';
 import {
+  formatInboxMessageSearchExpression,
+  parseInboxSearchExpression,
+} from './inboxSearchExpression.js';
+import {
   Err,
-  formatInboxMessageSearchQuery,
   formatInboxSearchQueryError,
   type InboxFolderScope,
   Ok,
-  parseInboxSearchQuery,
   type Result,
 } from './inboxSearchQuery.js';
 import type {
@@ -772,11 +774,11 @@ export const createInboxClient = (params: InboxClientParams): InboxClient => {
       const uniqueResults = new Map<string, InboxEmailEnvelope>();
       const mailboxId = account;
       const resolvedPageSize = resolveSearchPageSize(pageSize);
-      const parsedQuery = parseInboxSearchQuery(query);
+      const parsedQuery = parseInboxSearchExpression(query);
       if (parsedQuery.tag === 'Err') {
         throw new Error(formatInboxSearchQueryError(parsedQuery.error));
       }
-      const messageQuery = formatInboxMessageSearchQuery(parsedQuery.value);
+      const messageQuery = formatInboxMessageSearchExpression(parsedQuery.value.expression);
       const explicitFolderId = nonEmpty(folderId) ?? undefined;
       if (explicitFolderId && parsedQuery.value.folderScope.tag === 'FolderTree') {
         throw new Error(

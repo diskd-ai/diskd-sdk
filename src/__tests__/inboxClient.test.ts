@@ -2477,3 +2477,40 @@ test('platform.inbox.search exposes a null providerMessageId when the stored pay
     }
   );
 });
+
+/* REQ-3623-003: Boolean search preserves the account/folder wire scope and rejects malformed syntax before I/O. */
+test('platform.inbox.search forwards Boolean expressions and validates before transport', async () => {
+  await withFetchMock(
+    (_url, init) => {
+      const request = body(init);
+      assert.equal(request.method, 'messages_store/search');
+      assert.deepEqual(request.params, {
+        mailbox_id: 'owner@example.com',
+        folder_id: 'INBOX',
+        query: '((subject:invoice OR subject:receipt) AND after:2026-10-01)',
+        page_size: 20,
+        order_by: 'message_date_desc',
+      });
+      return rpc(request.id, { items: [], next_cursor: null });
+    },
+    async (calls) => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        contentMode: 'stored-only',
+      });
+      await inbox.search({
+        account: 'owner@example.com',
+        folderId: 'INBOX',
+        query: '(subject:invoice OR subject:receipt) after:2026-10-01',
+      });
+      assert.equal(calls.length, 1);
+      await assert.rejects(
+        () =>
+          inbox.search({ account: 'owner@example.com', folderId: 'INBOX', query: 'invoice OR' }),
+        /INVALID_INBOX_SEARCH_QUERY/
+      );
+      assert.equal(calls.length, 1);
+    }
+  );
+});

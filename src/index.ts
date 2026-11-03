@@ -293,8 +293,17 @@ export type {
   EmailMessageRef,
   EmailSyncStatus,
 } from './email/emailTypes.js';
-// -- Inbox (stored email types + platform inbox client) --
 export { createInboxClient } from './inbox/inbox.js';
+export type {
+  InboxSearchExpression,
+  ParsedInboxSearchExpression,
+} from './inbox/inboxSearchExpression.js';
+// -- Inbox (stored email types + platform inbox client) --
+export {
+  evaluateInboxSearchExpression,
+  formatInboxMessageSearchExpression,
+  parseInboxSearchExpression,
+} from './inbox/inboxSearchExpression.js';
 export type {
   InboxFolderScope,
   InboxSearchQuery,

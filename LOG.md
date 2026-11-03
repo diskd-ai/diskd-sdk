@@ -1,3 +1,9 @@
+## 2026-11-03 - Preserve Boolean mail search through the SDK (#3623)
+
+REQ-3623-001..006: Inbox search composes its existing flat criteria into typed AND/OR expressions with AND precedence, parentheses and scoped field alternatives. Quoted Boolean words remain literal; malformed expressions fail before transport. Folder and recursive selectors remain one unconditional routing scope and are stripped from the message predicate. The existing query:string contract, identity, ordering, pagination and selection stay unchanged. The original flat parser remains available to existing callers. New expression parsing, formatting and evaluation exports serve consumers that need the full grammar.
+
+Release order: deploy the Drive expression parser first, then publish the approved SDK version, then install that exact published version in Pi. No database migration is required. Validation: production typecheck/build and 78 scoped tests passed; independent source and cross-owner conformance review passed.
+
 # LOG
 
 ## 2026-10-27

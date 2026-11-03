@@ -14,6 +14,7 @@ export type Option<T> = { readonly tag: 'Some'; readonly value: T } | { readonly
  */
 export type InboxSearchQueryError =
   | { readonly tag: 'EmptyQuery' }
+  | { readonly tag: 'InvalidExpression'; readonly reason: string }
   | { readonly tag: 'EmptyOperator'; readonly operator: string }
   | { readonly tag: 'DuplicateOperator'; readonly operator: string }
   | { readonly tag: 'InvalidQuotedValue'; readonly operator: string; readonly value: string }
@@ -294,10 +295,14 @@ export const parseInboxSearchQuery = (
 };
 
 /** Quote a normalized operator value only when its whitespace requires it. */
-const formatOperatorValue = (value: string): string => (/\s/.test(value) ? `"${value}"` : value);
+const formatOperatorValue = (value: string): string =>
+  /[\s()"]/.test(value) ? `"${value}"` : value;
 
 /** Preserve phrase boundaries and colons when forwarding free text to Drive. */
-const formatTextTerm = (value: string): string => (/[\s:]/.test(value) ? `"${value}"` : value);
+const formatTextTerm = (value: string): string =>
+  /[\s:()"]/.test(value) || value.toUpperCase() === 'OR' || value.toUpperCase() === 'AND'
+    ? `"${value}"`
+    : value;
 
 /** Build the Drive message-query subset after folder routing has been resolved locally. */
 export const formatInboxMessageSearchQuery = (search: InboxSearchQuery): Option<string> => {
@@ -321,6 +326,8 @@ export const formatInboxMessageSearchQuery = (search: InboxSearchQuery): Option<
 /** Format parser failures as a stable SDK error message for tool adapters. */
 export const formatInboxSearchQueryError = (error: InboxSearchQueryError): string => {
   switch (error.tag) {
+    case 'InvalidExpression':
+      return `INVALID_INBOX_SEARCH_QUERY: ${error.reason}`;
     case 'EmptyQuery':
       return 'INVALID_INBOX_SEARCH_QUERY: query must contain at least one term or operator';
     case 'EmptyOperator':
