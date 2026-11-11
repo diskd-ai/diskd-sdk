@@ -1,6 +1,7 @@
 import type { AuthModule } from '../auth/types.js';
-import { jsonRpcCall } from '../drive/rpc.js';
+import { JsonRpcError, jsonRpcCall } from '../drive/rpc.js';
 import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
+import { makeLlmRouterError } from './llmRouterErrors.js';
 import type {
   ChatCompletionMessage,
   CompletionParams,
@@ -24,30 +25,8 @@ import type {
   TranscribeResult,
 } from './llmRouterTypes.js';
 
-// ---------------------------------------------------------------------------
-// Typed errors
-// ---------------------------------------------------------------------------
-
-/**
- * Thrown when the LLM Router rejects a request because the input exceeds the
- * model context window. The Router signals this on the streaming endpoint as an
- * HTTP 413 whose body carries `code: "context_too_large"`; this typed error lets
- * callers discriminate it (e.g. trim history and retry) instead of matching on a
- * message string.
- *
- * TODO: carry structured fields (contextWindow, estimatedTokens,
- * requestedOutputTokens) once the Router advertises them on the wire -- tracked
- * with the invoke-path `reason` follow-up -- so callers can trim precisely
- * instead of parsing the numbers out of `message`.
- */
-export class ContextTooLargeError extends Error {
-  readonly reason = 'context_too_large';
-
-  constructor(message: string) {
-    super(message);
-    this.name = 'ContextTooLargeError';
-  }
-}
+export type { LlmRouterErrorData } from './llmRouterErrors.js';
+export { ContextTooLargeError, LlmRouterError } from './llmRouterErrors.js';
 
 // ---------------------------------------------------------------------------
 // Decode helpers (wire snake_case -> domain camelCase)
@@ -57,22 +36,6 @@ type RawObject = { readonly [key: string]: unknown };
 
 const isObject = (value: unknown): value is RawObject =>
   typeof value === 'object' && value !== null;
-
-/**
- * If `bodyText` is the LLM Router's context-too-large error body
- * (`{ error, code: "context_too_large" }`), return its human-readable message;
- * otherwise null. Turns a 413 stream response into a typed ContextTooLargeError.
- */
-const parseContextTooLargeMessage = (bodyText: string): string | null => {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(bodyText);
-  } catch {
-    return null;
-  }
-  if (!isObject(parsed) || parsed.code !== 'context_too_large') return null;
-  return typeof parsed.error === 'string' ? parsed.error : 'Context too large for the model';
-};
 
 const str = (obj: RawObject, key: string): string | null => {
   const v = obj[key];
@@ -487,7 +450,12 @@ async function* readNdjsonStream(response: Response): AsyncGenerator<unknown, vo
 
         if (isObject(parsed) && parsed.type === 'error') {
           const msg = str(parsed, 'message') ?? JSON.stringify(parsed);
-          throw new Error(`LLM Router stream error: ${msg}`);
+          throw makeLlmRouterError(
+            `LLM Router stream error: ${msg}`,
+            response.status,
+            parsed.code,
+            parsed.data
+          );
         }
 
         yield parsed;
@@ -505,7 +473,12 @@ async function* readNdjsonStream(response: Response): AsyncGenerator<unknown, vo
       }
       if (isObject(parsed) && parsed.type === 'error') {
         const msg = str(parsed, 'message') ?? JSON.stringify(parsed);
-        throw new Error(`LLM Router stream error: ${msg}`);
+        throw makeLlmRouterError(
+          `LLM Router stream error: ${msg}`,
+          response.status,
+          parsed.code,
+          parsed.data
+        );
       }
       yield parsed;
     }
@@ -562,13 +535,18 @@ export const createLlmRouterClient = (params: {
     const id = nextId;
     nextId += 1;
 
-    if (params.auth.getRequestHeaders) {
-      const headers = await params.auth.getRequestHeaders();
-      return jsonRpcCall({ url: invokeUrl, headers, method, rpcParams, id, signal });
-    }
+    try {
+      if (params.auth.getRequestHeaders) {
+        const headers = await params.auth.getRequestHeaders();
+        return await jsonRpcCall({ url: invokeUrl, headers, method, rpcParams, id, signal });
+      }
 
-    const bearerToken = await params.auth.getAccessToken();
-    return jsonRpcCall({ url: invokeUrl, bearerToken, method, rpcParams, id, signal });
+      const bearerToken = await params.auth.getAccessToken();
+      return await jsonRpcCall({ url: invokeUrl, bearerToken, method, rpcParams, id, signal });
+    } catch (error) {
+      if (!(error instanceof JsonRpcError)) throw error;
+      throw makeLlmRouterError(error.message, error.httpStatus, error.code, error.data);
+    }
   };
 
   return {
@@ -598,13 +576,18 @@ export const createLlmRouterClient = (params: {
 
         if (!response.ok) {
           const text = await response.text();
-          const contextMessage = parseContextTooLargeMessage(text);
-          if (contextMessage !== null) {
-            throw new ContextTooLargeError(contextMessage);
+          let parsed: unknown;
+          try {
+            parsed = JSON.parse(text);
+          } catch {
+            parsed = {};
           }
-          throw new Error(
-            `LLM Router stream failed (HTTP ${response.status}): ${text.slice(0, 200)}`
-          );
+          const fields = isObject(parsed) && !Array.isArray(parsed) ? parsed : {};
+          const message =
+            typeof fields.error === 'string'
+              ? fields.error
+              : `LLM Router stream failed (HTTP ${response.status}): ${text.slice(0, 200)}`;
+          throw makeLlmRouterError(message, response.status, fields.code, fields.data, fields.code);
         }
 
         for await (const raw_ of readNdjsonStream(response)) {

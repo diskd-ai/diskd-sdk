@@ -33,6 +33,7 @@ export type {
   DriveScopedCrontabCreateJobParams,
   DriveScopedCrontabSaveParams,
 } from '../drive/crontabTypes.js';
+export { JsonRpcError } from '../drive/rpc.js';
 export type {
   DriveScopedSessionDeleteParams,
   DriveScopedSessionOpenParams,
@@ -89,6 +90,11 @@ export type {
   EmailMessageRef,
   EmailSyncStatus,
 } from '../email/emailTypes.js';
+export type { LlmRouterErrorData } from '../llmRouter/llmRouterErrors.js';
+export {
+  ContextTooLargeError,
+  LlmRouterError,
+} from '../llmRouter/llmRouterErrors.js';
 export type {
   CreateProjectNoteParams,
   ProjectNote,

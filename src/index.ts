@@ -219,7 +219,7 @@ export type {
   DriveUploadStartParams,
   DriveUploadStartResult,
 } from './drive/driveTypes.js';
-export { jsonRpcCall } from './drive/rpc.js';
+export { JsonRpcError, jsonRpcCall } from './drive/rpc.js';
 export { createDriveSessionClient } from './drive/session.js';
 export type { MessageParams } from './drive/sessionBuilder.js';
 export { buildMessage, generateUlid } from './drive/sessionBuilder.js';
@@ -334,8 +334,13 @@ export type {
   StoredEmailAttachment,
   StoredEmailContact,
 } from './inbox/inboxTypes.js';
+export type { LlmRouterErrorData } from './llmRouter/llmRouter.js';
 // -- LLM Router --
-export { ContextTooLargeError, createLlmRouterClient } from './llmRouter/llmRouter.js';
+export {
+  ContextTooLargeError,
+  createLlmRouterClient,
+  LlmRouterError,
+} from './llmRouter/llmRouter.js';
 export type {
   ChatCompletionMessage,
   CompletionChoice,

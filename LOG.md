@@ -250,3 +250,13 @@ Release order: deploy the Drive expression parser first, then publish the approv
   preserving canonical Drive content and provider confirmation. Remove MCP tool
   discovery and replace the Inbox custom `mcpUrl` option with `emailUrl`.
   Build and 58 focused SDK regressions pass on Bun and Node.
+
+## 2026-11-11
+
+### Changes
+
+- Preserve structured JSON-RPC and LLM Router error codes, transport status and
+  safe provider facts across invoke, stream startup and NDJSON failures
+  (REQ-3642-075), so consumers can recover without matching display text.
+- Keep ContextTooLargeError source compatibility and expose the error classes
+  from both Node and browser entrypoints.
