@@ -13,7 +13,7 @@ import { diskd } from '../sdk/diskd.js';
 
 type FetchCall = { readonly url: string; readonly init?: RequestInit };
 
-// Wire uses engine/engineProvider/engineModel/intelAccess;
+// Wire uses engine/engineProvider/engineModel/attachmentAccess (REQ-3676-013: renamed from intelAccess);
 // SDK exposes engine/engineProvider/engineModel/fileAccess
 const wireOperative = {
   id: 'op-01',
@@ -26,7 +26,7 @@ const wireOperative = {
   engineProvider: 'openai',
   engineModel: 'gpt-5',
   orders: 'You are a research assistant.',
-  intelAccess: 'all',
+  attachmentAccess: 'all',
   trustLevel: 2,
   isPrimary: true,
   status: 'active',
@@ -134,10 +134,10 @@ const withFetchMock = async (
 };
 
 // ---------------------------------------------------------------------------
-// Core CRUD -- verifies intelAccess <-> fileAccess mapping
+// Core CRUD -- verifies attachmentAccess <-> fileAccess mapping (REQ-3676-013)
 // ---------------------------------------------------------------------------
 
-test('operatives.list decodes intelAccess to fileAccess', async () => {
+test('operatives.list decodes attachmentAccess to fileAccess', async () => {
   const url = 'http://app-service:3000';
 
   await withFetchMock(
@@ -158,7 +158,7 @@ test('operatives.list decodes intelAccess to fileAccess', async () => {
   );
 });
 
-test('operatives.get decodes intelAccess to fileAccess', async () => {
+test('operatives.get decodes attachmentAccess to fileAccess', async () => {
   const url = 'http://app-service:3000';
 
   await withFetchMock(
@@ -237,8 +237,9 @@ test('operatives.update encodes SDK field names to wire format', async () => {
       });
 
       const body = JSON.parse(String(calls[0]?.init?.body));
-      // fileAccess is still encoded to intelAccess on the wire
-      assert.equal(body.intelAccess, 'selected');
+      // REQ-3676-013: fileAccess is encoded to attachmentAccess on the wire
+      assert.equal(body.attachmentAccess, 'selected');
+      assert.equal(body.intelAccess, undefined);
       assert.equal(body.fileAccess, undefined);
       // engine fields are now pass-through (no renaming)
       assert.equal(body.engineProvider, 'anthropic');
@@ -281,7 +282,7 @@ test('operatives.files.list decodes sourceId to path', async () => {
       const result = await client.files.list('op-01');
 
       assert.deepEqual(result, [expectedFile]);
-      assert.equal(calls[0]?.url, 'http://app-service:3000/api/operatives/op-01/intel');
+      assert.equal(calls[0]?.url, 'http://app-service:3000/api/operatives/op-01/attachments');
     }
   );
 });
@@ -324,7 +325,7 @@ test('operatives.files.remove sends DELETE', async () => {
       const client = diskd.platform.operatives({ auth: makeAuth(), url });
       await client.files.remove('op-01', 'file-01');
 
-      assert.equal(calls[0]?.url, 'http://app-service:3000/api/operatives/op-01/intel/file-01');
+      assert.equal(calls[0]?.url, 'http://app-service:3000/api/operatives/op-01/attachments/file-01');
       assert.equal(calls[0]?.init?.method, 'DELETE');
     }
   );

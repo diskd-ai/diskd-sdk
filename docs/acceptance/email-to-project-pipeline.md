@@ -199,7 +199,7 @@ This document is used by:
 
 | Entity | Description | Status |
 |--------|-------------|--------|
-| **Operative** | AI agent profile: LLM provider/model, orders (prompt), equipment (skills + MCP tools), intel access, trust level | Implemented (entity + CRUD + UI) |
+| **Operative** | AI agent profile: LLM provider/model, orders (prompt), equipment (skills + MCP tools), attachment access, trust level | Implemented (entity + CRUD + UI) |
 | **App Operative** | System operative for Dynamic App: `@mail`, `@calendar`, `@drive`. Equipment bound to MCP sidecar. Available globally | Pattern defined, implementation planned |
 | **Routine** | Routine: triggerType (rhythm/signal), steps (action sequence), stats | Entity defined, service in-memory seed. CRUD on Drive -- design only |
 | **routine_run** | Routine execution instance: runId, status, sessionId | Type `ParticipantKind = 'routine_run'` defined in session types. Table `routine_execution_runs` -- design only |

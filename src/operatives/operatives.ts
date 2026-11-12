@@ -17,7 +17,7 @@ import type {
 } from './operativesTypes.js';
 
 // ---------------------------------------------------------------------------
-// Wire types (app-service uses intelAccess / sourceId / equipmentType)
+// Wire types (app-service uses attachmentAccess / sourceId / equipmentType; REQ-3676-013 renamed intel to attachments)
 // ---------------------------------------------------------------------------
 
 type WireOperative = {
@@ -28,7 +28,7 @@ type WireOperative = {
   readonly name: string;
   readonly slug: string;
   readonly avatarUrl?: string;
-  readonly intelAccess: 'all' | 'selected';
+  readonly attachmentAccess: 'all' | 'selected';
   readonly engineProvider?: string;
   readonly engineModel?: string;
   readonly engine: 'quick' | 'deep';
@@ -43,7 +43,7 @@ type WireOperative = {
   readonly updatedAt: string;
 };
 
-type WireIntel = {
+type WireAttachment = {
   readonly id: string;
   readonly operativeId: string;
   readonly sourceId: string;
@@ -77,7 +77,7 @@ const decodeOperative = (wire: WireOperative): Operative => {
     name: wire.name,
     slug: wire.slug,
     avatarUrl: wire.avatarUrl,
-    fileAccess: wire.intelAccess,
+    fileAccess: wire.attachmentAccess,
     engineProvider: wire.engineProvider,
     engineModel: wire.engineModel,
     engine: wire.engine,
@@ -99,7 +99,7 @@ const decodeOperative = (wire: WireOperative): Operative => {
   return { ...base, scope: 'project', projectId: wire.projectId };
 };
 
-const decodeFile = (wire: WireIntel): OperativeFile => ({
+const decodeFile = (wire: WireAttachment): OperativeFile => ({
   id: wire.id,
   operativeId: wire.operativeId,
   path: wire.sourceId,
@@ -126,7 +126,7 @@ const decodeTool = (wire: WireEquipment): OperativeTool => ({
 const encodeParams = (params: Record<string, unknown>): Record<string, unknown> => {
   const wire: Record<string, unknown> = { ...params };
   if ('fileAccess' in wire) {
-    wire.intelAccess = wire.fileAccess;
+    wire.attachmentAccess = wire.fileAccess;
     delete wire.fileAccess;
   }
   return wire;
@@ -242,9 +242,9 @@ export const createOperativesClient = (params: {
 
     files: {
       list: async (operativeId: string): Promise<readonly OperativeFile[]> => {
-        const items = await request<readonly WireIntel[]>(
+        const items = await request<readonly WireAttachment[]>(
           'GET',
-          `/api/operatives/${encId(operativeId)}/intel`
+          `/api/operatives/${encId(operativeId)}/attachments`
         );
         return items.map(decodeFile);
       },
@@ -255,9 +255,9 @@ export const createOperativesClient = (params: {
       ): Promise<readonly OperativeFile[]> => {
         const results: OperativeFile[] = [];
         for (const path of addParams.paths) {
-          const wire = await request<WireIntel>(
+          const wire = await request<WireAttachment>(
             'POST',
-            `/api/operatives/${encId(operativeId)}/intel`,
+            `/api/operatives/${encId(operativeId)}/attachments`,
             {
               body: { sourceId: path },
             }
@@ -270,7 +270,7 @@ export const createOperativesClient = (params: {
       remove: async (operativeId: string, linkId: string): Promise<void> => {
         await request<unknown>(
           'DELETE',
-          `/api/operatives/${encId(operativeId)}/intel/${encId(linkId)}`
+          `/api/operatives/${encId(operativeId)}/attachments/${encId(linkId)}`
         );
       },
     },

@@ -1,5 +1,5 @@
 // Operative domain types.
-// Wire mapping (intelAccess -> fileAccess, sourceId -> path, equipmentType hidden)
+// Wire mapping (attachmentAccess -> fileAccess, sourceId -> path, equipmentType hidden; REQ-3676-013)
 // is handled in the client factory.
 
 // -- Enums / unions --

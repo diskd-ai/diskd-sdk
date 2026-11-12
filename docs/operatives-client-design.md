@@ -1,16 +1,19 @@
 @diskd-ai/sdk OperativesClient Design Doc
+
+> Wire names updated by #3676 (REQ-3676-013, 2026-11-12): the operative's pinned files are called attachments; routes `/api/operatives/:id/attachments`, field `attachmentAccess`. The implemented SDK exposes them as `files` and `fileAccess`.
+
 =======================================
 
 Context and motivation
 ----------------------
 
-The operatives CRUD API is implemented in app-service (`/api/operatives`). Operatives are project-scoped platform domain entities representing AI agents with configurable brain models, orders (system prompts), intel sources, and equipment (skills + MCP tools). Cross-service callers (crontab execution runtime, agent-hub, routine runners) need to look up and manage operatives without raw HTTP calls.
+The operatives CRUD API is implemented in app-service (`/api/operatives`). Operatives are project-scoped platform domain entities representing AI agents with configurable brain models, orders (system prompts), attachments, and equipment (skills + MCP tools). Cross-service callers (crontab execution runtime, agent-hub, routine runners) need to look up and manage operatives without raw HTTP calls.
 
 The `@diskd-ai/sdk` needs a corresponding `OperativesClient` so these callers can work through the canonical `diskd.platform.operatives(...)` namespace, following the pattern established by `routines`, `sessions`, and `crontab`.
 
 Goals:
 - Typed SDK client covering core operative CRUD (list, get, create, update, delete)
-- Sub-resource management for intel and equipment
+- Sub-resource management for attachments and equipment
 - Project-scoped access via `projectId` query param
 - Consistent with the routines client pattern (REST, camelCase wire, same httpRequest helper)
 
@@ -56,10 +59,10 @@ ops.create({ projectId, name, ... })       // POST /api/operatives
 ops.update(operativeId, { name?, ... })    // PATCH /api/operatives/:operativeId
 ops.delete(operativeId)                    // DELETE /api/operatives/:operativeId
 
-// Intel sub-resource
-ops.intel.list(operativeId)                // GET    /api/operatives/:id/intel
-ops.intel.add(operativeId, { sourceId })   // POST   /api/operatives/:id/intel
-ops.intel.remove(operativeId, linkId)      // DELETE  /api/operatives/:id/intel/:linkId
+// Attachments sub-resource
+ops.attachments.list(operativeId)                // GET    /api/operatives/:id/attachments
+ops.attachments.add(operativeId, { sourceId })   // POST   /api/operatives/:id/attachments
+ops.attachments.remove(operativeId, linkId)      // DELETE  /api/operatives/:id/attachments/:linkId
 
 // Equipment sub-resource
 ops.equipment.list(operativeId)            // GET    /api/operatives/:id/equipment
@@ -81,9 +84,9 @@ API design
 | GET /api/operatives/by-slug | `OperativeDto` (direct) |
 | PATCH /api/operatives/:id | `OperativeDto` (direct) |
 | DELETE /api/operatives/:id | 204 No Content |
-| GET .../intel | `OperativeIntelDto[]` (plain array) |
-| POST .../intel | `OperativeIntelDto` (direct) |
-| DELETE .../intel/:linkId | 204 No Content |
+| GET .../attachments | `OperativeAttachmentDto[]` (plain array) |
+| POST .../attachments | `OperativeAttachmentDto` (direct) |
+| DELETE .../attachments/:linkId | 204 No Content |
 | GET .../equipment | `{ registryStatus, items }` (wrapped) |
 | POST .../equipment | `OperativeEquipmentDto` (direct) |
 | DELETE .../equipment/:linkId | 204 No Content |
@@ -94,7 +97,7 @@ Unlike routines (which wrap single entities in `{ routine: ... }`), operatives r
 
 ```ts
 type OperativeBrainMode = 'quick' | 'deep';
-type OperativeIntelAccess = 'all' | 'selected';
+type OperativeAttachmentAccess = 'all' | 'selected';
 type OperativeStatus = 'active' | 'standby';
 type OperativeTrustLevel = 0 | 1 | 2 | 3;
 
@@ -110,7 +113,7 @@ type Operative = {
   readonly brainMode: OperativeBrainMode;
   readonly orders: string;
   readonly ordersUpdatedAt?: string;
-  readonly intelAccess: OperativeIntelAccess;
+  readonly attachmentAccess: OperativeAttachmentAccess;
   readonly trustLevel: OperativeTrustLevel;
   readonly isPrimary: boolean;
   readonly status: OperativeStatus;
@@ -120,7 +123,7 @@ type Operative = {
   readonly updatedAt: string;
 };
 
-type OperativeIntel = {
+type OperativeAttachment = {
   readonly id: string;
   readonly operativeId: string;
   readonly sourceId: string;
@@ -188,13 +191,13 @@ type OperativeUpdateParams = {
   readonly brainMode?: OperativeBrainMode;
   readonly orders?: string;
   readonly ordersUpdatedAt?: string;
-  readonly intelAccess?: OperativeIntelAccess;
+  readonly attachmentAccess?: OperativeAttachmentAccess;
   readonly trustLevel?: OperativeTrustLevel;
   readonly status?: OperativeStatus;
   readonly sealGradient?: readonly [string, string];
 };
 
-type OperativeAddIntelParams = {
+type OperativeAddAttachmentParams = {
   readonly sourceId: string;
 };
 
@@ -214,9 +217,9 @@ type OperativesClient = {
   readonly update: (operativeId: string, params: OperativeUpdateParams) => Promise<Operative>;
   readonly delete: (operativeId: string) => Promise<void>;
 
-  readonly intel: {
-    readonly list: (operativeId: string) => Promise<readonly OperativeIntel[]>;
-    readonly add: (operativeId: string, params: OperativeAddIntelParams) => Promise<OperativeIntel>;
+  readonly attachments: {
+    readonly list: (operativeId: string) => Promise<readonly OperativeAttachment[]>;
+    readonly add: (operativeId: string, params: OperativeAddAttachmentParams) => Promise<OperativeAttachment>;
     readonly remove: (operativeId: string, linkId: string) => Promise<void>;
   };
 
@@ -241,7 +244,7 @@ Follows the same pattern as the routines client:
 
 Error categories:
 - 400 Bad Request: invalid input (e.g., missing projectId, duplicate slug)
-- 404 Not Found: operative/intel/equipment link not found
+- 404 Not Found: operative/attachments/equipment link not found
 - 403 Forbidden: project does not belong to user's workspace
 
 
@@ -258,16 +261,16 @@ Implementation outline
 
 ### Phase 1: Types (src/operatives/operativesTypes.ts)
 
-1. Define union types: `OperativeBrainMode`, `OperativeIntelAccess`, `OperativeStatus`, `OperativeTrustLevel`
-2. Define domain models: `Operative`, `OperativeIntel`, `OperativeSkillEquipment`, `OperativeMcpToolEquipment`, `OperativeEquipment`, `EquipmentListResult`
-3. Define param types: `OperativeListParams`, `OperativeGetBySlugParams`, `OperativeCreateParams`, `OperativeUpdateParams`, `OperativeAddIntelParams`, `OperativeAddEquipmentParams`
-4. Define `OperativesClient` interface with `intel` and `equipment` sub-namespaces
+1. Define union types: `OperativeBrainMode`, `OperativeAttachmentAccess`, `OperativeStatus`, `OperativeTrustLevel`
+2. Define domain models: `Operative`, `OperativeAttachment`, `OperativeSkillEquipment`, `OperativeMcpToolEquipment`, `OperativeEquipment`, `EquipmentListResult`
+3. Define param types: `OperativeListParams`, `OperativeGetBySlugParams`, `OperativeCreateParams`, `OperativeUpdateParams`, `OperativeAddAttachmentParams`, `OperativeAddEquipmentParams`
+4. Define `OperativesClient` interface with `attachments` and `equipment` sub-namespaces
 
 ### Phase 2: Client factory (src/operatives/operatives.ts)
 
 1. Copy the routines client structure (httpRequest, getAuthHeaders, request helper)
 2. Implement core CRUD methods mapping to `/api/operatives` endpoints
-3. Implement `intel` sub-namespace (list, add, remove) mapping to `/api/operatives/:id/intel`
+3. Implement `attachments` sub-namespace (list, add, remove) mapping to `/api/operatives/:id/attachments`
 4. Implement `equipment` sub-namespace (list, add, remove) mapping to `/api/operatives/:id/equipment`
 5. Query param builder for `projectId` and `slug` on list/getBySlug endpoints
 
@@ -286,7 +289,7 @@ Implementation outline
 4. Test create with body
 5. Test update with operativeId and body
 6. Test delete (204 response)
-7. Test intel.list, intel.add, intel.remove
+7. Test attachments.list, attachments.add, attachments.remove
 8. Test equipment.list (verify wrapped response preserved)
 9. Test equipment.add with both skill and mcp_tool variants
 10. Test equipment.remove
@@ -300,7 +303,7 @@ Testing approach
 Unit tests:
 - Mock `globalThis.fetch` following the `withFetchMock` pattern from `routinesClient.test.ts`
 - Verify URL construction, HTTP methods, auth headers, request bodies, and response unwrapping for all methods
-- Test both sub-namespaces (intel, equipment)
+- Test both sub-namespaces (attachments, equipment)
 - Test equipment discriminated union serialization
 - Test error handling path
 
@@ -316,9 +319,9 @@ Acceptance criteria
 - Given create params with projectId and name, when `operatives.create(params)` is called, then it sends `POST /api/operatives` with the params as JSON body and returns the created operative.
 - Given an operativeId and update params, when `operatives.update(id, params)` is called, then it sends `PATCH /api/operatives/<id>` with the params as JSON body and returns the updated operative.
 - Given an operativeId, when `operatives.delete(id)` is called, then it sends `DELETE /api/operatives/<id>` and returns void.
-- Given an operativeId, when `operatives.intel.list(id)` is called, then it sends `GET /api/operatives/<id>/intel` and returns the intel array.
-- Given an operativeId and sourceId, when `operatives.intel.add(id, { sourceId })` is called, then it sends `POST /api/operatives/<id>/intel` and returns the created intel link.
-- Given an operativeId and linkId, when `operatives.intel.remove(id, linkId)` is called, then it sends `DELETE /api/operatives/<id>/intel/<linkId>` and returns void.
+- Given an operativeId, when `operatives.attachments.list(id)` is called, then it sends `GET /api/operatives/<id>/attachments` and returns the attachment array.
+- Given an operativeId and sourceId, when `operatives.attachments.add(id, { sourceId })` is called, then it sends `POST /api/operatives/<id>/attachments` and returns the created attachment link.
+- Given an operativeId and linkId, when `operatives.attachments.remove(id, linkId)` is called, then it sends `DELETE /api/operatives/<id>/attachments/<linkId>` and returns void.
 - Given an operativeId, when `operatives.equipment.list(id)` is called, then it sends `GET /api/operatives/<id>/equipment` and returns `{ registryStatus, items }` directly.
 - Given equipment add params with `equipmentType: 'skill'`, when `operatives.equipment.add(id, params)` is called, then it sends `POST /api/operatives/<id>/equipment` with the discriminated body.
 - Given equipment add params with `equipmentType: 'mcp_tool'`, when `operatives.equipment.add(id, params)` is called, then it sends `POST /api/operatives/<id>/equipment` with the `selector` field.
