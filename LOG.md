@@ -1,3 +1,9 @@
+## 2026-11-12 - Read and set Excel cells through the SDK (#3680)
+
+REQ-3680-008: `drive.tools.excelSetCells` and `drive.tools.excelReadCells` call Drive's `paths/tools/excel-set-cells` and `paths/tools/excel-read-cells`. Cells are Excel addresses (reads also take ranges such as `A2:R21`), at most 20 rows per call; `bgcolor` is RRGGBB or null for no fill; `expected` is an optional key check that refuses the whole call on a mismatch. Results carry the workbook `etag`; decoding refuses values or fills outside the contract. Drive holds a per-file database lock across each write, so a busy workbook surfaces as the Drive error `FILE_BUSY`.
+
+Release order: Drive 9415628 is on main (its Dev rollout waits for the Dev Vault to be unsealed); this SDK minor release adds the two methods; pi-agent-service then installs this exact version. Validation: typecheck, build, Biome and 38 affected tests on the release tree.
+
 ## 2026-11-03 - Preserve Boolean mail search through the SDK (#3623)
 
 REQ-3623-001..006: Inbox search composes its existing flat criteria into typed AND/OR expressions with AND precedence, parentheses and scoped field alternatives. Quoted Boolean words remain literal; malformed expressions fail before transport. Folder and recursive selectors remain one unconditional routing scope and are stripped from the message predicate. The existing query:string contract, identity, ordering, pagination and selection stay unchanged. The original flat parser remains available to existing callers. New expression parsing, formatting and evaluation exports serve consumers that need the full grammar.

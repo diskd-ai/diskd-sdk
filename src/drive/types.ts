@@ -22,6 +22,10 @@ import type {
   DriveToolsApplyPatchParams,
   DriveToolsBiQueryParams,
   DriveToolsBiQueryResult,
+  DriveToolsExcelReadCellsParams,
+  DriveToolsExcelReadCellsResult,
+  DriveToolsExcelSetCellsParams,
+  DriveToolsExcelSetCellsResult,
   DriveToolsExcelWriteParams,
   DriveToolsGlobParams,
   DriveToolsGlobResult,
@@ -110,6 +114,14 @@ export type DriveClient = {
     ) => Promise<DriveToolsInodesQueryResult>;
     readonly tgSearch: (params: DriveToolsTgSearchParams) => Promise<DriveToolsTgSearchResult>;
     readonly excelWrite: (params: DriveToolsExcelWriteParams) => Promise<DriveToolsWriteResult>;
+    /** REQ-3680-008: paths/tools/excel-set-cells. */
+    readonly excelSetCells: (
+      params: DriveToolsExcelSetCellsParams
+    ) => Promise<DriveToolsExcelSetCellsResult>;
+    /** REQ-3680-008: paths/tools/excel-read-cells. */
+    readonly excelReadCells: (
+      params: DriveToolsExcelReadCellsParams
+    ) => Promise<DriveToolsExcelReadCellsResult>;
   };
 
   // Database operations (Drive DB -- SQLite via JSON-RPC)

@@ -488,3 +488,53 @@ export type DriveToolsExcelWriteParams = {
   readonly rows: readonly (readonly (string | number | boolean | null)[])[];
   readonly sheetName?: string;
 };
+
+// -- Tools: cells of an existing workbook, changed in place under a per-file lock (#3680) --
+
+/** A cell value as data: text, a finite number, a boolean, or null for an empty cell. */
+export type DriveExcelCellValue = string | number | boolean | null;
+
+/** One cell: Excel address (`H12`), value, and solid fill as RRGGBB or null for no fill. */
+export type DriveExcelCell = {
+  readonly cell: string;
+  readonly value: DriveExcelCellValue;
+  readonly bgcolor: string | null;
+};
+
+/** A cell that must hold this value before a set writes anything (a key check). */
+export type DriveExcelExpectedCell = {
+  readonly cell: string;
+  readonly value: DriveExcelCellValue;
+};
+
+/** At most 20 rows per call; a mismatch in `expected` refuses the call with EXPECTED_MISMATCH. */
+export type DriveToolsExcelSetCellsParams = {
+  readonly path: string;
+  readonly sheet: string;
+  readonly cells: readonly DriveExcelCell[];
+  readonly expected?: readonly DriveExcelExpectedCell[];
+};
+
+export type DriveToolsExcelSetCellsResult = {
+  readonly id: string;
+  readonly path: string;
+  readonly etag: string | null;
+  readonly sheet: string;
+  readonly cellsWritten: number;
+};
+
+/** `cells` are addresses (`H5`) or top-left:bottom-right ranges (`A2:R21`); at most 20 rows. */
+export type DriveToolsExcelReadCellsParams = {
+  readonly path: string;
+  readonly sheet: string;
+  readonly cells: readonly string[];
+};
+
+/** Read from the stored workbook; `etag` names the bytes the cells were read from. */
+export type DriveToolsExcelReadCellsResult = {
+  readonly id: string;
+  readonly path: string;
+  readonly etag: string | null;
+  readonly sheet: string;
+  readonly cells: readonly DriveExcelCell[];
+};

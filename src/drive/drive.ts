@@ -10,6 +10,7 @@ import type {
   DriveDiskUsageResult,
   DriveDownloadFileResult,
   DriveDownloadUrlResult,
+  DriveExcelCell,
   DriveFileMetadata,
   DrivePathEntry,
   DrivePathMutationResult,
@@ -20,6 +21,8 @@ import type {
   DriveToolsBiQueryResult,
   DriveToolsDocument,
   DriveToolsDocumentPart,
+  DriveToolsExcelReadCellsResult,
+  DriveToolsExcelSetCellsResult,
   DriveToolsGlobResult,
   DriveToolsGrepResult,
   DriveToolsInodesQueryResult,
@@ -253,6 +256,54 @@ const decodeReadFileResult = (o: unknown): DriveReadFileResult => {
     nextOffset: num(r, 'next_offset') ?? num(r, 'nextOffset') ?? undefined,
     eof: boolOptional(r, 'eof'),
     etag: etagOf(r),
+  };
+};
+
+/** REQ-3680-008: decode one workbook cell, refusing values and fills outside the contract. */
+const decodeExcelCell = (o: unknown): DriveExcelCell => {
+  const r = raw(o);
+  const value = r.value;
+  if (
+    !(
+      value === null ||
+      typeof value === 'string' ||
+      typeof value === 'boolean' ||
+      (typeof value === 'number' && Number.isFinite(value))
+    )
+  ) {
+    throw new Error(
+      "Invalid Drive response: cell 'value' must be text, a number, a boolean or null"
+    );
+  }
+  const bgcolor = r.bgcolor;
+  if (bgcolor !== null && !(typeof bgcolor === 'string' && /^[0-9A-F]{6}$/.test(bgcolor))) {
+    throw new Error("Invalid Drive response: cell 'bgcolor' must be RRGGBB or null");
+  }
+  return { cell: strRequired(r, 'cell'), value, bgcolor };
+};
+
+/** REQ-3680-008: decode paths/tools/excel-set-cells. */
+const decodeExcelSetCellsResult = (o: unknown): DriveToolsExcelSetCellsResult => {
+  const r = raw(o);
+  return {
+    id: strRequired(r, 'inode'),
+    path: strRequired(r, 'path'),
+    etag: etagOf(r),
+    sheet: strRequired(r, 'sheet'),
+    cellsWritten: numRequired(r, 'cells_written'),
+  };
+};
+
+/** REQ-3680-008: decode paths/tools/excel-read-cells. */
+const decodeExcelReadCellsResult = (o: unknown): DriveToolsExcelReadCellsResult => {
+  const r = raw(o);
+  if (!Array.isArray(r.cells)) throw new Error('Invalid Drive response: cells must be array');
+  return {
+    id: strRequired(r, 'inode'),
+    path: strRequired(r, 'path'),
+    etag: etagOf(r),
+    sheet: strRequired(r, 'sheet'),
+    cells: r.cells.map(decodeExcelCell),
   };
 };
 
@@ -1001,6 +1052,28 @@ export const createDriveClient = (params: {
           ...optional('sheet_name', p.sheetName),
         });
         return decodeWriteResult(result);
+      },
+
+      excelSetCells: async (p) => {
+        const result = await call('paths/tools/excel-set-cells', {
+          path: p.path,
+          sheet: p.sheet,
+          cells: p.cells.map((c) => ({ cell: c.cell, value: c.value, bgcolor: c.bgcolor })),
+          ...optional(
+            'expected',
+            p.expected?.map((c) => ({ cell: c.cell, value: c.value }))
+          ),
+        });
+        return decodeExcelSetCellsResult(result);
+      },
+
+      excelReadCells: async (p) => {
+        const result = await call('paths/tools/excel-read-cells', {
+          path: p.path,
+          sheet: p.sheet,
+          cells: [...p.cells],
+        });
+        return decodeExcelReadCellsResult(result);
       },
     },
 
