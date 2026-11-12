@@ -325,7 +325,10 @@ test('operatives.files.remove sends DELETE', async () => {
       const client = diskd.platform.operatives({ auth: makeAuth(), url });
       await client.files.remove('op-01', 'file-01');
 
-      assert.equal(calls[0]?.url, 'http://app-service:3000/api/operatives/op-01/attachments/file-01');
+      assert.equal(
+        calls[0]?.url,
+        'http://app-service:3000/api/operatives/op-01/attachments/file-01'
+      );
       assert.equal(calls[0]?.init?.method, 'DELETE');
     }
   );
