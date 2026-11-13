@@ -1,12 +1,13 @@
 import type { AuthModule } from '../auth/types.js';
 import { JsonRpcError, jsonRpcCall } from '../drive/rpc.js';
 import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
+import { streamCompletionFrames } from './completion-stream.js';
+import { decodeCompletionUsage as decodeUsage } from './completion-usage.js';
 import { makeLlmRouterError } from './llmRouterErrors.js';
 import type {
   ChatCompletionMessage,
   CompletionParams,
   CompletionResult,
-  CompletionUsage,
   EmbeddingParams,
   EmbeddingResult,
   EmbeddingUsage,
@@ -87,15 +88,6 @@ const decodeToolCall = (o: unknown): ToolCall => {
           arguments: str(fn, 'arguments'),
         }
       : null,
-  };
-};
-
-const decodeUsage = (o: unknown): CompletionUsage | null => {
-  if (!isObject(o)) return null;
-  return {
-    promptTokens: num(o, 'prompt_tokens') ?? 0,
-    completionTokens: num(o, 'completion_tokens') ?? 0,
-    totalTokens: num(o, 'total_tokens') ?? 0,
   };
 };
 
@@ -410,82 +402,8 @@ const encodeOcrParams = (params: OcrParams): Record<string, unknown> => ({
   ...optional('extract_footer', params.extractFooter),
 });
 
-// ---------------------------------------------------------------------------
-// NDJSON streaming reader
-// ---------------------------------------------------------------------------
-
-/**
- * Reads a fetch Response body as NDJSON, yielding each parsed JSON value.
- * Empty lines and keep-alive newlines are skipped silently.
- * Lines that contain `{ type: 'error' }` are thrown as errors.
- */
-async function* readNdjsonStream(response: Response): AsyncGenerator<unknown, void, unknown> {
-  if (!response.body) throw new Error('LLM Router stream: response has no body');
-
-  const decoder = new TextDecoder();
-  const reader = response.body.getReader();
-  let buffer = '';
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      const lines = buffer.split('\n');
-      // Last element may be an incomplete line -- keep in buffer
-      buffer = lines.pop() ?? '';
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue; // skip keep-alive / empty lines
-
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(trimmed);
-        } catch {
-          // Malformed line -- skip; do not abort the stream
-          continue;
-        }
-
-        if (isObject(parsed) && parsed.type === 'error') {
-          const msg = str(parsed, 'message') ?? JSON.stringify(parsed);
-          throw makeLlmRouterError(
-            `LLM Router stream error: ${msg}`,
-            response.status,
-            parsed.code,
-            parsed.data
-          );
-        }
-
-        yield parsed;
-      }
-    }
-
-    // Flush remaining buffer
-    const remaining = buffer.trim();
-    if (remaining) {
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(remaining);
-      } catch {
-        return;
-      }
-      if (isObject(parsed) && parsed.type === 'error') {
-        const msg = str(parsed, 'message') ?? JSON.stringify(parsed);
-        throw makeLlmRouterError(
-          `LLM Router stream error: ${msg}`,
-          response.status,
-          parsed.code,
-          parsed.data
-        );
-      }
-      yield parsed;
-    }
-  } finally {
-    reader.releaseLock();
-  }
-}
+// REQ-3721-004: The legacy inline NDJSON reader is deprecated; completion-stream.ts owns its replacement.
+// Its public completions.stream contract is unchanged.
 
 // ---------------------------------------------------------------------------
 // Client factory
@@ -564,33 +482,12 @@ export const createLlmRouterClient = (params: {
         const authHeaders = await getAuthHeaders();
         const body = JSON.stringify(encodeCompletionParams(completionParams));
 
-        const response = await fetch(streamUrl, {
-          method: 'POST',
-          headers: {
-            ...authHeaders,
-            'Content-Type': 'application/json',
-            Accept: 'application/x-ndjson',
-          },
+        for await (const raw_ of streamCompletionFrames({
+          url: streamUrl,
+          headers: authHeaders,
           body,
-        });
-
-        if (!response.ok) {
-          const text = await response.text();
-          let parsed: unknown;
-          try {
-            parsed = JSON.parse(text);
-          } catch {
-            parsed = {};
-          }
-          const fields = isObject(parsed) && !Array.isArray(parsed) ? parsed : {};
-          const message =
-            typeof fields.error === 'string'
-              ? fields.error
-              : `LLM Router stream failed (HTTP ${response.status}): ${text.slice(0, 200)}`;
-          throw makeLlmRouterError(message, response.status, fields.code, fields.data, fields.code);
-        }
-
-        for await (const raw_ of readNdjsonStream(response)) {
+          ...(completionParams.signal ? { signal: completionParams.signal } : {}),
+        })) {
           yield decodeStreamChunk(raw_);
         }
       },

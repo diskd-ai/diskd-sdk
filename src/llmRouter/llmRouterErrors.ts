@@ -1,5 +1,7 @@
+import { type CompletionErrorUsage, decodeCompletionErrorUsage } from './completion-error-usage.js';
+
 /** Safe machine facts advertised by the router; message is display-only. */
-export type LlmRouterErrorData = {
+export type LlmRouterErrorData = CompletionErrorUsage & {
   readonly reason?: string;
   readonly status?: number;
   readonly type?: string;
@@ -63,6 +65,7 @@ export const decodeLlmRouterErrorData = (value: unknown): LlmRouterErrorData => 
   const message =
     typeof rawMessage === 'string' && rawMessage.length <= 1000 ? rawMessage : undefined;
   return {
+    ...decodeCompletionErrorUsage(value),
     ...(reason !== undefined ? { reason } : {}),
     ...(typeof status === 'number' && Number.isInteger(status) && status >= 100 && status <= 599
       ? { status }

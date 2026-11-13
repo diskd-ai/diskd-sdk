@@ -266,3 +266,30 @@ Release order: deploy the Drive expression parser first, then publish the approv
   (REQ-3642-075), so consumers can recover without matching display text.
 - Keep ContextTooLargeError source compatibility and expose the error classes
   from both Node and browser entrypoints.
+
+## 2026-11-13 - Preserve completion-stream cancellation (#3721)
+
+- Move completion streaming into a small transport module. Caller cancellation reaches fetch and unread bodies are cancelled when iteration stops; malformed NDJSON surfaces typed/parse failures rather than silently dropping content. Existing endpoint, request and error contracts remain intact.
+- Current release source: baseline cancellation tests 1 pass/6 fail, candidate 40 affected tests pass. Full required unit run: 314 pass plus Bun upload regression; build passes. Cached lint import-order findings were fixed and the format/import check passes.
+- A separate local Pi prototype using the same cancellation implementation on the 7.11 snapshot reached the real Router/Together abort boundary and preserved Drive evidence. Full consumer acceptance and publication remain pending.
+
+## 2026-11-13 - Preserve unknown completion usage (#3721)
+
+- Isolated prototype: replace zero-default decoding with a small pure completion-usage module. Incomplete or invalid counters remain null under the existing contract. Valid explicit zeros and provider totals containing extra thought/tool categories remain unchanged; response content is preserved.
+- Actual local HTTP baseline: 10 pass / 20 fail. Independent review found an invalid sum-equality assumption; its three failing compatibility regressions now pass. Final affected SDK run: 74 pass, build pass. Four Node 22 HTTP composition tests prove shrinking max_tokens, unknown-usage retry refusal and active-request deadline closure. Nineteen saved Together receipts replay unchanged, without new inference calls.
+- This is not full retry-cost accounting: upstream defaults/omissions, failed-attempt usage, provider-specific token categories, late completion admission and all-layer budget wiring remain open. Previous 314-test release run predates this addition. Publication, consumer adoption and Dev acceptance remain pending; version unchanged.
+
+## 2026-11-13 - Retain failed-completion receipts for bounded recovery (#3721)
+
+- Completion abort signals reach the HTTP owner; iterator cancellation closes
+  unread bodies and malformed frames surface errors. Missing usage remains
+  unknown instead of zero. Optional failed-attempt usage and completeness are
+  decoded into camelCase without changing request fields or typed error reasons.
+- Real-Pi isolated proof preserves both failed and recovered receipts, deducts
+  failed output before retry, reads the owner file once and persists exact usage.
+- Release authorization: owner approval after reviewing the local candidate and
+  deterministic proof. Source matches the reviewed error-usage snapshot except formatting.
+  Required release tests: 362 passed plus Bun upload regression; build and
+  typecheck passed. Four cached lint formatting/import findings were corrected;
+  the targeted format/import check and 38 affected tests passed.
+  Consumer rollout and whole-turn cost bounds remain separate acceptance gates.
