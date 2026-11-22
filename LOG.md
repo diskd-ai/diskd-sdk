@@ -1,3 +1,9 @@
+## 2026-11-22 - Preserve App mailbox intent order through SDK retries (#3737)
+
+Ordered sync and Stop requests carry the App's original generation and operation ID.
+Enable ordered calls only after every receiving worker accepts the paired fields.
+Existing callers can still use the account-only request.
+
 ## 2026-11-23 - Reply-header state on stored messages (#3894)
 
 REQ-3894-022 (owner decision): `StoredMessage`, `StoredEmail` and `InboxEmailEnvelope` carry `replyHeaders: 'LOADED' | 'UNAVAILABLE'` from Drive's `reply_headers`. `'UNAVAILABLE'` means Drive could not rebuild the reply headers of a listed row, so `inReplyTo: null` and `references: []` then mean unknown, not absent. A missing or malformed value (an older Drive) decodes as `'UNAVAILABLE'`. Release order: Drive with `reply_headers` first, then this SDK version, then Pi.
