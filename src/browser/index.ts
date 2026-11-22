@@ -84,6 +84,7 @@ export type {
   EmailBodyResult,
   EmailClient,
   EmailClientParams,
+  EmailSyncInput,
   EmailConnectionResult,
   EmailDeleteRequest,
   EmailDeleteResult,

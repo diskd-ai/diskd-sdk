@@ -1,6 +1,20 @@
 import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import * as decode from './emailDecode.js';
-import type { EmailClient, EmailClientParams } from './emailTypes.js';
+import type { EmailClient, EmailClientParams, EmailSyncInput } from './emailTypes.js';
+
+function readMailboxIntent(input: EmailSyncInput) {
+  if (!('intentGeneration' in input) && !('operationId' in input)) return undefined;
+  const { intentGeneration, operationId } = input;
+  if (
+    typeof intentGeneration !== 'number' ||
+    !Number.isSafeInteger(intentGeneration) ||
+    intentGeneration < 1
+  )
+    throw new TypeError('intentGeneration must be a positive safe integer');
+  if (typeof operationId !== 'string' || !/^[0-9A-HJKMNP-TV-Z]{26}$/i.test(operationId))
+    throw new TypeError('operationId must be a ULID');
+  return { intentGeneration, operationId };
+}
 
 /** Use the public authenticated email gateway; installed MCP servers never participate in provider execution. */
 export function createEmailClient(params: EmailClientParams): EmailClient {
@@ -48,10 +62,23 @@ export function createEmailClient(params: EmailClientParams): EmailClient {
   };
   return {
     listAccounts: async () => decode.accounts(await request('/accounts')),
-    sync: async (input) =>
-      decode.admission(await request('/sync', 'POST', input, crypto.randomUUID())),
-    stopSync: async ({ account }) => {
-      await request(`/sync/${encodeURIComponent(account)}`, 'DELETE');
+    sync: async (input) => {
+      const intent = readMailboxIntent(input);
+      return decode.admission(
+        await request(
+          '/sync',
+          'POST',
+          { ...input },
+          intent?.operationId ?? crypto.randomUUID()
+        )
+      );
+    },
+    stopSync: async (input) => {
+      await request(
+        `/sync/${encodeURIComponent(input.account)}`,
+        'DELETE',
+        readMailboxIntent(input)
+      );
     },
     syncStatus: async ({ account }) =>
       decode.syncStatus(await request(`/status/${encodeURIComponent(account)}`)),

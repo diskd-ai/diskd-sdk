@@ -104,11 +104,17 @@ export type EmailAdmission = {
   readonly status: 'queued';
   readonly requestId: string;
 };
+/** The App allocates and persists both fields before issuing an ordered mailbox action. */
+type MailboxIntent = { readonly intentGeneration: number; readonly operationId: string };
+export type EmailSyncInput = { readonly account: string } & (
+  | MailboxIntent
+  | { readonly intentGeneration?: never; readonly operationId?: never }
+);
 /** Account configuration queries stay read-only; provider operations use durable worker commands. */
 export type EmailClient = {
   readonly listAccounts: () => Promise<{ readonly accounts: readonly EmailAccount[] }>;
-  readonly sync: (params: { readonly account: string }) => Promise<EmailAdmission>;
-  readonly stopSync: (params: { readonly account: string }) => Promise<void>;
+  readonly sync: (params: EmailSyncInput) => Promise<EmailAdmission>;
+  readonly stopSync: (params: EmailSyncInput) => Promise<void>;
   readonly syncStatus: (params: { readonly account: string }) => Promise<EmailSyncStatus>;
   readonly hydrateBodies: (params: EmailBodyRequest) => Promise<EmailBodyResult>;
   readonly hydrateAttachment: (params: EmailAttachmentRequest) => Promise<EmailAttachmentResult>;

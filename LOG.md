@@ -1,3 +1,9 @@
+## 2026-11-22 - Preserve App mailbox intent order through SDK retries (#3737)
+
+Ordered sync and Stop requests carry the App's original generation and operation ID.
+Enable ordered calls only after every receiving worker accepts the paired fields.
+Existing callers can still use the account-only request.
+
 ## 2026-11-12 - Read and set Excel cells through the SDK (#3680)
 
 REQ-3680-008: `drive.tools.excelSetCells` and `drive.tools.excelReadCells` call Drive's `paths/tools/excel-set-cells` and `paths/tools/excel-read-cells`. Cells are Excel addresses (reads also take ranges such as `A2:R21`), at most 20 rows per call; `bgcolor` is RRGGBB or null for no fill; `expected` is an optional key check that refuses the whole call on a mismatch. Results carry the workbook `etag`; decoding refuses values or fills outside the contract. Drive holds a per-file database lock across each write, so a busy workbook surfaces as the Drive error `FILE_BUSY`.

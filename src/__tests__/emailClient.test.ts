@@ -1,5 +1,7 @@
 /* REQ-email-workers-004: SDK mail operations use the authenticated worker gateway and wait for durable scoped completion. */
 import assert from 'node:assert/strict';
+import { once } from 'node:events';
+import { createServer } from 'node:http';
 import test from 'node:test';
 import type { AuthModule } from '../auth/types.js';
 import { diskd } from '../sdk/diskd.js';
@@ -108,6 +110,106 @@ test('API-key auth sends one canonical workspace header', async () => {
         url: 'http://workers',
       })
       .listAccounts();
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+/* REQ-3737-003: the same App intent retains its wire identity across repeated SDK calls. */
+for (const operation of ['sync', 'stopSync'] as const) {
+  test(`email ${operation} preserves the mailbox intent through HTTP redelivery`, async () => {
+    const intent = { intentGeneration: 7, operationId: '01ARZ3NDEKTSV4RRFFQ69G5FAV' };
+    const account = 'mail__fixture';
+    const captures: { method?: string; path?: string; body: string; key?: string | string[] }[] =
+      [];
+    const server = createServer(async (req, res) => {
+      let body = '';
+      for await (const chunk of req) body += chunk;
+      captures.push({
+        method: req.method,
+        path: req.url,
+        body,
+        key: req.headers['idempotency-key'],
+      });
+      if (captures.length === 1) {
+        res.writeHead(503).end();
+      } else if (req.method === 'DELETE') {
+        res.writeHead(204).end();
+      } else {
+        res
+          .writeHead(202, { 'content-type': 'application/json' })
+          .end(
+            JSON.stringify({
+              jobId: 'j',
+              requestId: 'r',
+              status: 'queued',
+              syncIntervalSeconds: 300,
+            })
+          );
+      }
+    });
+    server.listen(0, '127.0.0.1');
+    try {
+      await once(server, 'listening');
+      const addr = server.address();
+      assert(addr && typeof addr !== 'string');
+      const client = diskd.os.email({ auth, url: `http://127.0.0.1:${addr.port}/v1/os/email` });
+      const input = { account, ...intent };
+      await assert.rejects(client[operation](input), /EmailWorkerHttp503/);
+      const outcome = await client[operation](input);
+      assert.equal(captures.length, 2);
+      assert.deepEqual(captures[1], captures[0]);
+      const capture = captures[0];
+      assert(capture);
+      if (operation === 'sync') {
+        assert.equal(capture.key, intent.operationId);
+        assert.equal(capture.method, 'POST');
+        assert.equal(capture.path, '/v1/os/email/sync');
+        assert.deepEqual(JSON.parse(capture.body), input);
+        assert.deepEqual(outcome, { jobId: 'j', requestId: 'r', status: 'queued' });
+      } else {
+        assert.equal(capture.method, 'DELETE');
+        assert.equal(capture.path, '/v1/os/email/sync/' + account);
+        assert.deepEqual(JSON.parse(capture.body), intent);
+        assert.equal(outcome, undefined);
+      }
+    } finally {
+      await new Promise<void>((resolve, reject) =>
+        server.close((e) => (e ? reject(e) : resolve()))
+      );
+    }
+  });
+}
+
+/* REQ-3737-003: legacy sync keeps its admission shape; invalid pairs never reach a worker. */
+test('keeps legacy sync and refuses incomplete mailbox intents before HTTP', async () => {
+  const original = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async (_url, init) => {
+    calls++;
+    assert.deepEqual(JSON.parse(String(init?.body)), { account: 'mail' });
+    assert(new Headers(init?.headers).get('idempotency-key'));
+    return Response.json({ jobId: 'j', requestId: 'r', status: 'queued' }, { status: 202 });
+  };
+  try {
+    const client = diskd.os.email({ auth, url: 'http://workers' });
+    await client.sync({ account: 'mail' });
+    for (const call of [client.sync, client.stopSync]) {
+      // JavaScript callers can bypass the typed pair.
+      await assert.rejects(
+        call(JSON.parse('{"account":"mail","intentGeneration":1}')),
+        /operationId/
+      );
+      await assert.rejects(
+        call(JSON.parse('{"account":"mail","operationId":"01ARZ3NDEKTSV4RRFFQ69G5FAV"}')),
+        /intentGeneration/
+      );
+      await assert.rejects(
+        call({ account: 'mail', intentGeneration: -1, operationId: 'invalid' }),
+        /intentGeneration/
+      );
+    }
+    assert.equal(calls, 1);
   } finally {
     globalThis.fetch = original;
   }
