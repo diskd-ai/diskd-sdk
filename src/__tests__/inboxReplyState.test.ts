@@ -130,7 +130,11 @@ test('platform.inbox.list envelopes carry inReplyTo, references and answered', a
   await withDrive(
     { 'messages_store/list': { items: [replyRow, legacyRow], next_cursor: null } },
     async () => {
-      const inbox = diskd.platform.inbox({ auth: makeAuth(), driveUrl: 'http://drive/api/v1' });
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        contentMode: 'stored-only',
+      });
       const page = await inbox.list({ account: 'owner@example.com', folderId: 'INBOX' });
       assert.deepEqual(
         page.items.map((item) => [item.messageId, item.inReplyTo, item.references, item.answered]),
