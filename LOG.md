@@ -1,3 +1,9 @@
+## 2026-11-22 - Reply headers and the answered flag on Inbox messages (#3894)
+
+REQ-3894-017: `StoredEmail` and `InboxEmailEnvelope` carry `inReplyTo` (string or null), `references` (string list) and `answered` (true when the stored IMAP flags contain `\Answered`). The mail workers already store these values in the Drive payload; the SDK now maps them in one named pure function, `replyStateOf`, which maps a missing or malformed value explicitly to null, [] or false. Pi uses them to tell answered from unanswered Inbox messages.
+
+Release order: no provider change is needed (the workers and Drive already store the values); publish this SDK version, then install the exact version in pi-agent-service. Consumers that build these types by hand (test fakes) must add the three fields.
+
 ## 2026-11-12 - Read and set Excel cells through the SDK (#3680)
 
 REQ-3680-008: `drive.tools.excelSetCells` and `drive.tools.excelReadCells` call Drive's `paths/tools/excel-set-cells` and `paths/tools/excel-read-cells`. Cells are Excel addresses (reads also take ranges such as `A2:R21`), at most 20 rows per call; `bgcolor` is RRGGBB or null for no fill; `expected` is an optional key check that refuses the whole call on a mismatch. Results carry the workbook `etag`; decoding refuses values or fills outside the contract. Drive holds a per-file database lock across each write, so a busy workbook surfaces as the Drive error `FILE_BUSY`.

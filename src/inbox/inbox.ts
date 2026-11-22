@@ -12,6 +12,7 @@ import {
   type StoredMessage,
 } from '../messagesStore/messagesStoreTypes.js';
 import { resolveEmailFlagTarget, validateEmailFlagOutcome } from './inboxMarkRead.js';
+import { replyStateOf } from './inboxReplyState.js';
 import {
   formatInboxMessageSearchExpression,
   parseInboxSearchExpression,
@@ -332,6 +333,7 @@ const exchangeStoredEmail = (
     isRead: Array.isArray(payload.flags)
       ? hasFlag(payload, '\\Seen')
       : isBool(payload.isRead) && payload.isRead,
+    ...replyStateOf(payload),
     isFlagged,
     flagColor: resolveFlagColor(row.platformFlags, isFlagged),
     priority: isString(payload.priority) ? payload.priority : 'normal',
@@ -351,6 +353,9 @@ const envelopeFromStoredEmail = (email: StoredEmail): InboxEmailEnvelope => ({
   date: email.date,
   hasAttachments: email.hasAttachments,
   isRead: email.isRead,
+  inReplyTo: email.inReplyTo,
+  references: email.references,
+  answered: email.answered,
   isFlagged: email.isFlagged,
   flagColor: email.flagColor,
   priority: email.priority,

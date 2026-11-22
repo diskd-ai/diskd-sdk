@@ -77,6 +77,13 @@ export type StoredEmail = {
   /** Platform-owned labels only; these are the ones setLabels can remove. */
   readonly platformLabels: readonly string[];
   readonly isRead: boolean;
+  /* REQ-3894-017: reply state from the stored payload (#3894). */
+  /** First RFC In-Reply-To id (`<...>`); null when the stored payload has none. */
+  readonly inReplyTo: string | null;
+  /** RFC References ids in stored order; empty when the stored payload has none. */
+  readonly references: readonly string[];
+  /** True when the stored IMAP flags contain \\Answered. */
+  readonly answered: boolean;
   /** True when the provider mirror has \\Flagged or the platform star is set. */
   readonly isFlagged: boolean;
   /** Flag colour (2026-10-07): the stored colour, red without one, null when not flagged. */
@@ -102,6 +109,10 @@ export type InboxEmailEnvelope = {
   readonly date: string;
   readonly hasAttachments: boolean;
   readonly isRead: boolean;
+  /* REQ-3894-017: reply state from the stored payload (#3894); see StoredEmail. */
+  readonly inReplyTo: string | null;
+  readonly references: readonly string[];
+  readonly answered: boolean;
   readonly isFlagged: boolean;
   /** Flag colour (2026-10-07); null when not flagged. */
   readonly flagColor: PlatformFlagColor | null;
