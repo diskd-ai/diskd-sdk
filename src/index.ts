@@ -294,11 +294,11 @@ export type {
   EmailBodyResult,
   EmailClient,
   EmailClientParams,
-  EmailSyncInput,
   EmailConnectionResult,
   EmailDeleteRequest,
   EmailDeleteResult,
   EmailMessageRef,
+  EmailSyncInput,
   EmailSyncStatus,
 } from './email/emailTypes.js';
 export { createInboxClient } from './inbox/inbox.js';

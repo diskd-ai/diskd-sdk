@@ -84,11 +84,11 @@ export type {
   EmailBodyResult,
   EmailClient,
   EmailClientParams,
-  EmailSyncInput,
   EmailConnectionResult,
   EmailDeleteRequest,
   EmailDeleteResult,
   EmailMessageRef,
+  EmailSyncInput,
   EmailSyncStatus,
 } from '../email/emailTypes.js';
 export type { LlmRouterErrorData } from '../llmRouter/llmRouterErrors.js';
