@@ -1,3 +1,9 @@
+## 2026-11-23 - Applied mailbox intent snapshot on the sync status (#3737)
+
+REQ-3737-011 (owner decision 2026-11-23): `EmailSyncStatus` carries the worker's one durable snapshot of the account's applied mailbox intent: `state` (`'ENABLED' | 'STOPPED' | 'UNDECLARED'`), `appliedGeneration`, `operationId` and `pendingPublication`, with the exact wire names. All four are `null` when the worker does not report the snapshot (workers before it). `UNDECLARED` carries no applied pair and is never a confirmed Stop. A malformed snapshot is refused with `InvalidEmailResponse`. Together with the ordered `sync`/`stopSync` pair (entry below), App confirms a recovered mailbox action only on the exact applied pair with `pendingPublication: false`.
+
+Release order: the workers must report the snapshot and accept the ordered Stop body before App sends ordered requests; publish this SDK version, then install the exact version in app-service. Consumers that build `EmailSyncStatus` by hand (test fakes) must add the four fields.
+
 ## 2026-11-22 - Preserve App mailbox intent order through SDK retries (#3737)
 
 Ordered sync and Stop requests carry the App's original generation and operation ID.
