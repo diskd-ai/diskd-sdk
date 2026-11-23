@@ -130,3 +130,21 @@ test('platform.inbox.read carries replyHeaders', async () => {
     }
   );
 });
+
+test('a readable message without reply headers is LOADED with null and []', async () => {
+  await withDrive(
+    { 'messages_store/list': { items: [row('headerless', 'LOADED')], next_cursor: null } },
+    async () => {
+      const inbox = diskd.platform.inbox({
+        auth: makeAuth(),
+        driveUrl: 'http://drive/api/v1',
+        contentMode: 'stored-only',
+      });
+      const page = await inbox.list({ account: 'owner@example.test', folderId: 'INBOX' });
+      assert.deepEqual(
+        page.items.map((item) => [item.replyHeaders, item.inReplyTo, item.references]),
+        [['LOADED', null, []]]
+      );
+    }
+  );
+});
