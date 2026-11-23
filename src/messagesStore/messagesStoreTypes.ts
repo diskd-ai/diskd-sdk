@@ -152,7 +152,15 @@ export type StoredMessage = {
   readonly platformLabels: readonly string[];
   /** Increases on every platform flag/label change; scopes flag event identity. */
   readonly platformRevision: number;
+  /**
+   * REQ-3894-022: whether `payload` carries the stored reply headers (inReplyTo, references). 'UNAVAILABLE' when
+   * Drive could not rebuild them for a listed row, or did not say (an older Drive).
+   */
+  readonly replyHeaders: ReplyHeadersState;
 };
+
+/** REQ-3894-022: the reply-header state of a stored message row (an untranslated constant). */
+export type ReplyHeadersState = 'LOADED' | 'UNAVAILABLE';
 
 /** The platform star flag accepted by messages_store/set-attributes. */
 export const PLATFORM_FLAGGED = 'flagged';

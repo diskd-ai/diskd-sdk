@@ -50,6 +50,7 @@ import type {
   MessagesStoreClient,
   OutboxLeaseParams,
   OutboxTerminalOutcome,
+  ReplyHeadersState,
   ReviewItem,
   SenderSummary,
   SetMessageAttributesResult,
@@ -232,6 +233,10 @@ const platformRevision = (obj: RawObject): number => {
   return typeof value === 'number' ? value : 0;
 };
 
+/** REQ-3894-022: 'LOADED' only when Drive says so; a missing or malformed value is 'UNAVAILABLE'. */
+const replyHeadersState = (obj: RawObject): ReplyHeadersState =>
+  obj.reply_headers === 'LOADED' ? 'LOADED' : 'UNAVAILABLE';
+
 const decodeStoredMessage = (o: unknown): StoredMessage => {
   const r = raw(o);
   return {
@@ -242,6 +247,7 @@ const decodeStoredMessage = (o: unknown): StoredMessage => {
     platformFlags: platformNames(r, 'platform_flags'),
     platformLabels: platformNames(r, 'platform_labels'),
     platformRevision: platformRevision(r),
+    replyHeaders: replyHeadersState(r),
   };
 };
 

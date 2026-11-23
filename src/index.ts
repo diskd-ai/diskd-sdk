@@ -455,6 +455,7 @@ export type {
   MessagesStoreClient,
   OutboxLeaseParams,
   OutboxTerminalOutcome,
+  ReplyHeadersState,
   ReviewItem,
   SenderSummary,
   SetMessageAttributesParams,

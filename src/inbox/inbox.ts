@@ -333,6 +333,7 @@ const exchangeStoredEmail = (
     isRead: Array.isArray(payload.flags)
       ? hasFlag(payload, '\\Seen')
       : isBool(payload.isRead) && payload.isRead,
+    replyHeaders: row.replyHeaders,
     ...replyStateOf(payload),
     isFlagged,
     flagColor: resolveFlagColor(row.platformFlags, isFlagged),
@@ -353,6 +354,7 @@ const envelopeFromStoredEmail = (email: StoredEmail): InboxEmailEnvelope => ({
   date: email.date,
   hasAttachments: email.hasAttachments,
   isRead: email.isRead,
+  replyHeaders: email.replyHeaders,
   inReplyTo: email.inReplyTo,
   references: email.references,
   answered: email.answered,

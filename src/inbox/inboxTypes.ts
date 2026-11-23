@@ -1,5 +1,5 @@
 import type { AuthModule } from '../auth/types.js';
-import type { PlatformFlagColor } from '../messagesStore/messagesStoreTypes.js';
+import type { PlatformFlagColor, ReplyHeadersState } from '../messagesStore/messagesStoreTypes.js';
 
 // Stored email types and platform inbox client contracts.
 // Account is the exact Drive mailbox ID; email mailboxes retain the configured email verbatim.
@@ -77,6 +77,8 @@ export type StoredEmail = {
   /** Platform-owned labels only; these are the ones setLabels can remove. */
   readonly platformLabels: readonly string[];
   readonly isRead: boolean;
+  /** REQ-3894-022: whether inReplyTo and references were read ('UNAVAILABLE': unknown, not absent). */
+  readonly replyHeaders: ReplyHeadersState;
   /* REQ-3894-017: reply state from the stored payload (#3894). */
   /** First RFC In-Reply-To id (`<...>`); null when the stored payload has none. */
   readonly inReplyTo: string | null;
@@ -109,6 +111,8 @@ export type InboxEmailEnvelope = {
   readonly date: string;
   readonly hasAttachments: boolean;
   readonly isRead: boolean;
+  /** REQ-3894-022: see StoredEmail.replyHeaders. */
+  readonly replyHeaders: ReplyHeadersState;
   /* REQ-3894-017: reply state from the stored payload (#3894); see StoredEmail. */
   readonly inReplyTo: string | null;
   readonly references: readonly string[];

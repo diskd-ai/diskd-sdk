@@ -1,3 +1,7 @@
+## 2026-11-23 - Reply-header state on stored messages (#3894)
+
+REQ-3894-022 (owner decision): `StoredMessage`, `StoredEmail` and `InboxEmailEnvelope` carry `replyHeaders: 'LOADED' | 'UNAVAILABLE'` from Drive's `reply_headers`. `'UNAVAILABLE'` means Drive could not rebuild the reply headers of a listed row, so `inReplyTo: null` and `references: []` then mean unknown, not absent. A missing or malformed value (an older Drive) decodes as `'UNAVAILABLE'`. Release order: Drive with `reply_headers` first, then this SDK version, then Pi.
+
 ## 2026-11-22 - Reply headers and the answered flag on Inbox messages (#3894)
 
 REQ-3894-017: `StoredEmail` and `InboxEmailEnvelope` carry `inReplyTo` (string or null), `references` (string list) and `answered` (true when the stored IMAP flags contain `\Answered`). The mail workers already store these values in the Drive payload; the SDK now maps them in one named pure function, `replyStateOf`, which maps a missing or malformed value explicitly to null, [] or false. Pi uses them to tell answered from unanswered Inbox messages.
