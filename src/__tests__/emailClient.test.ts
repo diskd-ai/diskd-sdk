@@ -136,16 +136,14 @@ for (const operation of ['sync', 'stopSync'] as const) {
       } else if (req.method === 'DELETE') {
         res.writeHead(204).end();
       } else {
-        res
-          .writeHead(202, { 'content-type': 'application/json' })
-          .end(
-            JSON.stringify({
-              jobId: 'j',
-              requestId: 'r',
-              status: 'queued',
-              syncIntervalSeconds: 300,
-            })
-          );
+        res.writeHead(202, { 'content-type': 'application/json' }).end(
+          JSON.stringify({
+            jobId: 'j',
+            requestId: 'r',
+            status: 'queued',
+            syncIntervalSeconds: 300,
+          })
+        );
       }
     });
     server.listen(0, '127.0.0.1');
@@ -210,6 +208,122 @@ test('keeps legacy sync and refuses incomplete mailbox intents before HTTP', asy
       );
     }
     assert.equal(calls, 1);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+/* REQ-3737-011 (#3737, owner decision 2026-11-23): the worker status carries one durable snapshot of the account's
+   applied mailbox intent { state, appliedGeneration, operationId, pendingPublication }; the SDK passes it through with
+   the exact wire names, null when an older worker does not report it, and refuses a malformed snapshot. */
+const statusWith = (snapshot: Record<string, unknown>) => ({
+  account: 'mail',
+  enabled: true,
+  intervalMs: 300000,
+  nextDueAt: null,
+  running: false,
+  lastSync: null,
+  ...snapshot,
+});
+const readStatus = async (body: unknown) => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => Response.json(body);
+  try {
+    return await diskd.os.email({ auth, url: 'http://workers' }).syncStatus({ account: 'mail' });
+  } finally {
+    globalThis.fetch = original;
+  }
+};
+
+test('passes the applied mailbox intent snapshot through the status', async () => {
+  const status = await readStatus(
+    statusWith({
+      state: 'STOPPED',
+      appliedGeneration: 2,
+      operationId: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+      pendingPublication: false,
+    })
+  );
+  assert.equal(status.state, 'STOPPED');
+  assert.equal(status.appliedGeneration, 2);
+  assert.equal(status.operationId, '01ARZ3NDEKTSV4RRFFQ69G5FAV');
+  assert.equal(status.pendingPublication, false);
+});
+
+test('reports an UNDECLARED account without an applied pair', async () => {
+  const status = await readStatus(
+    statusWith({
+      state: 'UNDECLARED',
+      appliedGeneration: null,
+      operationId: null,
+      pendingPublication: false,
+    })
+  );
+  assert.equal(status.state, 'UNDECLARED');
+  assert.equal(status.appliedGeneration, null);
+  assert.equal(status.operationId, null);
+});
+
+test('reads a status without the snapshot (older workers) as nulls', async () => {
+  const status = await readStatus(statusWith({}));
+  assert.equal(status.enabled, true);
+  assert.equal(status.state, null);
+  assert.equal(status.appliedGeneration, null);
+  assert.equal(status.operationId, null);
+  assert.equal(status.pendingPublication, null);
+});
+
+test('refuses a malformed snapshot', async () => {
+  for (const snapshot of [
+    {
+      state: 'PAUSED',
+      appliedGeneration: 1,
+      operationId: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+      pendingPublication: false,
+    },
+    {
+      state: 'ENABLED',
+      appliedGeneration: '1',
+      operationId: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+      pendingPublication: false,
+    },
+    {
+      state: 'ENABLED',
+      appliedGeneration: 1,
+      operationId: 'not-a-ulid',
+      pendingPublication: false,
+    },
+    {
+      state: 'ENABLED',
+      appliedGeneration: 1,
+      operationId: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+      pendingPublication: 'no',
+    },
+    { state: 'ENABLED', appliedGeneration: null, operationId: null, pendingPublication: false },
+  ]) {
+    await assert.rejects(readStatus(statusWith(snapshot)), /InvalidEmailResponse/);
+  }
+});
+
+test('sends the Stop pair in the DELETE body', async () => {
+  const original = globalThis.fetch;
+  const calls: { url: string; init?: RequestInit }[] = [];
+  globalThis.fetch = async (input, init) => {
+    calls.push({ url: String(input), init });
+    return new Response(null, { status: 204 });
+  };
+  try {
+    await diskd.os.email({ auth, url: 'http://workers' }).stopSync({
+      account: 'mail',
+      intentGeneration: 2,
+      operationId: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+    });
+    assert.equal(calls[0]?.url, 'http://workers/sync/mail');
+    assert.equal(calls[0]?.init?.method, 'DELETE');
+    assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
+      intentGeneration: 2,
+      operationId: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+    });
   } finally {
     globalThis.fetch = original;
   }
