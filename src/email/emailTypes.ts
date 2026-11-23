@@ -98,6 +98,15 @@ export type EmailSyncStatus = {
         readonly errorCode: string;
         readonly requiresReconnect: boolean;
       };
+  /**
+   * REQ-3737-011 (#3737, owner decision 2026-11-23): the worker's one durable snapshot of the account's applied
+   * mailbox intent. UNDECLARED (a legacy account or one the workers never saw) carries no applied pair and is never a
+   * confirmed Stop. All four are null when the worker does not report the snapshot (workers before it).
+   */
+  readonly state: 'ENABLED' | 'STOPPED' | 'UNDECLARED' | null;
+  readonly appliedGeneration: number | null;
+  readonly operationId: string | null;
+  readonly pendingPublication: boolean | null;
 };
 export type EmailAdmission = {
   readonly jobId: string;

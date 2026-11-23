@@ -84,7 +84,41 @@ function syncOutcome(value: unknown): EmailSyncStatus['lastSync'] {
     };
   throw new Error('InvalidEmailResponse');
 }
-/** Decode scheduling and the latest actual completion independently. */
+type IntentSnapshot = Pick<
+  EmailSyncStatus,
+  'state' | 'appliedGeneration' | 'operationId' | 'pendingPublication'
+>;
+const NO_SNAPSHOT: IntentSnapshot = {
+  state: null,
+  appliedGeneration: null,
+  operationId: null,
+  pendingPublication: null,
+};
+const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/i;
+
+/**
+ * REQ-3737-011: decode the worker's applied-intent snapshot. Absent (an older worker): all null. Present: the state is
+ * one of ENABLED, STOPPED, UNDECLARED; ENABLED and STOPPED carry a positive safe-integer generation and a ULID;
+ * UNDECLARED carries none; pendingPublication is a boolean. Anything else is refused, never guessed.
+ */
+function intentSnapshot(row: { readonly [key: string]: unknown }): IntentSnapshot {
+  if (!('state' in row)) return NO_SNAPSHOT;
+  const pendingPublication = boolean(row.pendingPublication);
+  if (row.state === 'UNDECLARED') {
+    if (row.appliedGeneration !== null || row.operationId !== null)
+      throw new Error('InvalidEmailResponse');
+    return { state: 'UNDECLARED', appliedGeneration: null, operationId: null, pendingPublication };
+  }
+  if (row.state !== 'ENABLED' && row.state !== 'STOPPED') throw new Error('InvalidEmailResponse');
+  const appliedGeneration = number(row.appliedGeneration);
+  if (!Number.isSafeInteger(appliedGeneration) || appliedGeneration < 1)
+    throw new Error('InvalidEmailResponse');
+  const operationId = text(row.operationId);
+  if (!ULID.test(operationId)) throw new Error('InvalidEmailResponse');
+  return { state: row.state, appliedGeneration, operationId, pendingPublication };
+}
+
+/** Decode scheduling and the latest actual completion independently, plus the applied-intent snapshot. */
 export function syncStatus(value: unknown): EmailSyncStatus {
   const row = object(value);
   return {
@@ -94,6 +128,7 @@ export function syncStatus(value: unknown): EmailSyncStatus {
     nextDueAt: row.nextDueAt === null ? null : number(row.nextDueAt),
     running: boolean(row.running),
     lastSync: syncOutcome(row.lastSync),
+    ...intentSnapshot(row),
   };
 }
 /** Decode hydration metadata while content remains in canonical Drive storage. */
