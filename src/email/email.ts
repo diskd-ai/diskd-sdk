@@ -2,8 +2,14 @@ import { resolveDiskdGatewayUrl } from '../env/baseUrl.js';
 import * as decode from './emailDecode.js';
 import type { EmailClient, EmailClientParams, EmailSyncInput } from './emailTypes.js';
 
+/**
+ * REQ-3737-005 (#3737): the App's recorded mailbox intent pair carried by an ordered sync or Stop, or undefined for a
+ * legacy account-only request. A field that is present but undefined counts as absent (TypeScript allows
+ * `intentGeneration?: never` to be passed as undefined); a pair with only one field, or an invalid value, is refused
+ * before any HTTP request.
+ */
 function readMailboxIntent(input: EmailSyncInput) {
-  if (!('intentGeneration' in input) && !('operationId' in input)) return undefined;
+  if (input.intentGeneration === undefined && input.operationId === undefined) return undefined;
   const { intentGeneration, operationId } = input;
   if (
     typeof intentGeneration !== 'number' ||
@@ -65,7 +71,12 @@ export function createEmailClient(params: EmailClientParams): EmailClient {
     sync: async (input) => {
       const intent = readMailboxIntent(input);
       return decode.admission(
-        await request('/sync', 'POST', { ...input }, intent?.operationId ?? crypto.randomUUID())
+        await request(
+          '/sync',
+          'POST',
+          { account: input.account, ...intent },
+          intent?.operationId ?? crypto.randomUUID()
+        )
       );
     },
     stopSync: async (input) => {

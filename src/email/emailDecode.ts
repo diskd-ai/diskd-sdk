@@ -95,6 +95,7 @@ const NO_SNAPSHOT: IntentSnapshot = {
   pendingPublication: null,
 };
 const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/i;
+const SNAPSHOT_KEYS = ['state', 'appliedGeneration', 'operationId', 'pendingPublication'] as const;
 
 /**
  * REQ-3737-011: decode the worker's applied-intent snapshot. Absent (an older worker): all null. Present: the state is
@@ -102,7 +103,10 @@ const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/i;
  * UNDECLARED carries none; pendingPublication is a boolean. Anything else is refused, never guessed.
  */
 function intentSnapshot(row: { readonly [key: string]: unknown }): IntentSnapshot {
-  if (!('state' in row)) return NO_SNAPSHOT;
+  /* A snapshot is present when any of its four fields is present; then all four are required. */
+  if (!SNAPSHOT_KEYS.some((key) => key in row)) return NO_SNAPSHOT;
+  if (!('state' in row) || !('appliedGeneration' in row) || !('operationId' in row))
+    throw new Error('InvalidEmailResponse');
   const pendingPublication = boolean(row.pendingPublication);
   if (row.state === 'UNDECLARED') {
     if (row.appliedGeneration !== null || row.operationId !== null)
