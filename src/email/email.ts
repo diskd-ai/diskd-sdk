@@ -65,12 +65,7 @@ export function createEmailClient(params: EmailClientParams): EmailClient {
     sync: async (input) => {
       const intent = readMailboxIntent(input);
       return decode.admission(
-        await request(
-          '/sync',
-          'POST',
-          { ...input },
-          intent?.operationId ?? crypto.randomUUID()
-        )
+        await request('/sync', 'POST', { ...input }, intent?.operationId ?? crypto.randomUUID())
       );
     },
     stopSync: async (input) => {
