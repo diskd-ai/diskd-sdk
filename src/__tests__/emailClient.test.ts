@@ -328,3 +328,57 @@ test('sends the Stop pair in the DELETE body', async () => {
     globalThis.fetch = original;
   }
 });
+
+/* REQ-3737-011 (review): a snapshot is present when any of its four fields is present, and then all four are
+   required; UNDECLARED never carries a pair. */
+test('refuses partial or inconsistent snapshots', async () => {
+  for (const snapshot of [
+    { appliedGeneration: 2, operationId: '01ARZ3NDEKTSV4RRFFQ69G5FAV', pendingPublication: false },
+    { pendingPublication: false },
+    { state: 'STOPPED', appliedGeneration: 2, operationId: '01ARZ3NDEKTSV4RRFFQ69G5FAV' },
+    {
+      state: 'UNDECLARED',
+      appliedGeneration: 2,
+      operationId: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+      pendingPublication: false,
+    },
+  ]) {
+    await assert.rejects(readStatus(statusWith(snapshot)), /InvalidEmailResponse/);
+  }
+});
+
+/* REQ-3737-005 (review): an explicitly undefined pair is a legacy request, and sync forwards only the account and
+   the pair, never other fields a JavaScript caller passes. */
+test('treats an undefined pair as legacy and forwards only account and pair', async () => {
+  const original = globalThis.fetch;
+  const seen: { method: string; body: unknown }[] = [];
+  globalThis.fetch = async (_input, init) => {
+    seen.push({
+      method: init?.method ?? 'GET',
+      body: init?.body === undefined ? undefined : JSON.parse(String(init.body)),
+    });
+    return init?.method === 'DELETE'
+      ? new Response(null, { status: 204 })
+      : Response.json({ jobId: 'j', requestId: 'r', status: 'queued' }, { status: 202 });
+  };
+  try {
+    const client = diskd.os.email({ auth, url: 'http://workers' });
+    await client.sync({ account: 'mail', intentGeneration: undefined, operationId: undefined });
+    await client.stopSync({ account: 'mail', intentGeneration: undefined, operationId: undefined });
+    await client.sync(
+      JSON.parse(
+        '{"account":"mail","intentGeneration":3,"operationId":"01ARZ3NDEKTSV4RRFFQ69G5FAV","extra":"x"}'
+      )
+    );
+    assert.deepEqual(seen, [
+      { method: 'POST', body: { account: 'mail' } },
+      { method: 'DELETE', body: undefined },
+      {
+        method: 'POST',
+        body: { account: 'mail', intentGeneration: 3, operationId: '01ARZ3NDEKTSV4RRFFQ69G5FAV' },
+      },
+    ]);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
